@@ -1,0 +1,9 @@
+﻿---
+BasedOnStyle: Google
+BreakBeforeBraces: Allman
+ColumnLimit: '120'
+Language: Cpp
+NamespaceIndentation: All
+IndentAccessModifiers: true
+
+...

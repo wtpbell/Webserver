@@ -1,3 +1,10 @@
+# vscode
+.vscode/
+
+# directories
+bin/
+debug/
+
 # Prerequisites
 *.d
 
@@ -39,3 +46,6 @@
 
 # debug information files
 *.dwo
+
+# executable
+webserv

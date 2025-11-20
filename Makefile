@@ -6,7 +6,7 @@ CXXEXTRA:=
 D_FLAGS	:= -MMD -MP
 SRC_DIR	:= src/
 BIN		:= bin/
-SRCS	:= main.cpp
+SRCS	:= main.cpp Logger.cpp
 OBJS	:= $(SRCS:%.cpp=$(BIN)%.o)
 DEPS	:= $(SRCS:%.cpp=$(BIN)%.d)
 SRCS	:= $(addprefix $(SRC_DIR), $(SRCS))

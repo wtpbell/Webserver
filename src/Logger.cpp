@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 11:15:07 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/19 19:32:10 by jboon         ########   odam.nl         */
+/*   Updated: 2025/11/20 15:24:14 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,7 @@ std::string_view Logger::LevelToString(LogLevel level)
 {
   switch (level)
   {
-    case LogLevel::DEBUG:
+    case LogLevel::LDEBUG:
       return LOG_DEBUG LOG_BOLD "DEBUG   " LOG_CLEAR;
     case LogLevel::INFO:
       return LOG_INFO LOG_BOLD "INFO    " LOG_CLEAR;

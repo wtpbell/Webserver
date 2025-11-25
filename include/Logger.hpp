@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 10:16:48 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/20 10:33:32 by jboon         ########   odam.nl         */
+/*   Updated: 2025/11/20 15:24:14 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,13 +27,13 @@
 enum class LogLevel
 {
   NONE = 0x0,
-  DEBUG = 0x1,
+  LDEBUG = 0x1,
   INFO = 0x2,
   WARNING = 0x4,
   ERROR = 0x8,
   CRITICAL = 0x10,
   STDOUT = (INFO | WARNING),
-  STDERR = (DEBUG | ERROR | CRITICAL)
+  STDERR = (LDEBUG | ERROR | CRITICAL)
 };
 
 class Logger

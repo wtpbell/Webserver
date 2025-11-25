@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 10:43:47 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/18 12:37:05 by jboon         ########   odam.nl         */
+/*   Updated: 2025/11/20 15:24:14 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ void Logger::Log(LogLevel level, std::string_view format, Args&&... args)
   char stime[32];
 
   LogFormat(ss, "[{}] {}: ", GetCurrentTime(stime, 32), LevelToString(level));
-  if (level == LogLevel::DEBUG)
+  if (level == LogLevel::LDEBUG)
     LogFormat(ss, LOG_DEBUG "{} ({}): " LOG_CLEAR, __FILE__, __LINE__);
   LogFormat(ss, format, std::forward<Args>(args)...);
   GetOutputStream(level) << ss.str() << std::endl;

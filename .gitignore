@@ -1,6 +1,9 @@
 # vscode
 .vscode/
 
+# tester
+run_tests
+
 # directories
 bin/
 debug/

@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 10:16:48 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/20 15:24:14 by jboon         ########   odam.nl         */
+/*   Updated: 2025/11/30 20:55:50 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,8 @@ enum class LogLevel
   ERROR = 0x8,
   CRITICAL = 0x10,
   STDOUT = (INFO | WARNING),
-  STDERR = (LDEBUG | ERROR | CRITICAL)
+  STDERR = (LDEBUG | ERROR | CRITICAL),
+  ALL = (STDOUT | STDERR)
 };
 
 class Logger
@@ -42,18 +43,33 @@ class Logger
     template <typename... Args>
     static void Log(LogLevel level, std::string_view format, Args&&... args);
     static std::string_view LevelToString(LogLevel level);
+    static void SetLogFilter(LogLevel filter);
 
     Logger(void) = delete;
 
   private:
     static std::ostream cout_;
     static std::ostream cerr_;
+    static LogLevel filter_;
 
     static char* GetCurrentTime(char* stime, std::size_t n);
     static std::ostream& GetOutputStream(LogLevel level);
+    static bool IsFiltered(LogLevel level);
     static void LogFormat(std::ostream& out, std::string_view format);
     template <typename T, typename... Args>
     static void LogFormat(std::ostream& out, std::string_view format, T&& arg, Args&&... args);
+
+#ifdef UNIT_TEST
+  public:
+    static std::streambuf* OverrideCoutBuf(const std::ostream& os)
+    {
+      return cout_.rdbuf(os.rdbuf());
+    }
+    static std::streambuf* OverrideCerrBuf(const std::ostream& os)
+    {
+      return cerr_.rdbuf(os.rdbuf());
+    }
+#endif
 };
 
 LogLevel operator|(LogLevel lhs, LogLevel rhs);

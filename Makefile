@@ -6,18 +6,18 @@ CXXEXTRA:=
 D_FLAGS	:= -MMD -MP
 SRC_DIR	:= src/
 BIN		:= bin/
-SRCS	:= main.cpp EpollManager.cpp Logger.cpp signal.cpp
+BIN_DIRS:= $(BIN)
+MAIN	:= $(BIN)main.o
+SRCS	:= EpollManager.cpp Logger.cpp signal.cpp
 OBJS	:= $(SRCS:%.cpp=$(BIN)%.o)
-DEPS	:= $(SRCS:%.cpp=$(BIN)%.d)
-SRCS	:= $(addprefix $(SRC_DIR), $(SRCS))
+DEPS	:= $(BIN)main.d $(SRCS:%.cpp=$(BIN)%.d)
 
 # UNIT TEST VARIABLES
-TEST_NAME	:= run_tests
 TEST_DIR	:= tests/
-TEST_SRCS	:= catch_amalgamated.cpp test_epollmanager.cpp
-TEST_OBJS	:= $(TEST_SRCS:%.cpp=$(BIN)%.o)
-TEST_OBJS	+= $(filter-out $(BIN)main.o, $(OBJS))
-TEST_SRCS	:= $(addprefix $(TEST_DIR), $(TEST_SRCS))
+TEST_NAME	:= $(BIN)$(TEST_DIR)run_tests
+TEST_SRCS	:= catch_amalgamated.cpp test_epollmanager.cpp test_logger.cpp
+TEST_OBJS	:= $(TEST_SRCS:%.cpp=$(BIN)$(TEST_DIR)%.o)
+TEST_DIRS	:= $(BIN)$(TEST_DIR)
 
 all: $(NAME)
 
@@ -27,36 +27,36 @@ debug: $(NAME)
 sanitize: CXXEXTRA += -fsanitize=address,undefined,leak
 sanitize: debug
 
-$(NAME): $(BIN) $(OBJS)
-	$(CC) $(CXXEXTRA) $(OBJS) -o $(NAME)
+$(NAME): $(MAIN) $(OBJS)
+	$(CC) $(CXXEXTRA) $^ -o $@
+
+$(TEST_NAME): $(OBJS) $(TEST_OBJS)
+	$(CC) $(CXXEXTRA) $^ -o $@
 
 -include $(DEPS)
 
 %/:
-	mkdir $@
+	mkdir -p $@
 
-$(BIN)%.o: $(SRC_DIR)%.cpp
+$(BIN)%.o: $(SRC_DIR)%.cpp | $(BIN_DIRS)
 	$(CC) $(CXXFLAGS) $(CXXEXTRA) $(CXXINC) $(D_FLAGS) -o $@ -c $<
 
-$(BIN)%.o: $(TEST_DIR)%.cpp
+$(BIN)$(TEST_DIR)%.o: $(TEST_DIR)%.cpp | $(TEST_DIRS)
 	$(CC) $(CXXFLAGS) $(CXXEXTRA) $(CXXINC) $(D_FLAGS) -o $@ -c $<
-
-$(TEST_NAME): $(BIN) $(TEST_OBJS)
-	$(CC) $(TEST_OBJS) -o $(BIN)$(NAME)
 
 test: CXXEXTRA	+= -DUNIT_TEST
-test: CXXINC	+= -Itests
+test: CXXINC	+= -I./tests
 test: $(TEST_NAME)
-	./$(BIN)$(NAME)
+	./$<
 
 clean:
-	$(RM) $(OBJS) $(DEPS)
-	$(RM) -r bin
+	$(RM) $(MAIN) $(OBJS) $(DEPS) $(TEST_OBJS)
 
 fclean: clean
-	$(RM) $(NAME)
-	$(RM) $(BIN)$(NAME)
+	$(RM) $(NAME) $(TEST_NAME)
+	$(RM) -r $(BIN)
 
 re: fclean all
 
 .PHONY: all clean fclean re test debug sanitize
+.SECONDARY: $(BIN_DIRS) $(TEST_DIRS)

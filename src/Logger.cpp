@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 11:15:07 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/20 15:24:14 by jboon         ########   odam.nl         */
+/*   Updated: 2025/11/30 20:55:18 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 
 std::ostream Logger::cout_{std::cout.rdbuf()};
 std::ostream Logger::cerr_{std::cerr.rdbuf()};
+LogLevel Logger::filter_{LogLevel::ALL};
 
 char* Logger::GetCurrentTime(char* stime, std::size_t n)
 {
@@ -65,6 +66,17 @@ std::string_view Logger::LevelToString(LogLevel level)
       break;
   }
   return "UNKNOWN";
+}
+
+void Logger::SetLogFilter(LogLevel filter)
+{
+  filter_ = filter;
+}
+
+bool Logger::IsFiltered(LogLevel level)
+{
+  return ((level & filter_) == LogLevel::NONE || level == LogLevel::STDERR || level == LogLevel::STDOUT ||
+          level == LogLevel::ALL);
 }
 
 LogLevel operator|(LogLevel lhs, LogLevel rhs)

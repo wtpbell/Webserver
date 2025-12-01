@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:18 by bewong        #+#    #+#                 */
-/*   Updated: 2025/11/21 18:36:58 by jboon         ########   odam.nl         */
+/*   Updated: 2025/11/27 10:57:38 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,8 +83,6 @@ void EpollManager::eventLoop(void)
   sigset_t waitMask;
   if (sigemptyset(&waitMask) < 0)
     throw std::runtime_error("sigemptyset failed");
-  if (sigaddset(&waitMask, SIGTSTP) < 0)
-    throw std::runtime_error("sigaddset failed");
   while (!g_shutdown.load())
   {
     int n = epoll_pwait(epFd_, events, MAX_EVENTS, -1, &waitMask);
@@ -97,8 +95,7 @@ void EpollManager::eventLoop(void)
     for (int i = 0; i < n; i++)
     {
       int fd = events[i].data.fd;
-      auto it = callbacks_.find(fd);
-      it->second(events[i].events);
+      callbacks_.find(fd)->second(*this, events[i]);
     }
   }
 }

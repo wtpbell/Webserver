@@ -1,24 +1,24 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   webserv.hpp                                        :+:    :+:            */
+/*   helper.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/11/18 17:18:13 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/02 15:58:51 by jboon         ########   odam.nl         */
+/*   Created: 2025/11/25 10:59:19 by jboon         #+#    #+#                 */
+/*   Updated: 2025/11/25 11:11:28 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef WEBSERV_H_
-#define WEBSERV_H_
-
-#include <atomic>
 #include <cstddef>
 
-extern std::atomic<bool> g_shutdown;
-
-void setupSignals(void);
-std::size_t NextPOT(std::size_t n);
-
-#endif  // WEBSERV_H_
+std::size_t NextPOT(std::size_t n)
+{
+  --n;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return (++n);
+}

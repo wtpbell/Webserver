@@ -6,16 +6,16 @@ CXXEXTRA:=
 D_FLAGS	:= -MMD -MP
 SRC_DIR	:= src/
 BIN		:= bin/
-BIN_DIRS:= $(BIN)
+BIN_DIRS:= $(BIN) $(BIN)exception/
 MAIN	:= $(BIN)main.o
-SRCS	:= EpollManager.cpp Logger.cpp signal.cpp
+SRCS	:= EpollManager.cpp Logger.cpp SharedFD.cpp helper.cpp exception/FileDescriptorException.cpp signal.cpp
 OBJS	:= $(SRCS:%.cpp=$(BIN)%.o)
 DEPS	:= $(BIN)main.d $(SRCS:%.cpp=$(BIN)%.d)
 
 # UNIT TEST VARIABLES
 TEST_DIR	:= tests/
 TEST_NAME	:= $(BIN)$(TEST_DIR)run_tests
-TEST_SRCS	:= catch_amalgamated.cpp test_epollmanager.cpp test_logger.cpp
+TEST_SRCS	:= catch_amalgamated.cpp test_sharedfd.cpp test_epollmanager.cpp test_logger.cpp
 TEST_OBJS	:= $(TEST_SRCS:%.cpp=$(BIN)$(TEST_DIR)%.o)
 TEST_DIRS	:= $(BIN)$(TEST_DIR)
 

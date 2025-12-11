@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:09 by bewong        #+#    #+#                 */
-/*   Updated: 2025/12/01 10:58:55 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/11 18:44:18 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,24 +34,25 @@ class EpollManager
     EpollManager& operator=(EpollManager&& other) noexcept = delete;
     ~EpollManager(void);
 
-    void addFd(int fd, uint32_t events, EventCallback cb);
-    void modifyFd(int fd, uint32_t events);
-    void modifyFd(int fd, uint32_t events, EventCallback cb);
-    void removeFd(int fd);
-    void eventLoop(void);
+    void AddFd(int fd, uint32_t events, EventCallback cb);
+    void ModifyFd(int fd, uint32_t events);
+    void ModifyFd(int fd, uint32_t events, EventCallback cb);
+    void RemoveFd(int fd);
+    void EventLoop(void);
+
 #ifdef UNIT_TEST
-    int getEpFd() const
+    int GetEpFd() const
     {
-      return epFd_;
+      return ep_fd_;
     }
-    auto& getCallbacks()
+    auto& GetCallbacks()
     {
       return callbacks_;
     }
 #endif
 
   private:
-    int epFd_;
+    int ep_fd_;
     std::unordered_map<int, EventCallback> callbacks_;
 };
 #endif  // EPOLLMANAGER_HPP_

@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:18 by bewong        #+#    #+#                 */
-/*   Updated: 2025/11/27 10:57:38 by bewong        ########   odam.nl         */
+/*   Updated: 2025/12/11 18:44:18 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,8 +19,8 @@
 
 EpollManager::EpollManager(void)
 {
-  epFd_ = epoll_create1(O_CLOEXEC);  // will test it out later to see use O_CLOEXEC or 0
-  if (epFd_ < 0)
+  ep_fd_ = epoll_create1(O_CLOEXEC);  // will test it out later to see use O_CLOEXEC or 0
+  if (ep_fd_ < 0)
     throw std::runtime_error("Failed to create epoll");
 }
 
@@ -29,16 +29,16 @@ EpollManager::~EpollManager(void)
   // Close all registered file descriptors
   for (const auto& [fd, callback] : callbacks_)
     close(fd);
-  close(epFd_);
+  close(ep_fd_);
 }
 
-void EpollManager::addFd(int fd, uint32_t events, EventCallback cb)
+void EpollManager::AddFd(int fd, uint32_t events, EventCallback cb)
 {
   struct epoll_event ev{};
 
   ev.data.fd = fd;
   ev.events = events;
-  if (epoll_ctl(epFd_, EPOLL_CTL_ADD, fd, &ev) < 0)
+  if (epoll_ctl(ep_fd_, EPOLL_CTL_ADD, fd, &ev) < 0)
   {
     if (errno == EEXIST)
       throw std::runtime_error("fd is already registered");
@@ -48,13 +48,13 @@ void EpollManager::addFd(int fd, uint32_t events, EventCallback cb)
   callbacks_[fd] = cb;
 }
 
-void EpollManager::modifyFd(int fd, uint32_t events)
+void EpollManager::ModifyFd(int fd, uint32_t events)
 {
   struct epoll_event ev{};
 
   ev.data.fd = fd;
   ev.events = events;
-  if (epoll_ctl(epFd_, EPOLL_CTL_MOD, fd, &ev) < 0)
+  if (epoll_ctl(ep_fd_, EPOLL_CTL_MOD, fd, &ev) < 0)
   {
     if (errno == ENOENT)  // fd not registered
       throw std::runtime_error("fd not registered in epoll");
@@ -63,20 +63,20 @@ void EpollManager::modifyFd(int fd, uint32_t events)
   }
 }
 
-void EpollManager::modifyFd(int fd, uint32_t events, EventCallback cb)
+void EpollManager::ModifyFd(int fd, uint32_t events, EventCallback cb)
 {
-  modifyFd(fd, events);
+  ModifyFd(fd, events);
   callbacks_[fd] = std::move(cb);
 }
 
-void EpollManager::removeFd(int fd)
+void EpollManager::RemoveFd(int fd)
 {
-  if (epoll_ctl(epFd_, EPOLL_CTL_DEL, fd, nullptr) < 0)
+  if (epoll_ctl(ep_fd_, EPOLL_CTL_DEL, fd, nullptr) < 0)
     throw std::runtime_error("EPOLL_CTL_DEL failed");
   callbacks_.erase(fd);
 }
 
-void EpollManager::eventLoop(void)
+void EpollManager::EventLoop(void)
 {
   constexpr int MAX_EVENTS = 64;
   struct epoll_event events[MAX_EVENTS];
@@ -85,7 +85,7 @@ void EpollManager::eventLoop(void)
     throw std::runtime_error("sigemptyset failed");
   while (!g_shutdown.load())
   {
-    int n = epoll_pwait(epFd_, events, MAX_EVENTS, -1, &waitMask);
+    int n = epoll_pwait(ep_fd_, events, MAX_EVENTS, -1, &waitMask);
     if (n == -1)
     {
       if (errno == EINTR)

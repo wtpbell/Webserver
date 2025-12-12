@@ -1,0 +1,93 @@
+
+#####################
+##### TOKENLIST #####
+#####################
+
+Token:
+  TokenKind: Events
+  lexeme:    'events'
+  trivia:    ''
+  line:      1
+  col:       1
+
+Token:
+  TokenKind: Semicolon
+  lexeme:    ';'
+  trivia:    ''
+  line:      1
+  col:       7
+
+Token:
+  TokenKind: Http
+  lexeme:    'http'
+  trivia:    ''
+  line:      1
+  col:       8
+
+Token:
+  TokenKind: LBrace
+  lexeme:    '{'
+  trivia:    ''
+  line:      1
+  col:       12
+
+Token:
+  TokenKind: Server
+  lexeme:    'server'
+  trivia:    ''
+  line:      1
+  col:       13
+
+Token:
+  TokenKind: RBrace
+  lexeme:    '}'
+  trivia:    ''
+  line:      1
+  col:       19
+
+Token:
+  TokenKind: Location
+  lexeme:    'location'
+  trivia:    ''
+  line:      1
+  col:       20
+
+Token:
+  TokenKind: RBrace
+  lexeme:    '}'
+  trivia:    ''
+  line:      1
+  col:       28
+
+Token:
+  TokenKind: String
+  lexeme:    'string'
+  trivia:    ''
+  line:      1
+  col:       29
+
+Token:
+  TokenKind: LBrace
+  lexeme:    '{'
+  trivia:    ''
+  line:      1
+  col:       35
+
+Token:
+  TokenKind: Number
+  lexeme:    '1234'
+  trivia:    ''
+  line:      1
+  col:       36
+
+Token:
+  TokenKind: Eof
+  lexeme:    ''
+  trivia:    ''
+  line:      1
+  col:       40
+
+#########################
+##### END TOKENLIST #####
+#########################
+

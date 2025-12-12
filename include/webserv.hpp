@@ -19,6 +19,7 @@
 extern std::atomic<bool> g_shutdown;
 
 void setupSignals(void);
+int LoadConfigs(int argc, char* argv[]);
 std::size_t NextPOT(std::size_t n);
 
 #endif  // WEBSERV_H_

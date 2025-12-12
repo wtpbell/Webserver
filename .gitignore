@@ -50,5 +50,8 @@ debug/
 # debug information files
 *.dwo
 
+# valgrind
+massif.out.*
+
 # executable
 webserv

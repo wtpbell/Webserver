@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   EpollManager.hpp                                   :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:09 by bewong        #+#    #+#                 */
-/*   Updated: 2025/12/11 18:44:18 by bewong        ########   odam.nl         */
+/*   Updated: 2025/12/11 23:10:03 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ extern std::atomic<bool> g_shutdown;
 class EpollManager
 {
   public:
-    using EventCallback = std::function<void(EpollManager& manager, const struct epoll_event&)>;
+    using EventCallback = std::function<void(EpollManager&, const struct epoll_event&)>;
 
     EpollManager(void);
     EpollManager(const EpollManager& other) = delete;

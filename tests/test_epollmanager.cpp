@@ -10,6 +10,7 @@
 
 #include "EpollManager.hpp"
 #include "catch_amalgamated.hpp"
+#include "exception/EPollManagerException.hpp"
 
 static int makeNonBlocking(int fd)
 {
@@ -87,7 +88,7 @@ TEST_CASE("Basic Operations", "[EpollManager]")
     REQUIRE_NOTHROW(manager.AddFd(read_fd, EPOLLIN, cb));
     REQUIRE(callbacks.size() == 1);
 
-    REQUIRE_THROWS_AS(manager.AddFd(read_fd, EPOLLIN, cb), std::runtime_error);
+    REQUIRE_THROWS_AS(manager.AddFd(read_fd, EPOLLIN, cb), ExistInEPollException);
     REQUIRE(errno == EEXIST);
   }
 
@@ -117,7 +118,7 @@ TEST_CASE("Basic Operations", "[EpollManager]")
     REQUIRE_NOTHROW(manager.AddFd(read_fd, EPOLLIN, cb_mod));
     REQUIRE(callbacks.size() == 1);
 
-    REQUIRE_THROWS_AS(manager.ModifyFd(213, EPOLLIN, cb_mod), std::runtime_error);
+    REQUIRE_THROWS_AS(manager.ModifyFd(213, EPOLLIN, cb_mod), EPollManagerException);
     REQUIRE(callbacks.size() == 1);
   }
 
@@ -148,7 +149,7 @@ TEST_CASE("Basic Operations", "[EpollManager]")
     REQUIRE_NOTHROW(manager.AddFd(read_fd, EPOLLIN, cb_in));
     REQUIRE(callbacks.size() == 1);
 
-    REQUIRE_THROWS_AS(manager.RemoveFd(218), std::runtime_error);
+    REQUIRE_THROWS_AS(manager.RemoveFd(218), EPollManagerException);
     REQUIRE(callbacks.size() == 1);
   }
 

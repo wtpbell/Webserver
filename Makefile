@@ -27,6 +27,9 @@ debug: $(NAME)
 sanitize: CXXEXTRA += -fsanitize=address,undefined,leak
 sanitize: debug
 
+ping:
+	$(CC) $(CXXFLAGS) $(CXXINC) tests/ping.cpp tests/Client.cpp src/Logger.cpp src/socket_info.cpp -o ping
+
 $(NAME): $(MAIN) $(OBJS)
 	$(CC) $(CXXEXTRA) $^ -o $@
 
@@ -58,5 +61,5 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re test debug sanitize
+.PHONY: all clean fclean re test debug sanitize ping
 .SECONDARY: $(BIN_DIRS) $(TEST_DIRS)

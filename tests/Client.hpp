@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/01 15:02:48 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/01 15:17:37 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/09 11:38:26 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ class Client
 
     void Connect(const char* host, const char* port);
     void Ping(const char* msg);
+    void Pong(void);
     void Shutdown(void);
 
   private:

@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/04 17:08:28 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/04 17:27:19 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/15 14:23:25 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,15 +19,15 @@
 
 class EPollManagerException : public std::exception
 {
-  private:
-    std::string msg_;
-
   public:
     EPollManagerException(const char* func_name, const int err,
                           const std::error_category& cat = std::system_category());
-    ~EPollManagerException(void) = default;
+    virtual ~EPollManagerException(void) = default;
 
     const char* what(void) const noexcept override;
+
+  private:
+    std::string msg_;
 };
 
 class ExistInEPollException : public EPollManagerException

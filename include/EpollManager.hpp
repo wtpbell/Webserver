@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:09 by bewong        #+#    #+#                 */
-/*   Updated: 2025/12/11 23:10:03 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/29 11:52:15 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,12 +17,11 @@
 
 #include <atomic>
 #include <functional>
-#include <string>
 #include <unordered_map>
 
-extern std::atomic<bool> g_shutdown;
+#include "io/SharedFD.hpp"
 
-class EpollManager
+class EpollManager : private SharedFD
 {
   public:
     using EventCallback = std::function<void(EpollManager&, const struct epoll_event&)>;
@@ -32,7 +31,7 @@ class EpollManager
     EpollManager(EpollManager&& other) noexcept = delete;
     EpollManager& operator=(const EpollManager& other) = delete;
     EpollManager& operator=(EpollManager&& other) noexcept = delete;
-    ~EpollManager(void);
+    ~EpollManager(void) = default;
 
     void AddFd(int fd, uint32_t events, EventCallback cb);
     void ModifyFd(int fd, uint32_t events);
@@ -41,10 +40,6 @@ class EpollManager
     void EventLoop(void);
 
 #ifdef UNIT_TEST
-    int GetEpFd() const
-    {
-      return ep_fd_;
-    }
     auto& GetCallbacks()
     {
       return callbacks_;
@@ -52,7 +47,6 @@ class EpollManager
 #endif
 
   private:
-    int ep_fd_;
     std::unordered_map<int, EventCallback> callbacks_;
 };
 #endif  // EPOLLMANAGER_HPP_

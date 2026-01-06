@@ -1,25 +1,34 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   webserv.hpp                                        :+:    :+:            */
+/*   string.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/11/18 17:18:13 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/22 16:25:02 by jboon         ########   odam.nl         */
+/*   Created: 2025/12/22 16:22:46 by jboon         #+#    #+#                 */
+/*   Updated: 2025/12/22 16:26:02 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef WEBSERV_H_
-#define WEBSERV_H_
+#include <algorithm>
+#include <cctype>
+#include <string_view>
 
-#include <atomic>
-#include <cstddef>
+namespace String
+{
+  bool IsDigitOnly(const char* s)
+  {
+    while (*s != '\0')
+    {
+      if (!std::isdigit(static_cast<unsigned char>(*s)))
+        return (false);
+      ++s;
+    }
+    return (true);
+  }
 
-extern std::atomic<bool> g_shutdown;
-
-void setupSignals(void);
-int LoadConfigs(int argc, char* argv[]);
-std::size_t NextPOT(std::size_t n);
-
-#endif  // WEBSERV_H_
+  bool IsEmptyOrNull(const char* s)
+  {
+    return (s == nullptr || *s == '\0');
+  }
+}  // namespace String

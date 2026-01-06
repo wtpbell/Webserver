@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/01 15:03:21 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/09 11:28:43 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/28 15:43:11 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,87 +14,61 @@
 
 #include <fcntl.h>
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include <cstring>
 #include <stdexcept>
+#include <string>
 
 #include "Logger.hpp"
 #include "webserv.hpp"
 
 Client::~Client(void)
 {
-  Logger::Log(LogLevel::INFO, "Client {} closing its connection {}", clientfd_, GetSocketInfo(clientfd_));
-  Shutdown();
+  Logger::Log(LogLevel::INFO, "Client: Connection {} closed", socket_);
 }
 
 void Client::Connect(const char* host, const char* port)
 {
-  struct addrinfo hints, *res;
-  int sockfd;
-  int status;
+  socket_ = Socket::CreateSocket(host, port);
 
-  std::memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
+  int flag = 1;
+  socket_.SetSockOpt(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+  socket_.SetSockOpt(IPPROTO_TCP, TCP_QUICKACK, &flag, sizeof(flag));
 
-  if ((status = getaddrinfo(host, port, &hints, &res)) != 0)
-    throw std::runtime_error(gai_strerror(status));
-  if ((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1 ||
-      connect(sockfd, res->ai_addr, res->ai_addrlen) == -1 || fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
-  {
-    if (sockfd != -1)
-      close(sockfd);
-    freeaddrinfo(res);
-    throw std::runtime_error(strerror(errno));
-  }
-  freeaddrinfo(res);
-  clientfd_ = sockfd;
-  Logger::Log(LogLevel::INFO, "Client {} established a connection with {}", clientfd_, GetSocketInfo(clientfd_));
+  // TODO: The server might need to set these settings for the incoming socket connections
+  // https://www.extrahop.com/blog/tcp-nodelay-nagle-quickack-best-practices
+  // https://brooker.co.za/blog/2024/05/09/nagle.html
+  // int flag = 1;
+  // client.SetSockOpt(IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+  // client.SetSockOpt(IPPROTO_TCP, TCP_QUICKACK, &flag, sizeof(flag));
+
+  socket_.Connect();
 }
 
-void Client::Ping(const char* msg)
+bool Client::Ping(const std::string& message)
 {
-  int total = 0;
-  int len = std::strlen(msg);
-  int bytesleft = len;
-  int n;
-
-  while (total < len)
-  {
-    if ((n = send(clientfd_, msg + total, bytesleft, MSG_DONTWAIT)) == -1)
-      throw std::runtime_error(strerror(errno));
-    total += n;
-    bytesleft -= n;
-  }
+  std::size_t leftover{message.size()};
+  while (leftover > 0 && socket_.Send(message, leftover) != -1)
+    ;
+  return (leftover == 0);
 }
 
-void Client::Pong(void)
+bool Client::Pong(void)
 {
-  const std::size_t buf_size = 1024;
+  std::string message;
+  ssize_t bytes{};
+  ssize_t prev{};
 
-  std::string msg;
-  char buf[buf_size];
-
-  for (;;)
+  while ((bytes = socket_.Recv(message)) > 0)
   {
-    ssize_t bytes = recv(clientfd_, buf, buf_size, 0);
-    if (bytes == -1)
+    if (message.find('\n', static_cast<std::size_t>(prev)) != std::string::npos)
       break;
-    else if (bytes == 0)
-      throw std::runtime_error(strerror(errno));
-    msg.append(buf, static_cast<std::size_t>(bytes));
+    prev += bytes;
   }
-  std::cout << msg << std::endl;
-}
-
-void Client::Shutdown(void)
-{
-  if (clientfd_ == -1)
-    return;
-  shutdown(clientfd_, SHUT_RDWR);
-  close(clientfd_);
-  clientfd_ = -1;
+  std::cout << message << std::endl;
+  return (bytes > 0);
 }

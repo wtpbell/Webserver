@@ -6,12 +6,16 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/01 15:02:48 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/09 11:38:26 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/28 14:10:19 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CLIENT_H_
 #define CLIENT_H_
+
+#include <string>
+
+#include "io/Socket.hpp"
 
 class Client
 {
@@ -25,12 +29,11 @@ class Client
     Client& operator=(Client&& rhs) noexcept = delete;
 
     void Connect(const char* host, const char* port);
-    void Ping(const char* msg);
-    void Pong(void);
-    void Shutdown(void);
+    bool Ping(const std::string& message);
+    bool Pong(void);
 
   private:
-    int clientfd_ = -1;
+    Socket socket_;
 };
 
 #endif  // CLIENT_H_

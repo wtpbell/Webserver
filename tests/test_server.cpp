@@ -14,7 +14,10 @@
 TEST_CASE("Basic server connection", "[server]")
 {
   Logger::SetLogFilter(LogLevel::NONE);
-  auto endcallback = [](EpollManager&, const struct epoll_event&) { g_shutdown = true; };
+  auto endcallback = [](EpollManager&, const struct epoll_event&)
+  {
+    g_shutdown = true;
+  };
 
   int pipefd[2];
   REQUIRE((pipe2(pipefd, O_NONBLOCK) == 0));
@@ -27,7 +30,7 @@ TEST_CASE("Basic server connection", "[server]")
     REQUIRE_NOTHROW((manager = std::make_unique<EpollManager>()));
     REQUIRE_NOTHROW((server = std::make_unique<Server>("8080")));
     REQUIRE_NOTHROW(server->ListenAndRegister(*manager, 5));
-    REQUIRE_NOTHROW(client.Connect("localhost", "8080"));
+    REQUIRE_NOTHROW(client.Connect("::1", "8080"));
     REQUIRE_NOTHROW(manager->AddFd(pipefd[0], EPOLLIN, endcallback));
 
     g_shutdown = false;
@@ -35,7 +38,10 @@ TEST_CASE("Basic server connection", "[server]")
     pipefd[1] = -1;
 
     client.Ping("Hello, world!");
-    std::thread loop_thread{[&manager] { manager->EventLoop(); }};
+    std::thread loop_thread{[&manager]
+                            {
+                              manager->EventLoop();
+                            }};
     loop_thread.join();
   }
 

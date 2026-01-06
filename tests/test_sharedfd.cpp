@@ -1,29 +1,27 @@
 #include <sys/socket.h>
 
 #include <utility>
-#include <vector>
 
 #include "Logger.hpp"
-#include "SharedFD.hpp"
 #include "catch_amalgamated.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "fcntl.h"
+#include "io/SharedFD.hpp"
 
-void RequireAllFdsClosed(std::vector<int>& open_fds)
+static void RequireAllFdsClosed(void)
 {
-  for (std::size_t fd = 0; fd < open_fds.size(); ++fd)
+  auto& shared_count{SharedFD::GetSharedCountVector()};
+
+  for (std::size_t fd{}; fd < shared_count.size(); ++fd)
   {
-    CAPTURE(fd, open_fds[fd]);
-    REQUIRE(open_fds[fd] == 0);
+    CAPTURE(fd, shared_count[fd]);
+    REQUIRE(shared_count[fd] == 0);
   }
 }
 
 TEST_CASE("rule-of-five", "[sharedfd]")
 {
   const char* dummy_file = "tests/test_files/dummy_rw";
-  auto& open_fds = SharedFD::GetSharedCountVector();
-
-  RequireAllFdsClosed(open_fds);
 
   SECTION("Empty constructor")
   {
@@ -107,15 +105,12 @@ TEST_CASE("rule-of-five", "[sharedfd]")
     REQUIRE(dummy.SharedCount() == 1);
   }
 
-  RequireAllFdsClosed(open_fds);
+  RequireAllFdsClosed();
 }
 
 TEST_CASE("SharedFD creation", "[sharedfd]")
 {
   const char* dummy_file = "tests/test_files/dummy_rw";
-  auto& open_fds = SharedFD::GetSharedCountVector();
-
-  RequireAllFdsClosed(open_fds);
 
   SECTION("Open")
   {
@@ -125,28 +120,6 @@ TEST_CASE("SharedFD creation", "[sharedfd]")
 
     SharedFD nofd;
     REQUIRE_THROWS_AS((nofd = SharedFD::Open("nothing_to_see_here", O_RDONLY, 0)), FileDescriptorException);
-  }
-
-  SECTION("Socket")
-  {
-    SharedFD socket;
-    REQUIRE_NOTHROW((socket = SharedFD::Socket(AF_UNIX, SOCK_DGRAM, 0)));
-    REQUIRE_FALSE(socket.GetFD() == -1);
-
-    SharedFD nosocket;
-    REQUIRE_THROWS_AS((nosocket = SharedFD::Socket(999, SOCK_DGRAM, 0)), FileDescriptorException);
-  }
-
-  SECTION("SocketPair")
-  {
-    std::pair<SharedFD, SharedFD> socketpair;
-    REQUIRE_NOTHROW((socketpair = SharedFD::SocketPair(AF_UNIX, SOCK_DGRAM, 0)));
-    REQUIRE_FALSE(socketpair.first.GetFD() == -1);
-    REQUIRE_FALSE(socketpair.second.GetFD() == -1);
-    REQUIRE_FALSE(socketpair.first.GetFD() == socketpair.second.GetFD());
-
-    std::pair<SharedFD, SharedFD> nosocketpair;
-    REQUIRE_THROWS_AS((nosocketpair = SharedFD::SocketPair(999, SOCK_DGRAM, 0)), FileDescriptorException);
   }
 
   SECTION("Pipe")
@@ -217,15 +190,12 @@ TEST_CASE("SharedFD creation", "[sharedfd]")
     REQUIRE(dummy.SharedCount() == 2);
   }
 
-  RequireAllFdsClosed(open_fds);
+  RequireAllFdsClosed();
 }
 
 TEST_CASE("SharedFD counter/Clean up", "[sharedfd]")
 {
   const char* dummy_file = "tests/test_files/dummy_rw";
-  auto& open_fds = SharedFD::GetSharedCountVector();
-
-  RequireAllFdsClosed(open_fds);
 
   SECTION("Create copies out of dummy")
   {
@@ -259,33 +229,24 @@ TEST_CASE("SharedFD counter/Clean up", "[sharedfd]")
     for (int i = 0; i < count; ++i)
       fds.emplace_back(SharedFD::Open(dummy_file, O_RDONLY));
 
+    auto& shared_count{SharedFD::GetSharedCountVector()};
     int open_file_count{};
-    for (int n : open_fds)
+    for (int n : shared_count)
       if (n > 0)
         ++open_file_count;
 
     REQUIRE(open_file_count == count);
   }
 
-  RequireAllFdsClosed(open_fds);
+  RequireAllFdsClosed();
 }
 
 TEST_CASE("Error Handling", "[sharedfd]")
 {
-  auto& open_fds = SharedFD::GetSharedCountVector();
-  RequireAllFdsClosed(open_fds);
-
   // Test opening non-existent file
   SECTION("Open non-existent file")
   {
     REQUIRE_THROWS_AS(SharedFD::Open("non_existent_file.txt", O_RDONLY), FileDescriptorException);
-  }
-
-  // Test invalid socket parameters
-  SECTION("Invalid socket parameters")
-  {
-    REQUIRE_THROWS_AS(SharedFD::Socket(-1, -1, -1),  // Invalid parameters
-                      FileDescriptorException);
   }
 
   // Test invalid pipe creation
@@ -296,5 +257,5 @@ TEST_CASE("Error Handling", "[sharedfd]")
                       FileDescriptorException);
   }
 
-  RequireAllFdsClosed(open_fds);
+  RequireAllFdsClosed();
 }

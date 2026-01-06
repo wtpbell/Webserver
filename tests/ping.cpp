@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "Client.hpp"
+#include "Logger.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -15,11 +16,11 @@ int main(int argc, char* argv[])
   try
   {
     client.Connect(argv[1], argv[2]);
-    std::cout << "Connection established with " << argv[1] << ":" << argv[2] << std::endl;
+    Logger::Log(LogLevel::INFO, "Connection established with {}:{}", argv[1], argv[2]);
   }
   catch (const std::exception& e)
   {
-    std::cerr << e.what() << '\n';
+    Logger::Log(LogLevel::ERROR, "{}", e.what());
     return (1);
   }
 
@@ -33,15 +34,18 @@ int main(int argc, char* argv[])
     try
     {
       line.append("\n");
-      client.Ping(line.data());
+      if (!client.Ping(line))
+        break;
+
       std::this_thread::sleep_for(500ms);
 
       std::cout << "\nserver response: " << std::endl;
-      client.Pong();
+      if (!client.Pong())
+        break;
     }
     catch (const std::exception& e)
     {
-      std::cerr << e.what() << '\n';
+      Logger::Log(LogLevel::ERROR, "{}", e.what());
       return (1);
     }
   }

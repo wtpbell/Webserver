@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 11:15:07 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/30 20:55:18 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/18 16:24:32 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,6 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
-#include <string>
 
 std::ostream Logger::cout_{std::cout.rdbuf()};
 std::ostream Logger::cerr_{std::cerr.rdbuf()};

@@ -6,184 +6,103 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/18 12:43:53 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/15 14:22:38 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/02 12:01:31 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
 
-#include <fcntl.h>
-#include <netdb.h>
 #include <sys/epoll.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 
-#include <cassert>
-#include <cerrno>
 #include <cstring>
 #include <string>
 
 #include "Logger.hpp"
-#include "exception/EPollManagerException.hpp"
 #include "exception/ServerException.hpp"
-#include "webserv.hpp"
+#include "io/Socket.hpp"
 
-Server::addrinfo_t* Server::GetAddrinfo(std::string_view service)
+Server::Server(const char* service) : socket_(Socket::CreateSocket(nullptr, service, AI_PASSIVE))
 {
-  addrinfo_t* result;
-  addrinfo_t hints{};
+  socket_.SetNonBlocking(true);
+  const int yes{1};
+  socket_.SetSockOpt(SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+  // By default dual stack socket is enabled on linux systems, but on other systems you might need to enable it
+  const int no{0};
+  socket_.SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
+  socket_.Bind();
 
-  hints.ai_family = AF_INET6;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_PASSIVE;
-
-  int status = getaddrinfo(NULL, service.data(), &hints, &result);
-  if (status != 0)
-    throw ServerException("GetAddrinfo", gai_strerror(status));
-  return (result);
+  Logger::Log(LogLevel::INFO, "Server succesfully created and is bound to the socket <{}>", socket_);
 }
 
-// TODO: look into dual stack socket (Linux defaults to dual stack and for Windows you must set the flag (IPV6_V6ONLY));
-// however, if it is not supported what should happen next?
-int Server::SocketAndBind(const addrinfo_t* result)
+Server::~Server(void)
 {
-  for (const addrinfo_t* curr = result; curr != nullptr; curr = curr->ai_next)
+  Logger::Log(LogLevel::INFO, "Server <{}> shutting down with {} active connections", socket_, connections_.size());
+}
+
+void Server::ListenAndRegister(EpollManager& manager2, int max_connections)
+{
+  socket_.Listen(max_connections);
+  manager2.AddFd(static_cast<int>(socket_), EPOLLIN | EPOLLERR,
+                 [this](EpollManager& manager, const struct epoll_event& event)
+                 {
+                   this->Accept(manager, event);
+                 });
+  Logger::Log(LogLevel::INFO, "Server is now listening on socket <{}>", socket_);
+}
+
+void Server::Accept(EpollManager& manager, const struct epoll_event& event)
+{
+  // TODO: What should happen to the server? finish up the pending request or force close all the connections?
+  if ((event.events & EPOLLERR) == EPOLLERR)
   {
-    int sfd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol);
-    if (sfd == -1)
-    {
-      Logger::Log(LogLevel::WARNING, "Failed to create socket for {}", GetNameInfo(curr->ai_addr, curr->ai_addrlen));
-      continue;
-    }
-    if (fcntl(sfd, F_SETFL, O_NONBLOCK) == -1)
-    {
-      Logger::Log(LogLevel::WARNING, "Failed to set O_NONBLOCK for socket {}", GetSocketInfo(sfd));
-      close(sfd);
-      continue;
-    }
-
-    const int yes = 1;
-    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
-    {
-      Logger::Log(LogLevel::WARNING, "Failed to set SO_REUSEADDR for socket {}", GetSocketInfo(sfd));
-      close(sfd);
-      continue;
-    }
-    if (bind(sfd, curr->ai_addr, curr->ai_addrlen) == -1)
-    {
-      Logger::Log(LogLevel::WARNING, "Failed to bind socket to {}", GetSocketInfo(sfd));
-      close(sfd);
-      continue;
-    }
-    return sfd;
-  }
-  return (-1);
-}
-
-void Server::ListenAndRegister(EpollManager& manager, int max_connections)
-{
-  if (listen(socket_fd_, max_connections) == -1)
-    throw ServerException("listen", errno);
-  manager.AddFd(socket_fd_, EPOLLIN | EPOLLERR,
-                [this](EpollManager& manager, const struct epoll_event& event)
-                {
-                  this->Accept(manager, event);
-                });
-  Logger::Log(LogLevel::INFO, "Server {} is now listening on socket: {}", socket_fd_, socket_info_);
-}
-
-void Server::Accept(EpollManager& manager, const struct epoll_event&)
-{
-  struct sockaddr_storage client_addr;
-  socklen_t client_addr_len = sizeof(client_addr);
-  int client_fd = accept4(socket_fd_, (struct sockaddr*)&client_addr, &client_addr_len, SOCK_NONBLOCK);
-  if (client_fd == -1)
-    throw ServerException("Accept", errno);
-
-  auto [it, status] = connections_.emplace(client_fd, Connection{});
-  if (!status)
-  {
-    Logger::Log(
-        LogLevel::WARNING,
-        "Server {} tried to emplace for {} but an entry was already there and will now reset the Connection state",
-        socket_fd_, client_fd);
+    manager.RemoveFd(socket_.GetFD());
+    throw ServerException("Server", "broken socket");
   }
 
-  uint32_t events = EPOLLIN;
+  const int max_accept = 100;
   auto callback = [this](EpollManager& manager, const struct epoll_event& event)
   {
     this->HandleRequest(manager, event);
   };
 
-  try
+  for (int i = 0; i < max_accept; ++i)
   {
-    manager.AddFd(client_fd, events, callback);
+    Socket client{socket_.Accept4(SOCK_NONBLOCK)};
+    if (client.GetFD() == -1)
+      break;
+
+    auto [it, status] = connections_.emplace(client.GetFD(), Connection{client});
+    if (!status)
+    {
+      Logger::Log(LogLevel::CRITICAL,
+                  "Server <{}> tried to emplace for <{}> but an entry was already there and will now reset the "
+                  "Connection state",
+                  socket_, client);
+      it->second.Clear();
+      it->second.socket = std::move(client);
+    }
+
+    try
+    {
+      manager.AddFd(client.GetFD(), EPOLLIN, callback);
+      Logger::Log(LogLevel::INFO, "Server <{}> accepted client connection <{}>", socket_, client);
+    }
+    catch (const std::exception& ex)
+    {
+      Logger::Log(LogLevel::ERROR,
+                  "Server <{}> unable to register the client <{}> into the poll: {}. Dropping the connection!", socket_,
+                  client, ex.what());
+      // TODO: Send HTTP 5xx response directly before closing the connection
+      CloseConnection(manager, it);
+    }
   }
-  catch (const ExistInEPollException& e)
-  {
-    // TODO: what is next if modify fails?
-    manager.ModifyFd(client_fd, events, callback);
-    Logger::Log(LogLevel::WARNING, "Server {} overwriten an existing fd event and callback {} in the EPollManager",
-                socket_fd_, client_fd);
-  }
-  catch (const std::exception& e)
-  {
-    Logger::Log(LogLevel::ERROR, "Server {} failed to add {} {} to the epollmanager and has dropped the connection: {}",
-                socket_fd_, client_fd, GetSocketInfo(client_fd), e.what());
-    CloseConnection(manager, it);
-    return;
-  }
-  it->second.client_info_ = GetSocketInfo(client_fd);
-  Logger::Log(LogLevel::INFO, "Server {} {} accepted socket connection {} {}", socket_fd_, socket_info_, client_fd,
-              it->second.client_info_);
 }
 
 void Server::CloseConnection(EpollManager& manager, ConnectionIterator it)
 {
-  Logger::Log(LogLevel::INFO, "Server {} closing {} {} connection", socket_fd_, it->first, it->second.client_info_);
+  Logger::Log(LogLevel::INFO, "Server <{}> closing <{}> connection", socket_, it->first);
   manager.RemoveFd(it->first);
-  close(it->first);
   connections_.erase(it);
-}
-
-bool Server::Recv(int fd, std::string& msg, std::size_t max_chunk_size)
-{
-  constexpr std::size_t buf_size = 1024;
-  char buf[buf_size];
-
-  assert(max_chunk_size >= buf_size && "buf_size is greater than maximum chunk size");
-  for (std::size_t total{}; total < max_chunk_size;)
-  {
-    ssize_t bytes = recv(fd, buf, buf_size, 0);
-    if (bytes == 0)
-      return (false);  // Connection close by client => close connection
-    else if (bytes == -1)
-      return (true);  // everything read from buffer and is now giving EAGAIN OR EWOULDBLOCK
-    msg.append(buf, static_cast<std::size_t>(bytes));
-    total += static_cast<std::size_t>(bytes);
-  }
-  return (true);  // reached maximum chunk size (try again next tick)
-}
-
-bool Server::Send(int fd, const std::string& msg, std::size_t& leftover, std::size_t max_chunk_size)
-{
-  const char* buf = msg.data() + (msg.size() - leftover);
-
-  for (std::size_t bytes_sent{}; bytes_sent < max_chunk_size && leftover > 0;)
-  {
-    std::size_t chunk = leftover > max_chunk_size ? max_chunk_size : leftover;
-    ssize_t bytes = send(fd, buf, chunk, 0);
-    if (bytes == 0)
-      return (false);  // Connection closed by client => close connection
-    else if (bytes == -1)
-      return (true);  // EAGAIN OR EWOULDBLOCK => send next tick (any other error will be picked up by the poll manager)
-
-    bytes_sent += static_cast<std::size_t>(bytes);
-    leftover -= static_cast<std::size_t>(bytes);
-    buf += static_cast<std::size_t>(bytes);
-  }
-  return (true);  // reached the maximum chunk size => send next tick
 }
 
 void Server::HandleRequest(EpollManager& manager, const struct epoll_event& event)
@@ -194,10 +113,13 @@ void Server::HandleRequest(EpollManager& manager, const struct epoll_event& even
 
   auto& [client_fd, connection] = *it;
   std::string msg;  // TODO: retrieve from HTTP Message Request
-
-  if (!Recv(client_fd, msg))
+  ssize_t bytes = connection.socket.Recv(msg);
+  if (bytes < 1)
   {
-    Logger::Log(LogLevel::INFO, "Server {} connection with {} got closed by client", socket_fd_, client_fd);
+    if (bytes == 0)
+      Logger::Log(LogLevel::INFO, "Server <{}> connection with <{}> got closed by client", socket_, client_fd);
+    else
+      Logger::Log(LogLevel::ERROR, "Recv failed ({})! Server <{}> closing connection <{}>", errno, socket_, client_fd);
     return (CloseConnection(manager, it));
   }
 
@@ -224,13 +146,15 @@ void Server::HandleResponse(EpollManager& manager, const struct epoll_event& eve
     return (CloseConnection(manager, it));
 
   auto& [client_fd, connection] = *it;
-  std::string msg{"Hello from Server " + socket_info_ + "\r\n"};
-  std::size_t tmp{msg.size()};  // TODO: retrieve from HTTP Message Response
+  std::string msg{"Hello from Server\r\n"};
+  std::size_t leftover{msg.size()};  // TODO: retrieve from HTTP Message Response
 
   // construct the http reponse
 
-  if (!Send(client_fd, msg, tmp))
+  if (connection.socket.Send(msg, leftover) == -1)
     return (CloseConnection(manager, it));
+  else if (leftover > 0)
+    return;
 
   // TODO: Log received response message to client (without the body)
 
@@ -241,40 +165,10 @@ void Server::HandleResponse(EpollManager& manager, const struct epoll_event& eve
   manager.ModifyFd(client_fd, EPOLLIN, callback);  // client must close the connection or timeout
 }
 
-Server::Server(std::string_view service)
-{
-  addrinfo_t* result = GetAddrinfo(service);
-  socket_fd_ = SocketAndBind(result);
-  freeaddrinfo(result);
-  if (socket_fd_ == -1)
-    throw ServerException("SocketAndBind", "Failed to create and bind a socket for this server!");
-  socket_info_ = GetSocketInfo(socket_fd_);
-  Logger::Log(LogLevel::INFO, "Server {} succesfully created and is bound to the socket {}", socket_fd_, socket_info_);
-}
-
-Server::~Server(void)
-{
-  // TODO: Server has no access to EPollManager... How will the deconstructor remove the entry from the poll queue?
-  // Closing fds does implicitly remove them from the poll queue, but only if all references to the file have been
-  // closed (think about dup fds for example)
-  for (const auto& [client_fd, connection] : connections_)
-  {
-    Logger::Log(LogLevel::INFO, "Server {} {} closing client {} connection {}", socket_fd_, socket_info_, client_fd,
-                GetSocketInfo(client_fd));
-    if (close(client_fd) == -1)
-      Logger::Log(LogLevel::ERROR, "Server {} failed to close client {}: {}", socket_fd_, client_fd, strerror(errno));
-  }
-
-  if (close(socket_fd_) == 0)
-    Logger::Log(LogLevel::INFO, "Server {} {} closed the socket", socket_fd_, socket_info_);
-  else
-    Logger::Log(LogLevel::ERROR, "Server {} was unable to close the socket: {}", socket_fd_, strerror(errno));
-}
-
 void Server::Connection::Clear(void)
 {
   request.reset();
   response.reset();
-  client_info_.clear();
+  socket.Reset();
   bytes_remaining = 0;
 }

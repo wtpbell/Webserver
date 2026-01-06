@@ -1,0 +1,5 @@
+# .clangd
+CompileFlags:
+  Add: [-std=c++17, -Wall, -Wextra, -Werror, -I../include, -I../../include]
+Diagnostics:
+  UnusedIncludes: Strict

@@ -19,6 +19,8 @@
 class FileDescriptorException : public std::exception
 {
   public:
+    // TODO: Add file descriptor number to the message
+    // TODO: Support gaierror
     FileDescriptorException(const char* pathname, int err);
     FileDescriptorException(const char* prefix, const char* msg);
     const char* what(void) const noexcept override;

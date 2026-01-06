@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/22 13:59:33 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/09 14:26:33 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/29 11:30:21 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,8 @@
 #define SHARED_FD_H_
 
 #include <fcntl.h>
+#include <netdb.h>
 
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -27,12 +27,12 @@ class SharedFD
     SharedFD(SharedFD&& other) noexcept;
     SharedFD& operator=(const SharedFD& rhs);
     SharedFD& operator=(SharedFD&& rhs) noexcept;
+
+    bool operator==(const SharedFD& rhs) const;
     explicit operator int() const;
-    ~SharedFD(void);
+    virtual ~SharedFD(void);
 
     static SharedFD Open(const char* pathname, int flags, mode_t mode = (S_IRWXU & S_IRWXG));
-    static SharedFD Socket(int domain, int type, int protocol);
-    static std::pair<SharedFD, SharedFD> SocketPair(int domain, int type, int protocol);
     static std::pair<SharedFD, SharedFD> Pipe(void);
     static std::pair<SharedFD, SharedFD> Pipe2(int flags);
     static SharedFD Dup(const SharedFD& oldfd);
@@ -44,14 +44,16 @@ class SharedFD
     void Swap(SharedFD& other);
     void Reset(void);
 
-  private:
-    static std::vector<int> shared_count_fds;
-
+  protected:
     explicit SharedFD(int fd);
-
-    void Close(void) noexcept;
+    void Initialize(int fd);
 
     int fd_ = -1;
+
+  private:
+    void Close(void) noexcept;
+
+    static std::vector<int> shared_count_fds;
 
 #ifdef UNIT_TEST
   public:

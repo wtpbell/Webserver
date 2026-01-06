@@ -6,11 +6,11 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/22 17:20:37 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/04 15:01:31 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/29 11:30:26 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "SharedFD.hpp"
+#include "io/SharedFD.hpp"
 
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -18,9 +18,10 @@
 #include <unistd.h>
 
 #include <cerrno>
-#include <memory>
-#include <stdexcept>
+#include <cstdarg>
+#include <vector>
 
+#include "Logger.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "webserv.hpp"
 
@@ -32,22 +33,6 @@ SharedFD SharedFD::Open(const char* pathname, int flags, mode_t mode)
   if (fd == -1)
     throw FileDescriptorException(pathname, errno);
   return (SharedFD(fd));
-}
-
-SharedFD SharedFD::Socket(int domain, int type, int protocol)
-{
-  int fd = socket(domain, type, protocol);
-  if (fd == -1)
-    throw FileDescriptorException("socket", errno);
-  return (SharedFD(fd));
-}
-
-std::pair<SharedFD, SharedFD> SharedFD::SocketPair(int domain, int type, int protocol)
-{
-  int sv[2];
-  if (socketpair(domain, type, protocol, sv) == -1)
-    throw FileDescriptorException("socketpair", errno);
-  return (std::make_pair<SharedFD, SharedFD>(SharedFD(sv[0]), SharedFD(sv[1])));
 }
 
 std::pair<SharedFD, SharedFD> SharedFD::Pipe(void)
@@ -99,6 +84,11 @@ void SharedFD::Dup2(const SharedFD& oldfd, SharedFD& newfd)
 
 SharedFD::SharedFD(int fd)
 {
+  Initialize(fd);
+}
+
+void SharedFD::Initialize(int fd)
+{
   std::size_t req_size = static_cast<std::size_t>(fd);
   if (shared_count_fds.size() < req_size)
     shared_count_fds.resize(NextPOT(req_size));
@@ -123,6 +113,16 @@ SharedFD& SharedFD::operator=(const SharedFD& rhs)
   if (fd_ != -1)
     ++shared_count_fds[fd_];
   return (*this);
+}
+
+bool SharedFD::operator==(const SharedFD& rhs) const
+{
+  return (fd_ == rhs.fd_);
+}
+
+SharedFD::operator int() const
+{
+  return (fd_);
 }
 
 SharedFD::SharedFD(SharedFD&& other) noexcept
@@ -177,9 +177,4 @@ void SharedFD::Swap(SharedFD& other)
 void SharedFD::Reset(void)
 {
   Close();
-}
-
-SharedFD::operator int() const
-{
-  return (fd_);
 }

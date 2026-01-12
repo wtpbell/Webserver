@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   load_configs.cpp                                    :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:47:44 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:47:48 by jstuhrin       ########   odam.nl        */
+/*   Updated: 2025/12/02 10:47:48 by jstuhrin       ########   codam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 

@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   EPollManagerException.hpp                          :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/04 17:08:28 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/15 14:23:25 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/15 14:23:25 by jboon         ########   codam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   ServerException.cpp                                :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/25 11:43:18 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/02 15:01:17 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/02 15:01:17 by jboon         ########   codam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

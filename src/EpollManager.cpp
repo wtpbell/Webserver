@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   EpollManager.cpp                                   :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/11/14 15:42:18 by bewong        #+#    #+#                 */
-/*   Updated: 2025/12/29 11:55:37 by jboon         ########   odam.nl         */
+/*   Created: 2026/01/06 14:03:27 by bewong        #+#    #+#                 */
+/*   Updated: 2026/01/06 14:09:38 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,16 +15,14 @@
 #include <sys/epoll.h>
 
 #include <csignal>
-#include <exception>
 #include <system_error>
 
-#include "Logger.hpp"
 #include "exception/EPollManagerException.hpp"
 #include "webserv.hpp"
 
 EpollManager::EpollManager(void) : SharedFD()
 {
-  int fd = epoll_create1(O_CLOEXEC);  // will test it out later to see use O_CLOEXEC or 0
+  int fd = epoll_create1(O_CLOEXEC);
   if (fd == -1)
     throw EPollManagerException("epoll_create1", errno);
 

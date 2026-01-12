@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Socket.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 15:17:37 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/05 19:30:31 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/05 19:30:31 by jboon         ########   codam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

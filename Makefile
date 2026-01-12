@@ -6,20 +6,23 @@ CXXEXTRA	:=
 D_FLAGS		:= -MMD -MP
 SRC_DIR		:= src/
 BIN			:= bin/
-BIN_DIRS	:= $(BIN) $(BIN)exception/ $(BIN)config/ $(BIN)io/
+BIN_DIRS	:= $(BIN) $(BIN)exception/ $(BIN)config/ $(BIN)io/ $(BIN)http/
 MAIN		:= $(BIN)main.o
 SRCS		:= Logger.cpp helper.cpp signal.cpp Server.cpp EpollManager.cpp string.cpp
 SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp load_configs.cpp)
 SRCS_EXCEPT	:= $(addprefix exception/, FileDescriptorException.cpp ServerException.cpp EPollManagerException.cpp)
 SRCS_IO		:= $(addprefix io/, SharedFD.cpp Socket.cpp)
-SRCS		:= $(SRCS) $(SRCS_CONFIG) $(SRCS_EXCEPT) $(SRCS_IO)
+SRCS_HTTP	:= $(addprefix http/, HTTPMessage.cpp HTTPParser.cpp HTTPUtils.cpp HTTPRequest.cpp)
+SRCS		:= $(SRCS) $(SRCS_CONFIG) $(SRCS_EXCEPT) $(SRCS_IO) $(SRCS_HTTP)
+
 OBJS		:= $(SRCS:%.cpp=$(BIN)%.o)
 DEPS		:= $(BIN)main.d $(SRCS:%.cpp=$(BIN)%.d)
 
 # UNIT TEST VARIABLES
 TEST_DIR	:= tests/
 TEST_NAME	:= $(BIN)$(TEST_DIR)run_tests
-TEST_SRCS	:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_server.cpp test_epollmanager.cpp test_logger.cpp test_lexer.cpp test_parser.cpp
+TEST_SRCS	:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_server.cpp test_epollmanager.cpp \
+				test_logger.cpp test_lexer.cpp test_parser.cpp test_http_paths.cpp test_http_parser.cpp
 TEST_OBJS	:= $(TEST_SRCS:%.cpp=$(BIN)$(TEST_DIR)%.o)
 TEST_DIRS	:= $(BIN)$(TEST_DIR)
 

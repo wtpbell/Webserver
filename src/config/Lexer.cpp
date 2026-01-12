@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   Lexer.cpp                                           :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:36:50 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:36:51 by jstuhrin       ########   odam.nl        */
+/*   Updated: 2025/12/02 10:36:51 by jstuhrin       ########   codam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 

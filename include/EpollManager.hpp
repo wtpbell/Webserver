@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   EpollManager.hpp                                   :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:09 by bewong        #+#    #+#                 */
-/*   Updated: 2025/12/29 11:52:15 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/08 19:57:18 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

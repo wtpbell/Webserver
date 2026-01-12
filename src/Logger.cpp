@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Logger.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 11:15:07 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/18 16:24:32 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/08 19:58:07 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

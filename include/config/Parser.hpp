@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   Parser.hpp                                          :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:35:32 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:35:34 by jstuhrin       ########   odam.nl        */
+/*   Updated: 2025/12/02 10:35:34 by jstuhrin       ########   codam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 

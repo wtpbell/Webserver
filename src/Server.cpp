@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Server.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.ccodam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/18 12:43:53 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/02 12:01:31 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/06 10:39:13 by bewong        ########   codam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,11 +14,13 @@
 
 #include <sys/epoll.h>
 
+#include <cassert>
 #include <cstring>
 #include <string>
 
 #include "Logger.hpp"
 #include "exception/ServerException.hpp"
+#include "http/HTTPParser.hpp"
 #include "io/Socket.hpp"
 
 Server::Server(const char* service) : socket_(Socket::CreateSocket(nullptr, service, AI_PASSIVE))
@@ -123,20 +125,36 @@ void Server::HandleRequest(EpollManager& manager, const struct epoll_event& even
     return (CloseConnection(manager, it));
   }
 
-  if (msg.size() == 0 || msg.find('\n') == std::string::npos)
-    return;
-
-  // try parse and update parser state
-  //  find empty newline to handle the header/meta data part
-
-  // TODO: Log received request message from client
-
-  // parse of the data complete goto next state
-  auto callback = [this](EpollManager& manager, const struct epoll_event& event)
+  if (msg.empty())
   {
-    this->HandleResponse(manager, event);
-  };
-  manager.ModifyFd(client_fd, EPOLLOUT, callback);
+    Logger::Log(LogLevel::LDEBUG, "Server {}: Empty message received from client {}", socket_, client_fd);
+    return;
+  }
+
+  Logger::Log(LogLevel::LDEBUG, "Server {}: Received {} bytes from client {}", socket_, msg.length(), client_fd);
+
+  auto result = connection.parser.Parse(msg);
+
+  if (result == HTTPParser::ParseResult::Error)
+  {
+    Logger::Log(LogLevel::ERROR, "Server {}: Bad request from client {} - Parser error", socket_, client_fd);
+    // return QueueResponse(manager, client_fd, connection, HTTPResponse::MakeError(400, "Bad Request"));
+    return;
+  }
+  if (result == HTTPParser::ParseResult::NeedMoreData)
+  {
+    Logger::Log(LogLevel::LDEBUG, "Server {}: Incomplete request from client {}, waiting for more data", socket_,
+                client_fd);
+    return;  // wait for more data
+  }
+  connection.request.emplace(connection.parser.TakeRequest());
+  // TODO: build real response from request
+  assert(connection.request.has_value());
+  const HTTPRequest& req = *connection.request;
+  Logger::Log(LogLevel::INFO, "Server {}: {} {} from Client {}", socket_, req.GetMethodString(), req.GetRawPath(),
+              client_fd);
+  // Only log 200 OK for successful requests
+  Logger::Log(LogLevel::INFO, "Server {}: 200 OK sent to client {}", socket_, client_fd);
 }
 
 void Server::HandleResponse(EpollManager& manager, const struct epoll_event& event)
@@ -168,7 +186,6 @@ void Server::HandleResponse(EpollManager& manager, const struct epoll_event& eve
 void Server::Connection::Clear(void)
 {
   request.reset();
-  response.reset();
   socket.Reset();
-  bytes_remaining = 0;
+  parser.Reset();
 }

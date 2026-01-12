@@ -5,8 +5,8 @@
 /*                                                     +:+                    */
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/11/18 12:41:29 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/26 15:30:35 by jboon         ########   odam.nl         */
+/*   Created: 2026/01/06 14:04:06 by bewong        #+#    #+#                 */
+/*   Updated: 2026/01/08 17:03:20 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,13 +16,13 @@
 #include <netdb.h>
 
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 #include "EpollManager.hpp"
+#include "http/HTTPParser.hpp"
+#include "http/HTTPRequest.hpp"
 #include "io/Socket.hpp"
-
-struct Connection;
-struct HTTPMessage;
 
 class Server
 {
@@ -45,11 +45,8 @@ class Server
         void Clear(void);
 
         Socket socket;
-        // TODO: Remove pointer (incomplete type)
-        std::unique_ptr<HTTPMessage*> request;
-        std::unique_ptr<HTTPMessage*> response;
-        std::size_t bytes_remaining;  // Without this member the Connection size is equal to 64 bytes
-
+        HTTPParser parser;
+        std::optional<HTTPRequest> request;
     };  // Current size 72 bytes
 
     using addrinfo_t = struct addrinfo;
@@ -60,6 +57,7 @@ class Server
     void HandleRequest(EpollManager& manager, const struct epoll_event&);
     void HandleResponse(EpollManager& manager, const struct epoll_event&);
     void CloseConnection(EpollManager& manager, ConnectionIterator it);
+    void ParseRequest(std::string_view data);
 
     Socket socket_;
     std::unordered_map<int, Connection> connections_;

@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   webserv.hpp                                        :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/18 17:18:13 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/22 16:25:02 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/08 19:57:35 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

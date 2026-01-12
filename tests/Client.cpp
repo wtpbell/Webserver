@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Client.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/01 15:03:21 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/28 15:43:11 by jboon         ########   odam.nl         */
+/*   Updated: 2025/12/28 15:43:11 by jboon         ########   codam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

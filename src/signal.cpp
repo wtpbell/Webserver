@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   signal.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/20 11:45:58 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/20 16:47:45 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/08 19:58:18 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include <cctype>
+#include <charconv>
 #include <string>
 #include <string_view>
 
@@ -77,5 +78,12 @@ namespace String
   bool starts_with(std::string_view s, std::string_view prefix)
   {
     return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
+  }
+
+  bool ConvertToNumber(std::string_view sv, std::size_t& result, int base = 10)
+  {
+    const char* end = sv.data() + sv.length();
+    auto [ptr, ec] = std::from_chars(sv.data(), end, result, base);
+    return (ec == std::errc{} && ptr == end);
   }
 }  // namespace String

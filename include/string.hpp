@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <string_view>
 #include <string>
+#include <string_view>
 
 namespace String
 {
@@ -22,4 +22,5 @@ namespace String
   void ToLowerInPlace(std::string& s);
   void AppendHex(std::string& result, unsigned char c);
   bool starts_with(std::string_view s, std::string_view prefix);
+  bool ConvertToDigit(std::string_view sv, std::size_t& result, int base = 10);
 }  // namespace String

@@ -6,21 +6,24 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 17:28:14 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:57:43 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/15 16:19:49 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "http/HTTPMessage.hpp"
 
 #include <cassert>
-#include <charconv>      // std::from_chars
-#include <system_error>  // std::errc
 
+#include "http/HTTPValidator.hpp"
 #include "string.hpp"
 
 HTTPMessage::HTTPMessage(std::string ver, HTTP::Headers headers, std::string body)
     : version_(std::move(ver)), headers_(std::move(headers)), body_(std::move(body))
 {
+#ifndef NDEBUG
+  for (const auto& [name, _] : headers_)
+    assert(HTTP::validate::IsValidHeaderName(name));
+#endif
 }
 
 /************************************************** Getter ***********************************************************/
@@ -39,12 +42,20 @@ HTTP::Headers& HTTPMessage::GetHeaders(void)
   return headers_;
 }
 
-std::string_view HTTPMessage::GetHeader(std::string_view name) const
+const std::vector<std::string>* HTTPMessage::GetHeaderValuesOf(std::string_view name) const
 {
   auto it = headers_.find(String::ToLower(name));
   if (it == headers_.end())
+    return nullptr;
+  return &it->second;
+}
+
+std::string_view HTTPMessage::GetFirstHeaderValueOf(std::string_view name) const
+{
+  auto vals = GetHeaderValuesOf(name);
+  if (!vals || vals->empty())
     return {};
-  return it->second;
+  return (*vals)[0];
 }
 
 const std::string& HTTPMessage::GetBody(void) const
@@ -63,30 +74,15 @@ void HTTPMessage::SetBody(const std::string& body)
 }
 void HTTPMessage::SetHeader(std::string_view name, std::string_view value)
 {
-  headers_[String::ToLower(name)] = std::string(value);
+  auto& vec = headers_[String::ToLower(name)];
+  vec.clear();
+  vec.emplace_back(String::Trim(value));
 }
 
 /************************************************** Helper ***********************************************************/
-// append with comma for “list headers”, but not for set-cookie for later use
 void HTTPMessage::AddHeader(std::string_view name, std::string_view value)
 {
-  std::string key = String::ToLower(name);
-
-  auto [it, inserted] = headers_.try_emplace(key, std::string(value));
-  if (!inserted)
-  {
-    if (key == "set-cookie")
-    {
-      // Preserve multiple Set-Cookie headers
-      it->second.append("\n");
-      it->second.append(value);
-    }
-    else
-    {
-      it->second.append(", ");
-      it->second.append(value);
-    }
-  }
+  headers_[String::ToLower(name)].emplace_back(String::Trim(value));
 }
 
 void HTTPMessage::AppendBody(std::string_view body)
@@ -99,35 +95,47 @@ void HTTPMessage::RemoveHeader(std::string_view name)
   headers_.erase(String::ToLower(name));
 }
 
+std::size_t HTTPMessage::GetHeaderValueCountOf(std::string_view name) const
+{
+  auto it = headers_.find(String::ToLower(name));
+  return (it == headers_.end()) ? 0 : it->second.size();
+}
+
 bool HTTPMessage::HasHeader(std::string_view name) const
 {
   return headers_.find(String::ToLower(name)) != headers_.end();
 }
 
-// use std:::from_chars instead of std::stol as it wont throw exceptions
 std::optional<std::size_t> HTTPMessage::GetContentLength(void) const
 {
-  auto it = headers_.find("content-length");
-  if (it == headers_.end())
+  auto vals = GetHeaderValuesOf("content-length");
+  if (!vals || vals->empty())
     return std::nullopt;
-  std::string_view val = String::Trim(it->second);
-  if (val.empty())
-    return std::nullopt;
-  std::size_t res{};
-  const char* first = val.data();
-  const char* last = val.data() + val.size();
-  auto [ptr, ec] = std::from_chars(first, last, res, 10);
-  // ec != std::errc() => invalid or out of range
-  // ptr != last       => trailing junk like "123abc"
-  if (ec != std::errc() || ptr != last)
-    return std::nullopt;
-  return res;
+
+  std::optional<std::size_t> first;
+  for (const auto& val : *vals)
+  {
+    std::size_t n{};
+    if (!String::ConvertToNumber(val, n, 10))
+      return std::nullopt;
+    if (!first)
+      first = n;
+    else if (*first != n)
+      return std::nullopt;
+  }
+  return first;
 }
 
 bool HTTPMessage::IsChunked(void) const
 {
-  auto it = headers_.find("transfer-encoding");
-  if (it == headers_.end())
+  auto vals = GetHeaderValuesOf("transfer-encoding");
+  if (!vals)
     return false;
-  return it->second.find("chunked") != std::string::npos;
+
+  for (const auto& v : *vals)
+  {
+    if (String::ToLower(v) == "chunked")
+      return true;
+  }
+  return false;
 }

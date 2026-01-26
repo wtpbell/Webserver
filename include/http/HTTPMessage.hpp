@@ -1,13 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
-/*   HTTPMessage.hpp                                   :+:    :+:            */
-/*   HTTPMessager.hpp                                   :+:    :+:            */
+/*   HTTPMessage.hpp                                    :+:    :+:            */
 /*                                                     +:+                    */
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/12/02 15:29:51 by bewong        #+#    #+#                 */
-/*   Updated: 2025/12/02 15:29:51 by bewong        ########   odam.nl         */
+/*   Created: 2026/01/15 16:20:44 by bewong        #+#    #+#                 */
+/*   Updated: 2026/01/15 16:20:49 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +32,8 @@ class HTTPMessage
     HTTPMessage(std::string ver, HTTP::Headers headers, std::string body);
 
     std::string_view GetVersion(void) const;
-    std::string_view GetHeader(std::string_view name) const;
+    const std::vector<std::string>* GetHeaderValuesOf(std::string_view name) const;
+    std::string_view GetFirstHeaderValueOf(std::string_view name) const;
     const std::string& GetBody(void) const;
 
     void SetVersion(std::string ver);
@@ -44,6 +44,7 @@ class HTTPMessage
     void AppendBody(std::string_view body);
     void RemoveHeader(std::string_view name);
 
+    std::size_t GetHeaderValueCountOf(std::string_view name) const;
     bool HasHeader(std::string_view name) const;
     std::optional<std::size_t> GetContentLength(void) const;
     bool IsChunked(void) const;

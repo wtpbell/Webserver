@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Server.hpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/06 14:04:06 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 17:03:20 by jboon         ########   odam.nl         */
+/*   Updated: 2026/01/13 19:06:52 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,6 @@
 
 #include <netdb.h>
 
-#include <memory>
 #include <optional>
 #include <unordered_map>
 
@@ -49,9 +48,21 @@ class Server
         std::optional<HTTPRequest> request;
     };  // Current size 72 bytes
 
+    enum class ReadResult
+    {
+      Ok,
+      Empty,
+      Closed,
+      Fatal
+    };
+
     using addrinfo_t = struct addrinfo;
     using sockaddr_storage_t = struct sockaddr_storage;
     using ConnectionIterator = std::unordered_map<int, Connection>::iterator;
+
+    ReadResult ReadOnce(Connection& c, std::string& out, int fd);
+    void InitBodyParser(HTTPParser& parser, const HTTPRequest& req);
+    bool HandleHeadersDone(EpollManager& manager, Connection& connection, int client_fd);
 
     void Accept(EpollManager& manager, const struct epoll_event&);
     void HandleRequest(EpollManager& manager, const struct epoll_event&);

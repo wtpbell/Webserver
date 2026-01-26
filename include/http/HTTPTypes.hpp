@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 14:54:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:56:55 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/13 19:06:30 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,11 +18,12 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace HTTP
 {
 
-  using Headers = std::unordered_map<std::string, std::string>;
+  using Headers = std::unordered_map<std::string, std::vector<std::string>>;
 
   inline constexpr std::string_view kCRLF = "\r\n";
   inline constexpr std::string_view kWHITESPACE = " \t\v\r\n";

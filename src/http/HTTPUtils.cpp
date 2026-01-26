@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 13:31:19 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:57:54 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/15 16:20:07 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,10 +15,8 @@
 #include <sys/stat.h>
 
 #include <cctype>
-#include <charconv>
 #include <ctime>
 #include <string_view>
-#include <system_error>
 
 #include "http/HTTPUtils.hpp"
 #include "string.hpp"
@@ -32,7 +30,7 @@ namespace HTTP::wire
   std::string URLEncode(std::string_view str)  // didnt use
   {
     std::string result;
-    result.reserve(str.length() * 3);  // worst case every character becomes %HH
+    result.reserve(str.length() * 3);
 
     for (unsigned char c : str)
     {
@@ -53,19 +51,17 @@ namespace HTTP::wire
     {
       if (str[i] == '%' && i + 2 < str.size())
       {
-        unsigned int byte = 0;
-        const char* start = str.data() + i + 1;  // 1st hex digit
-        const char* end = str.data() + i + 3;    // one past 2nd hex digit
+        unsigned int byte{0};
+        const char* start = str.data() + i + 1;
 
-        auto [ptr, ec] = std::from_chars(start, end, byte, 16);
-        if (ec == std::errc() && ptr == end && byte <= 0xFF)
+        if (String::ConvertToNumber(std::string_view(start, 2), reinterpret_cast<std::size_t&>(byte), 16) &&
+            byte <= 0xFF)
         {
           result.push_back(static_cast<char>(byte));
           i += 2;
-          continue;
         }
       }
-      if (str[i] == '+')  // HTML form style: '+' means space
+      if (str[i] == '+')
         result.push_back(' ');
       else
         result.push_back(str[i]);

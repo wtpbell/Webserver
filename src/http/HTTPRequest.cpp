@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:14:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:57:51 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/15 16:20:00 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,6 @@
 
 #include <vector>
 
-#include "http/HTTPTypes.hpp"
 #include "http/HTTPUtils.hpp"
 
 // | Input      | Normalized |
@@ -29,10 +28,8 @@
 bool HTTPRequest::NormalizePath(std::string_view in, std::string& out)
 {
   out.clear();
-  // TODO: will we enfore leading slash -> absolute paths, match RFC 9112
   if (in.empty() || in[0] != '/')
     return false;
-  // preserve the trailing slash if the raw path end with '/'
   std::vector<std::string_view> segments;
   segments.reserve(8);
   std::size_t segStart = 1;
@@ -45,16 +42,14 @@ bool HTTPRequest::NormalizePath(std::string_view in, std::string& out)
     std::size_t segEnd = segStart;
     while (segEnd < in.size() && in[segEnd] != '/')
       ++segEnd;
-    // const std::size_t len = segEnd - segStart;
     std::string_view segment = in.substr(segStart, segEnd - segStart);
     if (segment == "..")
     {
       if (segments.empty())
-        return false;       // Reject paths that go above root
-                            // for server reject it (403/400)
-      segments.pop_back();  // /a/b/../c -> /a/b/c
+        return false;
+      segments.pop_back();
     }
-    else if (segment != ".")  // ignore /a/./b/ -> /a/b/
+    else if (segment != ".")
       segments.push_back(segment);
     segStart = segEnd;
   }
@@ -105,13 +100,12 @@ std::string_view HTTPRequest::GetPath(void) const
   return path_;
 }
 
-std::string_view HTTPRequest::GetHost(void) const
+std::string_view HTTPRequest::GetHost() const
 {
-  const HTTP::Headers& headers = GetHeaders();
-  auto it = headers.find("host");
-  if (it == headers.end())
+  std::string_view host = GetFirstHeaderValueOf("host");
+  if (host.empty())
     return {};
-  std::string_view host = it->second;
+
   auto colon = host.find(':');
   return (colon == std::string_view::npos) ? host : host.substr(0, colon);
 }
@@ -123,7 +117,7 @@ void HTTPRequest::SetMethod(HTTP::Method method)
   method_ = method;
 }
 
-void HTTPRequest::SetTarget(std::string_view target)
+bool HTTPRequest::SetTarget(std::string_view target)
 {
   target_.assign(target);
   const size_t q = target_.find('?');
@@ -137,15 +131,13 @@ void HTTPRequest::SetTarget(std::string_view target)
   }
   else
     raw_path = std::string_view(target_);
-  // URL-decode path FIRST
   std::string decoded = HTTP::wire::URLDecode(raw_path);
-  // Normalize decoded path
   std::string normalized;
   if (!NormalizePath(decoded, normalized))
-    // signal parser error (400)
-    return;
-  uri_ = raw_path;  // optional: keep raw URI
+    return false;
+  uri_ = raw_path;
   path_ = std::move(normalized);
+  return true;
 }
 
 void HTTPRequest::SetMethod(std::string_view method)

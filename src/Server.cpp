@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Server.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.ccodam.nl>             +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
-/*   Created: 2025/11/18 12:43:53 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/06 10:39:13 by bewong        ########   codam.nl         */
+/*   Created: 2026/01/13 19:08:02 by bewong        #+#    #+#                 */
+/*   Updated: 2026/01/15 16:20:20 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 #include "Logger.hpp"
 #include "exception/ServerException.hpp"
 #include "http/HTTPParser.hpp"
+#include "http/HTTPValidator.hpp"
 #include "io/Socket.hpp"
 
 Server::Server(const char* service) : socket_(Socket::CreateSocket(nullptr, service, AI_PASSIVE))
@@ -107,64 +108,140 @@ void Server::CloseConnection(EpollManager& manager, ConnectionIterator it)
   connections_.erase(it);
 }
 
-void Server::HandleRequest(EpollManager& manager, const struct epoll_event& event)
+Server::ReadResult Server::ReadOnce(Connection& c, std::string& out, int client_fd)
 {
-  ConnectionIterator it = connections_.find(event.data.fd);
-  if ((event.events & (EPOLLERR | EPOLLHUP)) != 0)
-    return (CloseConnection(manager, it));
+  out.clear();
+  const ssize_t bytes = c.socket.Recv(out);
 
-  auto& [client_fd, connection] = *it;
-  std::string msg;  // TODO: retrieve from HTTP Message Request
-  ssize_t bytes = connection.socket.Recv(msg);
-  if (bytes < 1)
+  if (bytes == 0)
   {
-    if (bytes == 0)
-      Logger::Log(LogLevel::INFO, "Server <{}> connection with <{}> got closed by client", socket_, client_fd);
-    else
-      Logger::Log(LogLevel::ERROR, "Recv failed ({})! Server <{}> closing connection <{}>", errno, socket_, client_fd);
-    return (CloseConnection(manager, it));
+    Logger::Log(LogLevel::INFO, "Server <{}> connection with <{}> got closed by client", socket_, client_fd);
+    return ReadResult::Closed;
   }
-
-  if (msg.empty())
+  if (bytes < 0)
   {
-    Logger::Log(LogLevel::LDEBUG, "Server {}: Empty message received from client {}", socket_, client_fd);
+    Logger::Log(LogLevel::ERROR, "Recv failed ({})! Server <{}> closing connection <{}>", errno, socket_, client_fd);
+    return ReadResult::Fatal;
+  }
+  return ReadResult::Ok;
+}
+
+// After ValidateRequest(req) == OK:
+// - transfer-encoding is either absent or exactly "chunked"
+// - transfer-encoding and content-length are not both present
+// - content-length (if present) is valid and within limits
+void Server::InitBodyParser(HTTPParser& parser, const HTTPRequest& req)
+{
+  const auto* te = req.GetHeaderValuesOf("transfer-encoding");
+  const auto* cl = req.GetHeaderValuesOf("content-length");
+
+  const bool has_te = te && !te->empty();
+  const bool has_cl = cl && !cl->empty();
+
+  if (has_te)
+  {
+    parser.SetChunked();
     return;
   }
+  if (has_cl)
+  {
+    auto len = req.GetContentLength();
+    if (!len)
+    {
+      parser.SetNoBody();
+      return;  // validation should have already returned 400
+    }
+    parser.SetContentLength(*len);
+    return;
+  }
+  parser.SetNoBody();
+}
 
-  Logger::Log(LogLevel::LDEBUG, "Server {}: Received {} bytes from client {}", socket_, msg.length(), client_fd);
+bool Server::HandleHeadersDone(EpollManager& manager, Connection& connection, int client_fd)
+{
+  (void)manager;  // remove once QueueError/QueueBadRequest uses it
+  const HTTPRequest& partial = connection.parser.GetRequest();
+  const ValidationResult vr = ValidateRequest(partial);
 
-  auto result = connection.parser.Parse(msg);
+  if (vr != ValidationResult::OK)
+  {
+    Logger::Log(LogLevel::ERROR, "Server {}: Validation error ({}) from client {}", socket_, static_cast<int>(vr),
+                client_fd);
+    // TODO: QueueError(manager, it, vr);
+    return false;
+  }
+  InitBodyParser(connection.parser, partial);
+  auto vResult = connection.parser.Parse({});  // continue consuming what we have left instead of append new bytes
+  if (vResult == HTTPParser::ParseResult::NeedMoreData)
+    return false;
+  if (vResult == HTTPParser::ParseResult::Error)
+  {
+    Logger::Log(LogLevel::ERROR, "Server {}: Parser error after body decision from client {}", socket_, client_fd);
+    // TODO: QueueBadRequest(manager, it);
+    return false;
+  }
+  return (vResult == HTTPParser::ParseResult::Done);
+}
 
+void Server::HandleRequest(EpollManager& manager, const epoll_event& event)
+{
+  ConnectionIterator it = connections_.find(event.data.fd);
+  if (it == connections_.end())
+    return;
+  if ((event.events & (EPOLLERR | EPOLLHUP)) != 0)
+    return CloseConnection(manager, it);
+  auto& [client_fd, connection] = *it;
+  std::string msg;
+  const ReadResult rr = ReadOnce(connection, msg, client_fd);
+
+  if (rr == ReadResult::Empty)
+    return;
+  if (rr == ReadResult::Closed || rr == ReadResult::Fatal)
+    return CloseConnection(manager, it);
+  Logger::Log(LogLevel::LDEBUG, "Server {}: Received {} bytes from client {}", socket_, msg.size(), client_fd);
+  HTTPParser::ParseResult result = connection.parser.Parse(msg);
+  if (result == HTTPParser::ParseResult::NeedMoreData)
+    return;
   if (result == HTTPParser::ParseResult::Error)
   {
     Logger::Log(LogLevel::ERROR, "Server {}: Bad request from client {} - Parser error", socket_, client_fd);
-    // return QueueResponse(manager, client_fd, connection, HTTPResponse::MakeError(400, "Bad Request"));
+    // TODO: QueueBadRequest(manager, it);
     return;
   }
-  if (result == HTTPParser::ParseResult::NeedMoreData)
+  if (result == HTTPParser::ParseResult::HeadersDone)
   {
-    Logger::Log(LogLevel::LDEBUG, "Server {}: Incomplete request from client {}, waiting for more data", socket_,
-                client_fd);
-    return;  // wait for more data
+    const bool done = HandleHeadersDone(manager, connection, client_fd); // TODO will return state later, now keep it returning bool
+    if (!done)
+      return;
+    result = HTTPParser::ParseResult::Done;
   }
+  // Done: take request
   connection.request.emplace(connection.parser.TakeRequest());
-  // TODO: build real response from request
-  assert(connection.request.has_value());
   const HTTPRequest& req = *connection.request;
   Logger::Log(LogLevel::INFO, "Server {}: {} {} from Client {}", socket_, req.GetMethodString(), req.GetRawPath(),
               client_fd);
-  // Only log 200 OK for successful requests
-  Logger::Log(LogLevel::INFO, "Server {}: 200 OK sent to client {}", socket_, client_fd);
+  // TODO: DispatchRequest(...) -> QueueResponse(...) -> switch to EPOLLOUT
 }
 
 void Server::HandleResponse(EpollManager& manager, const struct epoll_event& event)
 {
   ConnectionIterator it = connections_.find(event.data.fd);
+  if (it == connections_.end())
+    return;
   if ((event.events & (EPOLLERR | EPOLLHUP)) != 0)
     return (CloseConnection(manager, it));
 
   auto& [client_fd, connection] = *it;
-  std::string msg{"Hello from Server\r\n"};
+  std::string body = "Hello";
+  std::string msg =
+      "HTTP/1.1 200 OK\r\n"
+      "Content-Length: " +
+      std::to_string(body.size()) +
+      "\r\n"
+      "Connection: close\r\n"
+      "\r\n" +
+      body;
+
   std::size_t leftover{msg.size()};  // TODO: retrieve from HTTP Message Response
 
   // construct the http reponse

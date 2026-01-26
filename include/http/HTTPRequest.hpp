@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:12:54 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:56:51 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/13 19:06:11 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,7 @@ class HTTPRequest : public HTTPMessage
     std::string_view GetHost(void) const;
 
     void SetMethod(HTTP::Method method);
-    void SetTarget(std::string_view target);
+    bool SetTarget(std::string_view target);
     void SetMethod(std::string_view method);
 
     bool IsComplete(void) const;

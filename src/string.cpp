@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:22:46 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/08 19:58:22 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/13 19:08:14 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include <charconv>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include "http/HTTPTypes.hpp"
 

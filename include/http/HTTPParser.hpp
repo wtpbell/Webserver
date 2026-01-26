@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/02 15:28:21 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:56:46 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/13 19:06:04 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ class HTTPParser
     {
       StartLine,
       Headers,
+      AwaitBodyDecision,
       Body,
       Chunked,
       Done,
@@ -35,6 +36,7 @@ class HTTPParser
     enum class ParseResult
     {
       NeedMoreData,
+      HeadersDone,
       Done,
       Error
     };
@@ -61,14 +63,17 @@ class HTTPParser
     ~HTTPParser(void) = default;
 
     ParseResult Parse(std::string_view data);
-    ParseResult ExitResult(void) const;
+    ParseResult ExitResult(void);
     bool IsComplete(void) const;
     bool HasError(void) const;
 
+    void SetNoBody();
+    void SetContentLength(std::size_t n);
+    void SetChunked();
+    bool NeedsBodyDecision() const;
+
     const HTTPRequest& GetRequest(void) const;
     HTTPRequest TakeRequest(void);
-
-    ParserState GetState(void) const;
     void Reset(void);
 
   private:
@@ -86,7 +91,6 @@ class HTTPParser
     bool ConsumeLine(const std::string& buf, size_t& pos, size_t& lineEnd);
     bool ParseRequestLine(const size_t lineStart, size_t lineEnd);
     bool ParseHeaderLine(const size_t lineStart, size_t lineEnd);
-    void UpdateState(void);
     void Fail(void);
 
     HTTPRequest req_;

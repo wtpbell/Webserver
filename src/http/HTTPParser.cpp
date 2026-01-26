@@ -6,18 +6,19 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 17:14:02 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/08 19:57:47 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/15 16:19:53 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "http/HTTPParser.hpp"
 
 #include <algorithm>
-#include <charconv>
 #include <cstdlib>
 
+#include "Logger.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPTypes.hpp"
+// #include "http/HTTPUtils.hpp"
 #include "string.hpp"
 
 /************************************************** Helper ***********************************************************/
@@ -61,6 +62,7 @@ bool HTTPParser::HasError(void) const
 
 void HTTPParser::Fail(void)
 {
+  Logger::Log(LogLevel::LDEBUG, "Parser failed in state {}", static_cast<int>(state_));
   state_ = ParserState::Error;
 }
 
@@ -69,11 +71,6 @@ void HTTPParser::Fail(void)
 const HTTPRequest& HTTPParser::GetRequest(void) const
 {
   return req_;
-}
-
-HTTPParser::ParserState HTTPParser::GetState(void) const
-{
-  return state_;
 }
 
 void HTTPParser::Reset(void)
@@ -93,6 +90,41 @@ HTTPRequest HTTPParser::TakeRequest(void)
   state_ = ParserState::Done;
   // clear parser only after request destroyed
   return req;
+}
+
+/************************************************** Setter ***********************************************************/
+
+bool HTTPParser::NeedsBodyDecision(void) const
+{
+  return state_ == ParserState::AwaitBodyDecision;
+}
+
+void HTTPParser::SetNoBody(void)
+{
+  // only valid after headers end
+  if (state_ != ParserState::AwaitBodyDecision)
+    return (Fail(), void());
+
+  state_ = ParserState::Done;
+}
+
+void HTTPParser::SetContentLength(std::size_t n)
+{
+  if (state_ != ParserState::AwaitBodyDecision)
+    return (Fail(), void());
+
+  contentLength_ = n;
+  bodyRead_ = 0;
+  state_ = (contentLength_ > 0) ? ParserState::Body : ParserState::Done;
+}
+
+void HTTPParser::SetChunked(void)
+{
+  if (state_ != ParserState::AwaitBodyDecision)
+    return (Fail(), void());
+
+  chunk_ = ChunkState{};
+  state_ = ParserState::Chunked;
 }
 
 /************************************************ Parse lines *********************************************************/
@@ -128,9 +160,10 @@ bool HTTPParser::ParseRequestLine(const size_t lineStart, size_t lineEnd)
   if (version.find(' ') != std::string::npos || version != HTTP::kVERSION)
     return (Fail(), false);
   // TODO(VALIDATE): method support checks (501 vs 400)
-  // if (!HTTPValidation::IsValidMethod(method)) return Fail();
+  // if (!HTTPValidation::Method(method)) return Fail();
   req_.SetMethod(method);
-  req_.SetTarget(target);
+  if (!req_.SetTarget(target))
+    return (Fail(), false);
   req_.SetVersion(std::string(version));
   return true;
 }
@@ -153,12 +186,7 @@ bool HTTPParser::ParseHeaderLine(const size_t lineStart, size_t lineEnd)
   }
 
   std::string_view name(buffer_.data() + lineStart, colon - lineStart);
-
-  size_t vBegin = colon + 1;
-  while (vBegin < lineEnd && (buffer_[vBegin] == ' ' || buffer_[vBegin] == '\t'))
-    ++vBegin;
-
-  std::string_view value(buffer_.data() + vBegin, lineEnd - vBegin);
+  std::string_view value(buffer_.data() + (colon + 1), lineEnd - (colon + 1));
   req_.AddHeader(name, value);
   return true;
 }
@@ -180,7 +208,7 @@ bool HTTPParser::ParseChunkSize(void)
   size_t start = pos_;
 
   if (!ConsumeLine(buffer_, pos_, lineEnd))
-    return false;
+    return (false);
   std::string_view line(buffer_.data() + start, lineEnd - start);
   // can accept chunk extentsions A;foo=bar\r\n
   auto semi = line.find(';');
@@ -188,12 +216,10 @@ bool HTTPParser::ParseChunkSize(void)
     line.remove_suffix(line.size() - semi);
   line = String::Trim(line);
   if (line.empty())
-    return (Fail(), false);
+    return false;
   // parse hex
-  std::size_t size = 0;
-  auto [ptr, ec] = std::from_chars(line.data(), line.data() + line.size(), size, 16);
-  // Validation
-  if (ec != std::errc{} || ptr != line.data() + line.size())
+  std::size_t size{0};
+  if (!String::ConvertToNumber(line, size, 16))
     return (Fail(), false);  // invalid chunk size
 
   chunk_.remaining = size;
@@ -226,11 +252,28 @@ bool HTTPParser::ParseChunkCRLF(void)
 
 bool HTTPParser::ParseChunkTrailer(void)
 {
-  if (!ParseChunkCRLF())
-    return false;
+  // We are at the start of trailer section after "0\r\n".
+  // Trailer section ends with an empty line "\r\n".
+  // For now, reject any non-empty trailer lines.
 
-  chunk_.phase = ChunkState::Phase::Done;
-  return true;
+  while (true)
+  {
+    size_t lineEnd = 0;
+    size_t lineStart = pos_;
+
+    if (!ConsumeLine(buffer_, pos_, lineEnd))
+      return false;  // need more data
+
+    if (lineEnd == lineStart)
+    {
+      // empty line => end of trailers
+      chunk_.phase = ChunkState::Phase::Done;
+      return true;
+    }
+
+    // Non-empty trailer line present: reject (not supported yet)
+    return (Fail(), false);
+  }
 }
 
 /************************************************* Parser ************************************************************/
@@ -270,26 +313,6 @@ bool HTTPParser::ParseStartLine(void)
   }
 }
 
-/*If the message has Transfer-Encoding (and it includes chunked),
-then you must not use Content-Length to delimit the body.
-ignore Content-Length for body-length decisions.*/
-void HTTPParser::UpdateState(void)
-{
-  if (req_.IsChunked())
-  {
-    state_ = ParserState::Chunked;
-    return;
-  }
-  else if (auto len = req_.GetContentLength())
-  {
-    contentLength_ = *len;
-    // TODO(VALIDATE): content length checks (413 vs 400)
-    state_ = (contentLength_ > 0) ? ParserState::Body : ParserState::Done;
-    return;
-  }
-  state_ = ParserState::Done;
-}
-
 /*
     @brief Parses the headers of the HTTP request
     @return ParseProgress::NeedMoreData if need more data,
@@ -309,7 +332,7 @@ bool HTTPParser::ParseHeaders(void)
 
     if (lineEnd == lineStart)
     {
-      UpdateState();
+      state_ = ParserState::AwaitBodyDecision;
       return true;
     }
 
@@ -379,14 +402,17 @@ bool HTTPParser::ParseChunked(void)
   }
 }
 
-HTTPParser::ParseResult HTTPParser::ExitResult(void) const
+HTTPParser::ParseResult HTTPParser::ExitResult(void)
 {
   if (state_ == ParserState::Done)
+  {
+    req_.SetComplete(true);
     return ParseResult::Done;
-
+  }
   if (state_ == ParserState::Error)
     return ParseResult::Error;
-
+  if (state_ == ParserState::AwaitBodyDecision)
+    return ParseResult::HeadersDone;
   return ParseResult::NeedMoreData;
 }
 
@@ -402,15 +428,17 @@ HTTPParser::ParseResult HTTPParser::ExitResult(void) const
     keep the states, transition decisions are based on line boundaries not per byte
     read start-line -> headers -> empty line -> body
     ParserState: the current state of the parser, keep track of the boundaries
-    ParseProgress: advance vs need more data, indicate what actions to be taken next
 */
 HTTPParser::ParseResult HTTPParser::Parse(std::string_view input)
 {
+  if (state_ == ParserState::Done || state_ == ParserState::Error)
+    return ExitResult();
   buffer_.append(input);
-
   if (state_ == ParserState::StartLine && !ParseStartLine())
     return ExitResult();
   if (state_ == ParserState::Headers && !ParseHeaders())
+    return ExitResult();
+  if (state_ == ParserState::AwaitBodyDecision)
     return ExitResult();
   if (state_ == ParserState::Body && !ParseBody())
     return ExitResult();

@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   SharedFD.cpp                                       :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/22 17:20:37 by jboon         #+#    #+#                 */
-/*   Updated: 2025/12/29 11:30:26 by jboon         ########   codam.nl         */
+/*   Updated: 2026/01/13 19:08:30 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

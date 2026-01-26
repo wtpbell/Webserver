@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Socket.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 15:17:37 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/05 19:30:31 by jboon         ########   codam.nl         */
+/*   Updated: 2026/01/13 19:08:25 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,14 +17,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include <cctype>
 #include <cerrno>
 #include <charconv>
-#include <cstdarg>
 #include <cstring>
 #include <ostream>
 #include <string>
-#include <string_view>
 
 #include "exception/FileDescriptorException.hpp"
 #include "io/SharedFD.hpp"

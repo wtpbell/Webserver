@@ -16,6 +16,8 @@
 #include <string>
 #include <string_view>
 
+#include "HTTPTypes.hpp"
+
 class HTTPResponse;
 
 namespace HTTP
@@ -28,18 +30,5 @@ namespace HTTP
 
   }  // namespace wire
 }  // namespace HTTP
-
-/*HTTPResponse {
-    status = 200
-    reason = "OK"
-    headers = { "content-length": "5" }
-    body = "Hello"
-  }
--->HTTP/1.1 200 OK\r\n
-Content-Length: 5\r\n
-\r\n
-Hello
-
-*/
 
 #endif  // HTTPUTILS_HPP

@@ -72,8 +72,7 @@ TEST_CASE("Parser + Validator: invalid HTTP version", "[http][integration]")
       "\r\n");
 
   // Parser should fail at start-line level.
-  REQUIRE(res.parse == HTTPParser::ParseResult::Error);
-  REQUIRE_FALSE(res.validate.has_value());
+  REQUIRE(res.validate == ValidationResult::VersionNotSupported);
 }
 
 TEST_CASE("Parser + Validator: reject CL and chunked together", "[http][integration]")

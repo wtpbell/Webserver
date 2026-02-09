@@ -20,11 +20,9 @@
 #include <unistd.h>
 
 #include <cstring>
-#include <stdexcept>
 #include <string>
 
 #include "Logger.hpp"
-#include "webserv.hpp"
 
 Client::~Client(void)
 {

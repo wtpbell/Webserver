@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:22:46 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/13 19:08:14 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:42:48 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,10 +38,10 @@ namespace String
 
   std::string_view Trim(std::string_view str)
   {
-    size_t start = str.find_first_not_of(HTTP::kWHITESPACE);
+    std::size_t start = str.find_first_not_of(HTTP::kWHITESPACE);
     if (start == std::string::npos)
       return {};
-    size_t end = str.find_last_not_of(HTTP::kWHITESPACE);
+    std::size_t end = str.find_last_not_of(HTTP::kWHITESPACE);
     return str.substr(start, end - start + 1);
   }
 
@@ -87,4 +87,40 @@ namespace String
     auto [ptr, ec] = std::from_chars(sv.data(), end, result, base);
     return (ec == std::errc{} && ptr == end);
   }
+
+  bool IsCloseToken(std::string_view v)
+  {
+    constexpr std::string_view close = "close";
+
+    v = String::Trim(v);
+    if (v.size() != close.size())
+      return false;
+
+    for (std::size_t i = 0; i < close.size(); ++i)
+    {
+      const unsigned char c = static_cast<unsigned char>(v[i]);
+      if (close[i] != static_cast<char>(std::tolower(c)))
+        return false;
+    }
+    return true;
+  }
+
+  std::string CanonicalizeHeader(std::string_view key)
+  {
+    std::string out;
+    out.reserve(key.size());
+
+    bool upper = true;
+    for (unsigned char ch : key)
+    {
+      if (upper && std::isalpha(ch))
+        out.push_back(static_cast<char>(std::toupper(ch)));
+      else
+        out.push_back(static_cast<char>(std::tolower(ch)));
+
+      upper = (ch == '-');
+    }
+    return out;
+  }
+
 }  // namespace String

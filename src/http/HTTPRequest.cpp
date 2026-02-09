@@ -6,14 +6,17 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:14:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/15 16:20:00 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:30:26 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "http/HTTPRequest.hpp"
 
+#include <string>
+#include <string_view>
 #include <vector>
 
+#include "http/HTTPTypes.hpp"
 #include "http/HTTPUtils.hpp"
 
 // | Input      | Normalized |
@@ -120,7 +123,7 @@ void HTTPRequest::SetMethod(HTTP::Method method)
 bool HTTPRequest::SetTarget(std::string_view target)
 {
   target_.assign(target);
-  const size_t q = target_.find('?');
+  const std::size_t q = target_.find('?');
   std::string_view raw_path;
   query_.clear();
 
@@ -155,7 +158,12 @@ bool HTTPRequest::IsComplete(void) const
   return isComplete_;
 }
 
-const HTTP::Headers& HTTPRequest::Headers() const
+void HTTPRequest::Clear(void)
 {
-  return GetHeaders();
+  method_ = HTTP::Method::UNSUPPORTED;
+  target_.clear();
+  uri_.clear();
+  query_.clear();
+  isComplete_ = false;
+  path_.clear();
 }

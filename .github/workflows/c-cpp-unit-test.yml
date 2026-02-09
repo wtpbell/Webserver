@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      -main
+      - main
   pull_request:
     branches:
       - main
@@ -17,4 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: make test
-      run: make fclean test
+      run:
+        make fclean test
+    - name: http request/response
+      run: |
+        make fclean all
+        bash ./tests/bash/run_all.sh

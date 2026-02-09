@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 10:16:48 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/08 19:57:22 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:11:10 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,6 @@
 #define LOGGER_H_
 
 #include <iostream>
-#include <string>
 
 #define LOG_BOLD "\033[1m"
 #define LOG_CLEAR "\033[0m"
@@ -37,6 +36,12 @@ enum class LogLevel
   ALL = (STDOUT | STDERR)
 };
 
+enum class TimeFormat
+{
+  LOG_LOCAL,
+  HTTP_GMT
+};
+
 class Logger
 {
   public:
@@ -52,7 +57,7 @@ class Logger
     static std::ostream cerr_;
     static LogLevel filter_;
 
-    static char* GetCurrentTime(char* stime, std::size_t n);
+    static char* GetTime(char* stime, std::size_t n, TimeFormat fmt);
     static std::ostream& GetOutputStream(LogLevel level);
     static bool IsFiltered(LogLevel level);
     static void LogFormat(std::ostream& out, std::string_view format);

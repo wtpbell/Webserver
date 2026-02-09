@@ -6,14 +6,19 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 17:28:14 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/15 16:19:49 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:24:18 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "http/HTTPMessage.hpp"
 
 #include <cassert>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
 
+#include "http/HTTPTypes.hpp"
 #include "http/HTTPValidator.hpp"
 #include "string.hpp"
 

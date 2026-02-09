@@ -14,6 +14,7 @@
 #define HTTPSTATUS_HPP
 
 #include <cstdint>
+#include <string_view>
 
 #include "http/HTTPValidator.hpp"
 

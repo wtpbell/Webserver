@@ -6,12 +6,17 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/13 19:07:39 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/13 19:07:39 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:33:37 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "http/HTTPValidator.hpp"
 
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "http/HTTPTypes.hpp"
 #include "string.hpp"
 
 namespace
@@ -101,7 +106,7 @@ ValidationResult ValidateHeader(const HTTPRequest& req)
 {
   if (req.GetHeaderValueCountOf("host") != 1)
     return ValidationResult::BadRequest;
-  for (const auto& [name, values] : req.Headers())
+  for (const auto& [name, values] : req.GetHeaders())
   {
     if (!HTTP::validate::IsValidHeaderName(name))
       return ValidationResult::BadRequest;

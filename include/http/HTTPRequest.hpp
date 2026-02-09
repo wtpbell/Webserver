@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:12:54 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/13 19:06:11 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 16:55:44 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ class HTTPRequest : public HTTPMessage
 
     bool IsComplete(void) const;
     void SetComplete(bool complete);
-    const HTTP::Headers& Headers() const;
+    void Clear(void);
 
   private:
     bool NormalizePath(std::string_view in, std::string& out);

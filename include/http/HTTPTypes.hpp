@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 14:54:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/13 19:06:30 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/28 10:31:09 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,6 @@ namespace HTTP
   {
     GET,
     POST,
-    PUT,
     DELETE,
     UNSUPPORTED
   };
@@ -54,7 +53,6 @@ namespace HTTP
   } kMethodMap[] = {
       {HTTP::Method::GET, "GET"},
       {HTTP::Method::POST, "POST"},
-      {HTTP::Method::PUT, "PUT"},
       {HTTP::Method::DELETE, "DELETE"},
   };
 

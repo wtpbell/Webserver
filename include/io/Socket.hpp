@@ -45,9 +45,8 @@ class Socket : public SharedFD
     Socket Accept4(int flags = 0);
     void SetSockOpt(int level, int optname, const void* optval, socklen_t optlen);
     void SetNonBlocking(bool is_non_blocking);
-    ssize_t Recv(std::string& msg, int flags = 0, std::size_t max_chunk_size = 1024);
-    ssize_t Send(const std::string& msg, std::size_t& leftover, int flags = 0, std::size_t max_chunk_size = 4096);
-
+    ssize_t Recv(std::string& message, int flags = 0, std::size_t max_chunk_size = 1024);
+    ssize_t Send(std::string_view message, std::size_t& leftover, int flags = 0, std::size_t max_chunk_size = 4096);
     std::string_view GetSocketInfo(void) const;
     friend std::ostream& operator<<(std::ostream& out, const Socket& socket);
 

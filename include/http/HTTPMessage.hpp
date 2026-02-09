@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/15 16:20:44 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/15 16:20:49 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 16:55:32 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,8 +48,6 @@ class HTTPMessage
     bool HasHeader(std::string_view name) const;
     std::optional<std::size_t> GetContentLength(void) const;
     bool IsChunked(void) const;
-
-  protected:
     const HTTP::Headers& GetHeaders(void) const;
     HTTP::Headers& GetHeaders(void);
 

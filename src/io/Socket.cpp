@@ -163,14 +163,14 @@ void Socket::SetNonBlocking(bool is_non_blocking)
  * @brief System call to recv and append the data onto msg
  * @return bytes read by recv or -1 if an error occurred
  */
-ssize_t Socket::Recv(std::string& msg, int flags, std::size_t max_chunk_size)
+ssize_t Socket::Recv(std::string& message, int flags, std::size_t max_chunk_size)
 {
-  std::size_t len = msg.length();
-  msg.resize(msg.length() + max_chunk_size);
+  std::size_t len = message.length();
+  message.resize(message.length() + max_chunk_size);
 
-  ssize_t bytes = recv(fd_, (msg.data() + len), max_chunk_size, flags);
+  ssize_t bytes = recv(fd_, (message.data() + len), max_chunk_size, flags);
   if (bytes > 0)
-    msg.resize(len + bytes);
+    message.resize(len + bytes);
   return (bytes);
 }
 
@@ -179,9 +179,14 @@ ssize_t Socket::Recv(std::string& msg, int flags, std::size_t max_chunk_size)
  * Updates leftover by substracting the amount of bytes that were sent.
  * @return total amount of bytes sent or -1 if an error occurred
  */
-ssize_t Socket::Send(const std::string& msg, std::size_t& leftover, int flags, std::size_t max_chunk_size)
+// ssize_t Socket::Send(const std::string& msg, std::size_t& leftover, int flags, std::size_t max_chunk_size)
+// {
+//   return Send(std::string_view(msg), leftover, flags, max_chunk_size);
+// }
+
+ssize_t Socket::Send(std::string_view message, std::size_t& leftover, int flags, std::size_t max_chunk_size)
 {
-  const char* buf = msg.data() + (msg.size() - leftover);
+  const char* buf = message.data() + (message.size() - leftover);
 
   ssize_t bytes = send(fd_, buf, std::min(leftover, max_chunk_size), flags);
   if (bytes > 0)

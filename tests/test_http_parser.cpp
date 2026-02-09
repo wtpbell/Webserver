@@ -1,8 +1,14 @@
 #include "catch_amalgamated.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
+#include "http/HTTPTypes.hpp"
 
 using ParseRes = HTTPParser::ParseResult;
+
+static std::string MakeHugeHeaderValue(std::size_t minBytes)
+{
+  return std::string(minBytes, 'a');
+}
 
 // Parse like the server’s mechanics (but without validation):
 //   1) Parse raw bytes until HeadersDone / Done / Error
@@ -216,9 +222,9 @@ TEST_CASE("HTTPParser::Parse - Invalid HTTP Version", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Error);
-  REQUIRE(parser.HasError() == true);
-  REQUIRE(parser.IsComplete() == false);
+  REQUIRE(result == ParseRes::Done);
+  REQUIRE(parser.HasError() == false);
+  REQUIRE(parser.IsComplete() == true);
 }
 
 TEST_CASE("HTTPParser::Parse - Allow Multiple Headers", "[httpparser]")
@@ -406,4 +412,39 @@ TEST_CASE("HTTPParser rejects non-empty trailer after last chunk", "[http][parse
                                " \r\n");
 
   REQUIRE(res == HTTPParser::ParseResult::Error);
+}
+TEST_CASE("HTTPParser rejects headers section larger than kMaxHeaderSize (complete lines)", "[http][parser]")
+{
+  HTTPParser p;
+  std::string huge = MakeHugeHeaderValue(HTTP::kMaxHeaderSize + 64);
+  std::string req =
+      "GET / HTTP/1.1\r\n"
+      "Host: localhost\r\n"
+      "X-Big: " +
+      huge +
+      "\r\n"
+      "\r\n";
+
+  HTTPParser::ParseResult r = p.Parse(req);
+
+  REQUIRE(r == HTTPParser::ParseResult::Error);
+  REQUIRE(p.HasError());
+  REQUIRE(p.GetError() == ValidationResult::PayloadTooLarge);
+}
+
+TEST_CASE("HTTPParser rejects headers larger than kMaxHeaderSize even without CRLF", "[http][parser]")
+{
+  HTTPParser p;
+  std::string huge = MakeHugeHeaderValue(HTTP::kMaxHeaderSize + 64);
+  std::string partial =
+      "GET / HTTP/1.1\r\n"
+      "Host: localhost\r\n"
+      "X-Big: " +
+      huge;  // <-- no "\r\n" yet
+
+  HTTPParser::ParseResult r = p.Parse(partial);
+
+  REQUIRE(r == HTTPParser::ParseResult::Error);
+  REQUIRE(p.HasError());
+  REQUIRE(p.GetError() == ValidationResult::PayloadTooLarge);
 }

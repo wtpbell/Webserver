@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/22 17:20:37 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/13 19:08:30 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:49:16 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,6 @@
 #include <cstdarg>
 #include <vector>
 
-#include "Logger.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "webserv.hpp"
 
@@ -89,7 +88,7 @@ SharedFD::SharedFD(int fd)
 
 void SharedFD::Initialize(int fd)
 {
-  std::size_t req_size = static_cast<std::size_t>(fd);
+  std::size_t req_size = static_cast<std::size_t>(fd) + 1;
   if (shared_count_fds.size() < req_size)
     shared_count_fds.resize(NextPOT(req_size));
   fd_ = fd;
@@ -159,7 +158,7 @@ void SharedFD::Close(void) noexcept
 
 int SharedFD::SharedCount(void) const
 {
-  if (fd_ < 0 || shared_count_fds.size() < static_cast<std::size_t>(fd_))
+  if (fd_ < 0 || shared_count_fds.size() <= static_cast<std::size_t>(fd_))
     return (0);
   return (shared_count_fds[fd_]);
 }

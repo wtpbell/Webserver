@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:23:40 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/13 19:06:57 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/28 09:55:29 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,4 +23,6 @@ namespace String
   void AppendHex(std::string& result, unsigned char c);
   bool starts_with(std::string_view s, std::string_view prefix);
   bool ConvertToNumber(std::string_view sv, std::size_t& result, int base = 10);
+  bool IsCloseToken(std::string_view v);
+  std::string CanonicalizeHeader(std::string_view key);
 }  // namespace String

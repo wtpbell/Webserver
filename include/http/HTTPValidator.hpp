@@ -6,12 +6,14 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/13 19:06:37 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/13 19:06:37 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:19:59 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTPVALIDATOR_HPP
 #define HTTPVALIDATOR_HPP
+
+#include <string_view>
 
 #include "http/HTTPRequest.hpp"
 

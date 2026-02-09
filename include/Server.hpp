@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/06 14:04:06 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/13 19:06:52 by bewong        ########   odam.nl         */
+/*   Updated: 2026/01/28 09:55:33 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,12 +15,13 @@
 
 #include <netdb.h>
 
-#include <optional>
+#include <deque>
 #include <unordered_map>
 
 #include "EpollManager.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
+#include "http/HTTPResponse.hpp"
 #include "io/Socket.hpp"
 
 class Server
@@ -45,7 +46,10 @@ class Server
 
         Socket socket;
         HTTPParser parser;
-        std::optional<HTTPRequest> request;
+        std::deque<std::string> outputQueue;  // queued responses (pipeline)
+        std::size_t remaining = 0;            // number of bytes already sent
+        bool closeAfterSend = false;
+        bool peerClosed = false;
     };  // Current size 72 bytes
 
     enum class ReadResult
@@ -60,16 +64,22 @@ class Server
     using sockaddr_storage_t = struct sockaddr_storage;
     using ConnectionIterator = std::unordered_map<int, Connection>::iterator;
 
-    ReadResult ReadOnce(Connection& c, std::string& out, int fd);
+    ReadResult ReadOnce(Connection& c, std::string& out);
     void InitBodyParser(HTTPParser& parser, const HTTPRequest& req);
-    bool HandleHeadersDone(EpollManager& manager, Connection& connection, int client_fd);
+    void HandleHeadersDone(EpollManager& manager, ConnectionIterator it, Connection& connection, int client_fd);
+    void EnableReadWrite(EpollManager& manager, int fd);
+    void EnableReadOnly(EpollManager& manager, int fd);
 
     void Accept(EpollManager& manager, const struct epoll_event&);
     void HandleRequest(EpollManager& manager, const struct epoll_event&);
     void HandleResponse(EpollManager& manager, const struct epoll_event&);
     void CloseConnection(EpollManager& manager, ConnectionIterator it);
     void ParseRequest(std::string_view data);
-
+    void FinishResponse(EpollManager& manager, ConnectionIterator it);
+    bool CheckConnectionClose(const HTTPRequest* request, const HTTPResponse& response) const;
+    HTTPResponse DispatchRequest(const HTTPRequest& req);
+    void QueueResponse(EpollManager& manager, ConnectionIterator it, HTTPResponse resp, bool closeAfter);
+    void QueueError(EpollManager& manager, ConnectionIterator it, ValidationResult result);
     Socket socket_;
     std::unordered_map<int, Connection> connections_;
 };

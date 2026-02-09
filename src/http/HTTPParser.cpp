@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 17:14:02 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/15 16:19:53 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:46:11 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,11 +14,12 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <string>
+#include <string_view>
 
 #include "Logger.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPTypes.hpp"
-// #include "http/HTTPUtils.hpp"
 #include "string.hpp"
 
 /************************************************** Helper ***********************************************************/
@@ -30,12 +31,12 @@ namespace
 
   // Read a token until the next SP, require exactly one SP, and position i at start of next token.
   // Grammar: token SP
-  bool ReadTokenSP(const std::string& s, size_t& i, size_t end, size_t& tokBegin, size_t& tokEnd)
+  bool ReadTokenSP(const std::string& s, std::size_t& i, size_t end, std::size_t& tokBegin, size_t& tokEnd)
   {
     if (i >= end)
       return false;
     tokBegin = i;
-    size_t sp = s.find(' ', i);
+    std::size_t sp = s.find(' ', i);
     if (sp == std::string::npos || sp >= end)
       return false;
     tokEnd = sp;
@@ -60,9 +61,15 @@ bool HTTPParser::HasError(void) const
   return state_ == ParserState::Error;
 }
 
-void HTTPParser::Fail(void)
+ValidationResult HTTPParser::GetError(void) const
 {
-  Logger::Log(LogLevel::LDEBUG, "Parser failed in state {}", static_cast<int>(state_));
+  return error_;
+}
+
+void HTTPParser::Fail(ValidationResult vr)
+{
+  Logger::Log(LogLevel::LDEBUG, "Parser failed in state {} (vr={})", static_cast<int>(state_), static_cast<int>(vr));
+  error_ = vr;
   state_ = ParserState::Error;
 }
 
@@ -82,6 +89,8 @@ void HTTPParser::Reset(void)
   contentLength_ = 0;
   bodyRead_ = 0;
   chunk_ = ChunkState{};
+  error_ = ValidationResult::OK;
+  headerStart_ = 0;
 }
 
 HTTPRequest HTTPParser::TakeRequest(void)
@@ -135,7 +144,7 @@ void HTTPParser::SetChunked(void)
     @param lineEnd The position of the kCRLF
     @return true if the line was consumed, false otherwise
 */
-bool HTTPParser::ConsumeLine(const std::string& buf, size_t& pos, size_t& lineEnd)
+bool HTTPParser::ConsumeLine(const std::string& buf, std::size_t& pos, std::size_t& lineEnd)
 {
   lineEnd = buf.find(HTTP::kCRLF, pos);
   if (lineEnd == std::string::npos)
@@ -145,10 +154,10 @@ bool HTTPParser::ConsumeLine(const std::string& buf, size_t& pos, size_t& lineEn
 }
 // request-line   = method SP request-target SP HTTP-version kCRLF
 // GET http://example.com?foo HTTP/1.1
-bool HTTPParser::ParseRequestLine(const size_t lineStart, size_t lineEnd)
+bool HTTPParser::ParseRequestLine(const std::size_t lineStart, std::size_t lineEnd)
 {
-  size_t mBegin, mEnd, tBegin, tEnd;
-  size_t i = lineStart;
+  std::size_t mBegin, mEnd, tBegin, tEnd;
+  std::size_t i = lineStart;
 
   if (!ReadTokenSP(buffer_, i, lineEnd, mBegin, mEnd) || !ReadTokenSP(buffer_, i, lineEnd, tBegin, tEnd) ||
       i >= lineEnd)
@@ -157,7 +166,7 @@ bool HTTPParser::ParseRequestLine(const size_t lineStart, size_t lineEnd)
   std::string_view method(buffer_.data() + mBegin, mEnd - mBegin);
   std::string_view target(buffer_.data() + tBegin, tEnd - tBegin);
   std::string_view version(buffer_.data() + i, lineEnd - i);
-  if (version.find(' ') != std::string::npos || version != HTTP::kVERSION)
+  if (version.find(' ') != std::string::npos)
     return (Fail(), false);
   // TODO(VALIDATE): method support checks (501 vs 400)
   // if (!HTTPValidation::Method(method)) return Fail();
@@ -173,13 +182,13 @@ bool HTTPParser::ParseRequestLine(const size_t lineStart, size_t lineEnd)
 // Content-Type: text/html \r\n
 // Content-Length: 42 \r\n
 // \r\n
-bool HTTPParser::ParseHeaderLine(const size_t lineStart, size_t lineEnd)
+bool HTTPParser::ParseHeaderLine(const std::size_t lineStart, std::size_t lineEnd)
 {
-  size_t colon = buffer_.find(':', lineStart);
+  std::size_t colon = buffer_.find(':', lineStart);
   if (colon == std::string::npos || colon >= lineEnd)
     return (Fail(), false);
 
-  for (size_t i = lineStart; i < colon; ++i)
+  for (std::size_t i = lineStart; i < colon; ++i)
   {
     if (buffer_[i] == ' ' || buffer_[i] == '\t')
       return (Fail(), false);
@@ -204,8 +213,8 @@ we get Codam at the end
 // TODO: check the kMAxBodySize -> return 413
 bool HTTPParser::ParseChunkSize(void)
 {
-  size_t lineEnd;
-  size_t start = pos_;
+  std::size_t lineEnd;
+  std::size_t start = pos_;
 
   if (!ConsumeLine(buffer_, pos_, lineEnd))
     return (false);
@@ -258,8 +267,8 @@ bool HTTPParser::ParseChunkTrailer(void)
 
   while (true)
   {
-    size_t lineEnd = 0;
-    size_t lineStart = pos_;
+    std::size_t lineEnd = 0;
+    std::size_t lineStart = pos_;
 
     if (!ConsumeLine(buffer_, pos_, lineEnd))
       return false;  // need more data
@@ -291,14 +300,14 @@ bool HTTPParser::ParseStartLine(void)
 {
   while (true)
   {
-    size_t lineEnd = 0;
-    const size_t lineStart = pos_;
+    std::size_t lineEnd = 0;
+    const std::size_t lineStart = pos_;
 
     if (!ConsumeLine(buffer_, pos_, lineEnd))  // if there is no kCRLF
     {
       if (buffer_.size() - lineStart > HTTP::kMaxRequestLine)  // if the request line is too long
       {
-        Fail();  // set state to error
+        Fail(ValidationResult::URITooLong);
         return false;
       }
       return false;  // is incomplete, need more data
@@ -309,6 +318,7 @@ bool HTTPParser::ParseStartLine(void)
     if (!ParseRequestLine(lineStart, lineEnd))
       return false;
     state_ = ParserState::Headers;  // move to next state
+    headerStart_ = pos_;
     return true;
   }
 }
@@ -324,12 +334,20 @@ bool HTTPParser::ParseHeaders(void)
 {
   while (true)
   {
-    size_t lineStart = pos_;
-    size_t lineEnd = 0;
+    std::size_t lineStart = pos_;
+    std::size_t lineEnd = 0;
 
     if (!ConsumeLine(buffer_, pos_, lineEnd))
+    {
+      if (buffer_.size() - headerStart_ > HTTP::kMaxHeaderSize)
+        Fail(ValidationResult::PayloadTooLarge);
       return false;
-
+    }
+    if (lineEnd - headerStart_ > HTTP::kMaxHeaderSize)
+    {
+      Fail(ValidationResult::PayloadTooLarge);
+      return false;
+    }
     if (lineEnd == lineStart)
     {
       state_ = ParserState::AwaitBodyDecision;
@@ -347,8 +365,8 @@ bool HTTPParser::ParseHeaders(void)
 // TODO(VALIDATE): handle multiple Content-Length
 bool HTTPParser::ParseBody(void)
 {
-  const size_t available = buffer_.size() - pos_;
-  const size_t remaining = contentLength_ - bodyRead_;
+  const std::size_t available = buffer_.size() - pos_;
+  const std::size_t remaining = contentLength_ - bodyRead_;
 
   if (remaining == 0)
   {
@@ -358,7 +376,7 @@ bool HTTPParser::ParseBody(void)
 
   if (available == 0)
     return false;
-  size_t take = std::min(available, remaining);
+  std::size_t take = std::min(available, remaining);
   req_.AppendBody(std::string_view(buffer_.data() + pos_, take));
   pos_ += take;
   bodyRead_ += take;
@@ -445,4 +463,18 @@ HTTPParser::ParseResult HTTPParser::Parse(std::string_view input)
   if (state_ == ParserState::Chunked && !ParseChunked())
     return ExitResult();
   return ExitResult();
+}
+
+void HTTPParser::ResetNextRequest(void)
+{
+  if (pos_ > 0)
+    buffer_.erase(0, pos_);
+  pos_ = 0;
+  req_.HTTPRequest::Clear();
+  state_ = ParserState::StartLine;
+  contentLength_ = 0;
+  bodyRead_ = 0;
+  chunk_ = ChunkState{};
+  error_ = ValidationResult::OK;
+  headerStart_ = 0;
 }

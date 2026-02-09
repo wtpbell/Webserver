@@ -12,6 +12,9 @@
 
 #include "http/HTTPStatus.hpp"
 
+#include <cassert>
+#include <string_view>
+
 #include "http/HTTPValidator.hpp"
 
 namespace HTTP
@@ -32,30 +35,56 @@ namespace HTTP
         return Status::NOT_IMPLEMENTED;
       case ValidationResult::VersionNotSupported:
         return Status::HTTP_VERSION_NOT_SUPPORTED;
-      default:
-        return Status::INTERNAL_SERVER_ERROR;
     }
+    assert(false && "Invalid validation result");
+    __builtin_unreachable();
   }
+
   std::string_view ToReasonPhrase(Status status)
   {
     switch (status)
     {
       case Status::OK:
         return "OK";
+      case Status::CREATED:
+        return "Created";
+      case Status::NO_CONTENT:
+        return "No Content";
+
       case Status::BAD_REQUEST:
         return "Bad Request";
-      case Status::NOT_IMPLEMENTED:
-        return "Not Implemented";
+      case Status::UNAUTHORIZED:
+        return "Unauthorized";
+      case Status::FORBIDDEN:
+        return "Forbidden";
+      case Status::NOT_FOUND:
+        return "Not Found";
+      case Status::METHOD_NOT_ALLOWED:
+        return "Method Not Allowed";
       case Status::PAYLOAD_TOO_LARGE:
         return "Payload Too Large";
       case Status::URI_TOO_LONG:
         return "URI Too Long";
-      case Status::HTTP_VERSION_NOT_SUPPORTED:
-        return "HTTP Version Not Supported";
+      case Status::UNSUPPORTED_MEDIA_TYPE:
+        return "Unsupported Media Type";
+      case Status::RANGE_NOT_SATISFIABLE:
+        return "Range Not Satisfiable";
+
       case Status::INTERNAL_SERVER_ERROR:
         return "Internal Server Error";
-      default:
-        return "Error";
+      case Status::NOT_IMPLEMENTED:
+        return "Not Implemented";
+      case Status::BAD_GATEWAY:
+        return "Bad Gateway";
+      case Status::SERVICE_UNAVAILABLE:
+        return "Service Unavailable";
+      case Status::GATEWAY_TIMEOUT:
+        return "Gateway Timeout";
+      case Status::HTTP_VERSION_NOT_SUPPORTED:
+        return "HTTP Version Not Supported";
     }
+    assert(false && "Invalid status");
+    __builtin_unreachable();
   }
+
 }  // namespace HTTP

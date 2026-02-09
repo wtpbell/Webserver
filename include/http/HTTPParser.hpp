@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/02 15:28:21 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/13 19:06:04 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/06 17:44:31 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <string_view>
 
 #include "http/HTTPRequest.hpp"
+#include "http/HTTPValidator.hpp"
 
 class HTTPParser
 {
@@ -52,7 +53,7 @@ class HTTPParser
           Done
         };
         Phase phase = Phase::SizeLine;
-        size_t remaining = 0;
+        std::size_t remaining = 0;
     };
 
     HTTPParser(void) = default;
@@ -73,7 +74,9 @@ class HTTPParser
     bool NeedsBodyDecision() const;
 
     const HTTPRequest& GetRequest(void) const;
+    ValidationResult GetError(void) const;
     HTTPRequest TakeRequest(void);
+    void ResetNextRequest(void);
     void Reset(void);
 
   private:
@@ -91,13 +94,15 @@ class HTTPParser
     bool ConsumeLine(const std::string& buf, size_t& pos, size_t& lineEnd);
     bool ParseRequestLine(const size_t lineStart, size_t lineEnd);
     bool ParseHeaderLine(const size_t lineStart, size_t lineEnd);
-    void Fail(void);
+    void Fail(ValidationResult vr = ValidationResult::BadRequest);
 
     HTTPRequest req_;
     ParserState state_{ParserState::StartLine};
+    ValidationResult error_ = ValidationResult::OK;
     std::string buffer_;
     std::size_t pos_{0};
 
+    std::size_t headerStart_{0};
     std::size_t contentLength_{0};
     std::size_t bodyRead_{0};
     ChunkState chunk_;

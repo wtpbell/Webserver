@@ -1,0 +1,13 @@
+
+
+http {
+  
+  # valid
+
+  index file file file;
+
+  # invalid
+
+  index ;
+  index file file file;
+}

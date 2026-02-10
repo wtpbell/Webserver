@@ -1,0 +1,28 @@
+events {}
+
+http {
+  server {
+    listen 8000 8000 8000;
+    server_name name name name;
+    root path path path;
+    client_max_body_size size size size;
+    error_page 400 500 600;
+    return ;
+    allowed_methods GET POST DELETE MORE MORE;
+    location /path/ path/ {
+      alias path path path;
+      allowed_methods GET POST DELETE MORE MORE;
+    }
+  }
+}
+
+
+listen 8000 8000 8000;
+server_name name name name;
+root path path path;
+index ;
+alias path path path;
+client_max_body_size size size size;
+error_page 400 500 600;
+return ;
+allowed_methods GET POST DELETE MORE MORE;

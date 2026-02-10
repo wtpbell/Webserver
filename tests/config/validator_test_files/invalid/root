@@ -1,0 +1,17 @@
+
+
+http {
+  server {
+
+    # valid
+
+    root /path;
+
+    # invalid
+
+    root ;
+    root path;
+    root /path /path;
+    root /path;
+  }
+}

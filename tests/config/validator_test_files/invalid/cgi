@@ -1,0 +1,48 @@
+# invalid
+
+cgi ;
+cgi off;
+cgi on;
+cgi error;
+cgi on off;
+cgi off on;
+
+http {
+
+  # valid 
+
+  cgi on;
+
+  # invalid 
+
+  cgi ;
+  cgi error;
+  cgi on off;
+  cgi off on;
+
+  server {
+
+    # valid
+
+    cgi off;
+
+    # invalid
+
+    cgi ;
+    cgi error;
+    cgi on off;
+    cgi off on;
+
+    location /path {
+
+      # invalid
+
+      cgi ;
+      cgi off;
+      cgi on;
+      cgi error;
+      cgi on off;
+      cgi off on;
+    }
+  }
+}

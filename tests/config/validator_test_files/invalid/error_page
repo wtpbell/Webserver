@@ -1,0 +1,21 @@
+http {
+  server {
+    location path {
+
+      # valid
+
+      error_page 504 301 503 400 502 401 500 404 /path;
+      error_page 504 301 503 400 502 401 500 404 http://path;
+      
+      # invalid
+
+      error_page ;
+      error_page 400 100 401 402 404 path;
+      error_page 400 500 600 401 402 403 path;
+      error_page /path 401;
+      error_page 504 301 503 400 502 401 500 404 /path /path /path;
+      error_page 504 301 503 400 502 401 500 404 http://path http://path;
+      error_page 504 301 503 400 502 401 500 404 /path;
+    }
+  }
+}

@@ -1,0 +1,19 @@
+
+
+http {
+  server {
+    location /path {
+
+      # valid
+
+      alias /path;
+
+      # invalid
+
+      alias path;
+      alias /path;
+      alias path /path;
+      alias /path path;
+    }
+  }
+}

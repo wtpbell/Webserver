@@ -16,123 +16,178 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
 
 #include "config/Lexer.hpp"
 
-Parser::Parser(Lexer& lexer) : lexer_(lexer), num_events_(0), num_http_(0)
-{
-  currentToken_ = lexer_.Current();
-}
+Parser::Parser(Lexer& lexer) : lexer_(lexer) {}
 
-//  PUBLIC
+//////////////////// PUBLIC ////////////////////
 void Parser::Parse()
 {
-  configs_.name = Identifier::Main;
-  configs_.error = false;
+  currentToken_ = lexer_.Current();
+  ast_.name = Identifier::Main;
   while (!IsEof())
   {
     if (IsDirective())
     {
-      configs_.directives.emplace_back(ParseDirective(Identifier::Main));
+      ast_.directives.emplace_back(ParseDirective(Identifier::Main));
     }
     else if (IsBlockDirective())
     {
-      ValidateNumberOfEventsAndHtpp(configs_);
-      ValidateContext(configs_);
-      configs_.nestedBlocks.emplace_back(ParseBlockDirective(Identifier::Main));
+      ast_.nestedBlocks.emplace_back(ParseBlockDirective(Identifier::Main));
     }
 
     else
     {
-      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true);
-      configs_.error = true;
+      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true, ast_);
     }
   }
 }
 
-void Parser::PrintDetailedAST()
+void Parser::PrintDetailedAST() const
 {
-  size_t level = 0;
+  std::size_t level = 0;
   std::cout << "\n###############\n##### AST #####\n###############\n\n";
-  if (configs_.error == true)
+  if (ast_.error == true)
   {
     std::cout << kRed_ << "ERROR in main >>>\n" << kReset_;
   }
   std::cout << "CONFIGS:\n";
-  for (auto dir : configs_.directives)
+  for (const Node& dir : ast_.directives)
   {
     PrintDirective(dir, level + 1);
   }
-  for (auto blockDir : configs_.nestedBlocks)
+  for (const Node& blockDir : ast_.nestedBlocks)
   {
     PrintBlockDirective(blockDir, level + 1);
   }
-  if (configs_.error == true)
+  if (ast_.error == true)
   {
     std::cout << kRed_ << "<<< ERROR in main\n" << kReset_;
   }
   std::cout << "\n###################\n##### END AST #####\n###################\n\n";
 }
 
-// PRIVATE
-// helper functions
-bool Parser::IsEof()
+Node& Parser::GetAst()
+{
+  return (ast_);
+}
+
+bool Parser::GetError() const
+{
+  return (error_);
+}
+
+std::string Parser::IdentifierToString(Identifier identifier) const
+{
+  switch (identifier)
+  {
+    case Identifier::Main:
+      return ("main");
+    case Identifier::Listen:
+      return ("listen");
+    case Identifier::Server_name:
+      return ("server_name");
+    case Identifier::Root:
+      return ("root");
+    case Identifier::Index:
+      return ("index");
+    case Identifier::Alias:
+      return ("alias");
+    case Identifier::Client_max_body_size:
+      return ("client_max_body_size");
+    case Identifier::Client_body_temp_path:
+      return ("client_body_temp_path");
+    case Identifier::Error_page:
+      return ("error_page");
+    case Identifier::Return:
+      return ("return");
+    case Identifier::Allowed_methods:
+      return ("allowed_methods");
+    case Identifier::Autoindex:
+      return ("autoindex");
+    case Identifier::Cgi:
+      return ("cgi");
+    case Identifier::Events:
+      return ("events");
+    case Identifier::Http:
+      return ("http");
+    case Identifier::Server:
+      return ("server");
+    case Identifier::Location:
+      return ("location");
+    case Identifier::Param:
+      return ("param");
+  }
+  assert(false && "Invalid Identifier passed to IdentifierToString");
+  __builtin_unreachable();
+}
+
+//////////////////// PRIVATE ////////////////////
+//////////////////// helper functions ////////////////////
+bool Parser::IsEof() const
 {
   return (currentToken_.kind == TokenKind::Eof);
 }
 
-bool Parser::IsBlockDirective()
+bool Parser::IsBlockDirective() const
 {
   return (currentToken_.kind == TokenKind::Events || currentToken_.kind == TokenKind::Http ||
           currentToken_.kind == TokenKind::Server || currentToken_.kind == TokenKind::Location);
 }
 
-bool Parser::IsHttp()
+bool Parser::IsHttp() const
 {
   return (currentToken_.kind == TokenKind::Http);
 }
 
-bool Parser::IsEvents()
+bool Parser::IsEvents() const
 {
   return (currentToken_.kind == TokenKind::Events);
 }
 
-bool Parser::IsServer()
+bool Parser::IsServer() const
 {
   return (currentToken_.kind == TokenKind::Server);
 }
 
-bool Parser::IsLocation()
+bool Parser::IsLocation() const
 {
   return (currentToken_.kind == TokenKind::Location);
 }
 
-bool Parser::IsLBrace()
+bool Parser::IsLBrace() const
 {
   return (currentToken_.kind == TokenKind::LBrace);
 }
 
-bool Parser::IsRBrace()
+bool Parser::IsRBrace() const
 {
   return (currentToken_.kind == TokenKind::RBrace);
 }
 
-bool Parser::IsDirective()
+bool Parser::IsDirective() const
 {
-  return (currentToken_.kind == TokenKind::String);
+  return (currentToken_.kind == TokenKind::Listen || currentToken_.kind == TokenKind::Server_name ||
+          currentToken_.kind == TokenKind::Root || currentToken_.kind == TokenKind::Index ||
+          currentToken_.kind == TokenKind::Alias || currentToken_.kind == TokenKind::Client_max_body_size ||
+          currentToken_.kind == TokenKind::Client_body_temp_path || currentToken_.kind == TokenKind::Error_page ||
+          currentToken_.kind == TokenKind::Return || currentToken_.kind == TokenKind::Allowed_methods ||
+          currentToken_.kind == TokenKind::Autoindex || currentToken_.kind == TokenKind::Cgi);
 }
 
-bool Parser::IsSemicolon()
+bool Parser::IsSemicolon() const
 {
   return (currentToken_.kind == TokenKind::Semicolon);
 }
 
-bool Parser::IsParam()
+bool Parser::IsParam() const
 {
-  return (currentToken_.kind == TokenKind::String || currentToken_.kind == TokenKind::Number);
+  return (currentToken_.kind == TokenKind::String);
 }
 
-Identifier Parser::TokenKindToIdentifier(TokenKind kind)
+Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
 {
   switch (kind)
   {
@@ -144,8 +199,32 @@ Identifier Parser::TokenKindToIdentifier(TokenKind kind)
       return (Identifier::Server);
     case TokenKind::Location:
       return (Identifier::Location);
+    case TokenKind::Listen:
+      return (Identifier::Listen);
+    case TokenKind::Server_name:
+      return (Identifier::Server_name);
+    case TokenKind::Root:
+      return (Identifier::Root);
+    case TokenKind::Index:
+      return (Identifier::Index);
+    case TokenKind::Alias:
+      return (Identifier::Alias);
+    case TokenKind::Client_max_body_size:
+      return (Identifier::Client_max_body_size);
+    case TokenKind::Client_body_temp_path:
+      return (Identifier::Client_body_temp_path);
+    case TokenKind::Error_page:
+      return (Identifier::Error_page);
+    case TokenKind::Return:
+      return (Identifier::Return);
+    case TokenKind::Allowed_methods:
+      return (Identifier::Allowed_methods);
+    case TokenKind::Autoindex:
+      return (Identifier::Autoindex);
+    case TokenKind::Cgi:
+      return (Identifier::Cgi);
     default:
-      assert(false && "Invalid TokenKind passed to kindToIdentifier");
+      assert(false && "Invalid TokenKind passed to TokenKindToIdentifier");
       __builtin_unreachable();
   }
 }
@@ -155,124 +234,63 @@ void Parser::Next()
   currentToken_ = lexer_.Next();
 }
 
-void Parser::PrintError(std::string_view errorType, std::string_view expectedMessage)
+std::string Parser::BuildErrorMessage(std::string_view errorType, std::string_view expectedMessage)
 {
-  std::cerr << currentToken_.line << ":" << currentToken_.col << ": " << kRed_ << "error:" << kReset_ << " "
+  std::stringstream ss;
+  ss << currentToken_.line << ":" << currentToken_.col << ": " << kRed_ << "error:" << kReset_ << " "
             << errorType << ": ";
   if (currentToken_.kind == TokenKind::Eof)
   {
-    std::cerr << kRed_ << "EOF" << kReset_;
+    ss << kRed_ << "EOF" << kReset_;
   }
   else
   {
-    std::cerr << "`" << kRed_ << currentToken_.lexeme << kReset_ << "`";
+    ss << "`" << kRed_ << currentToken_.lexeme << kReset_ << "`";
   }
-  std::cerr << expectedMessage << "\n";
+  ss << expectedMessage << "\n";
+  return (ss.str());
 }
 
-void Parser::Error(std::string_view error_type, std::string_view message, bool skip)
+void Parser::Error(std::string_view error_type, std::string_view message, bool skip, Node& node)
 {
-  PrintError(error_type, message);
-  lexer_.SetTokenErrorTrue();
+  lexer_.SetTokenErrorMessage(currentToken_.idxTokenList, BuildErrorMessage(error_type, message));
+  lexer_.SetTokenErrorTrue(currentToken_.idxTokenList);
+  node.error = true;
+  error_ = true;
   if (skip && !IsEof())
   {
     Next();
   }
 }
 
-void Parser::ContextError(BlockDirective& blockDirective)
+//////////////////// parsing logic ////////////////////
+Node Parser::ParseDirective(Identifier context)
 {
-  Error("incorrect context", " not allowed in context " + IdentifierToString(blockDirective.name), false);
-  blockDirective.error = true;
-}
+  Node directive;
 
-void Parser::ValidateContext(BlockDirective& blockDirective)
-{
-  switch (blockDirective.name)
-  {
-    case Identifier::Main:
-    {
-      if (!IsEvents() && !IsHttp())
-      {
-        ContextError(blockDirective);
-      }
-      break;
-    }
-    case Identifier::Events:
-    {
-      ContextError(blockDirective);
-      break;
-    }
-    case Identifier::Http:
-    {
-      if (!IsServer())
-      {
-        ContextError(blockDirective);
-      }
-      break;
-    }
-    case Identifier::Server:
-    {
-      if (!IsLocation())
-      {
-        ContextError(blockDirective);
-      }
-      break;
-    }
-    case Identifier::Location:
-    {
-      ContextError(blockDirective);
-      break;
-    }
-    default:
-      assert(false && "Invalid Identifier passed to is_valid_context");
-      __builtin_unreachable();
-  }
-}
-
-void Parser::ValidateNumberOfEventsAndHtpp(BlockDirective& blockDirective)
-{
-  if (IsEvents())
-  {
-    ++num_events_;
-    if (num_events_ > 1)
-    {
-      Error("duplicate `events`", "", false);
-      blockDirective.error = true;
-      return;
-    }
-  }
-  if (IsHttp())
-  {
-    ++num_http_;
-    if (num_http_ > 1)
-    {
-      Error("duplicate `http`", "", false);
-      blockDirective.error = true;
-      return;
-    }
-  }
-}
-
-// parsing logic
-Directive Parser::ParseDirective(Identifier context)
-{
-  Directive directive;
-
-  directive.name = currentToken_.lexeme;
+  directive.name = TokenKindToIdentifier(currentToken_.kind);
   directive.context = context;
-  directive.error = false;
+  directive.idxTokenList = currentToken_.idxTokenList;
+  directive.lexeme = currentToken_.lexeme;
+  directive.line = currentToken_.line;
+  directive.col = currentToken_.col;
   Next();
   while (!IsSemicolon() && !IsEof())
   {
     if (!IsParam())
     {
-      Error("unexpected token", " expected: PARAMETER", true);
-      directive.error = true;
+      Error("unexpected token", " expected: PARAMETER", true, directive);
     }
     else
     {
-      directive.params.emplace_back(currentToken_.lexeme);
+      Node param;
+      param.name = Identifier::Param;
+      param.context = directive.name;
+      param.idxTokenList = currentToken_.idxTokenList;
+      param.lexeme = currentToken_.lexeme;
+      param.line = currentToken_.line;
+      param.col = currentToken_.col;
+      directive.params.emplace_back(param);
       Next();
     }
   }
@@ -282,13 +300,12 @@ Directive Parser::ParseDirective(Identifier context)
   }
   else
   {
-    Error("unexpected token", " expected: `;`", true);
-    directive.error = true;
+    Error("unexpected token", " expected: `;`", true, directive);
   }
   return (directive);
 }
 
-void Parser::ParseLBrace(BlockDirective& blockDirective)
+void Parser::ParseLBrace(Node& blockDirective)
 {
   if (IsLBrace())
   {
@@ -296,10 +313,9 @@ void Parser::ParseLBrace(BlockDirective& blockDirective)
   }
   else
   {
-    blockDirective.error = true;
     do
     {
-      Error("unexpected token", " expected: `{`", true);
+      Error("unexpected token", " expected: `{`", true, blockDirective);
     } while (!IsLBrace() && !IsEof());
     if (IsLBrace())
     {
@@ -308,7 +324,7 @@ void Parser::ParseLBrace(BlockDirective& blockDirective)
   }
 }
 
-void Parser::ParseRBrace(BlockDirective& blockDirective)
+void Parser::ParseRBrace(Node& blockDirective)
 {
   if (IsRBrace())
   {
@@ -316,12 +332,11 @@ void Parser::ParseRBrace(BlockDirective& blockDirective)
   }
   else
   {
-    blockDirective.error = true;
-    Error("unexpected token", " expected: `}`", true);
+    Error("unexpected token", " expected: `}`", true, blockDirective);
   }
 }
 
-void Parser::ParseBlock(BlockDirective& blockDirective)
+void Parser::ParseBlock(Node& blockDirective)
 {
   ParseLBrace(blockDirective);
   while (!IsRBrace() && !IsEof())
@@ -332,20 +347,17 @@ void Parser::ParseBlock(BlockDirective& blockDirective)
     }
     else if (IsBlockDirective())
     {
-      ValidateContext(blockDirective);
-      ValidateNumberOfEventsAndHtpp(blockDirective);
       blockDirective.nestedBlocks.emplace_back(ParseBlockDirective(blockDirective.name));
     }
     else
     {
-      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true);
-      blockDirective.error = true;
+      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true, blockDirective);
     }
   }
   ParseRBrace(blockDirective);
 }
 
-void Parser::ParseLocationParam(BlockDirective& blockDirective)
+void Parser::ParseLocationParam(Node& blockDirective)
 {
   if (blockDirective.name != Identifier::Location)
   {
@@ -355,74 +367,67 @@ void Parser::ParseLocationParam(BlockDirective& blockDirective)
   {
     if (IsEof() || IsLBrace())
     {
-      Error("unexpected token", " expected: PARAMETER", false);
-      blockDirective.error = true;
+      Error("unexpected token", " expected: PARAMETER", false, blockDirective);
       return;
     }
-    Error("unexpected token", " expected: PARAMETER", true);
+    Error("unexpected token", " expected: PARAMETER", true, blockDirective);
   }
   if (IsParam())
   {
-    blockDirective.params.emplace_back(currentToken_.lexeme);
+    Node param;
+    param.name = Identifier::Param;
+    param.context = Identifier::Location;
+    param.idxTokenList = currentToken_.idxTokenList;
+    param.lexeme = currentToken_.lexeme;
+    param.line = currentToken_.line;
+    param.col = currentToken_.col;
+    blockDirective.params.emplace_back(param);
     Next();
   }
 }
 
-BlockDirective Parser::ParseBlockDirective(Identifier context)
+Node Parser::ParseBlockDirective(Identifier context)
 {
-  BlockDirective blockDirective;
+  Node blockDirective;
 
-  blockDirective.error = false;
   blockDirective.name = TokenKindToIdentifier(currentToken_.kind);
   blockDirective.context = context;
+  blockDirective.idxTokenList = currentToken_.idxTokenList;
+  blockDirective.lexeme = currentToken_.lexeme;
+  blockDirective.line = currentToken_.line;
+  blockDirective.col = currentToken_.col;
   Next();
   ParseLocationParam(blockDirective);
   ParseBlock(blockDirective);
   return (blockDirective);
 }
 
-// print detailed AST
-std::string Parser::MakeSpaces(size_t level)
+//////////////////// print detailed AST ////////////////////
+std::string Parser::MakeSpaces(std::size_t level) const
 {
   std::string spaces;
-  for (size_t i = 0; i < level; ++i)
+  for (std::size_t i = 0; i < level; ++i)
   {
     spaces.append("    ");
   }
   return (spaces);
 }
 
-std::string Parser::IdentifierToString(Identifier identifier)
-{
-  switch (identifier)
-  {
-    case Identifier::Main:
-      return ("main");
-    case Identifier::Directive:
-      return ("directive");
-    case Identifier::Events:
-      return ("events");
-    case Identifier::Http:
-      return ("http");
-    case Identifier::Server:
-      return ("server");
-    case Identifier::Location:
-      return ("location");
-  }
-  assert(false && "Invalid Identifier passed to identifierToString");
-  __builtin_unreachable();
-}
-
-void Parser::PrintParams(const std::vector<std::string>& params, size_t level)
+void Parser::PrintParam(const Node& param, std::size_t level) const
 {
   std::string spaces = MakeSpaces(level);
-  for (auto param : params)
+  if (param.error == true)
   {
-    std::cout << spaces << "PARAM:   " << param << "\n";
+    std::cout << "\n" << spaces << kRed_ << "ERROR >>>" << kReset_;
+  }
+  std::cout << "\n" << spaces << "PARAM:   " << param.lexeme << "\n";
+  if (param.error == true)
+  {
+    std::cout << spaces << kRed_ << "<<< ERROR\n" << kReset_;
   }
 }
 
-void Parser::PrintDirective(const Directive& directive, size_t level)
+void Parser::PrintDirective(const Node& directive, std::size_t level) const
 {
   std::string spaces = MakeSpaces(level);
   if (directive.error == true)
@@ -431,15 +436,18 @@ void Parser::PrintDirective(const Directive& directive, size_t level)
   }
   std::cout << "\n"
             << spaces << "DIRECTIVE:"
-            << "   Name: " << directive.name << "   Context: " << IdentifierToString(directive.context) << "\n";
-  PrintParams(directive.params, level + 1);
+            << "   Name: " << IdentifierToString(directive.name) << "   Context: " << IdentifierToString(directive.context) << "\n";
+  for (const Node& param : directive.params)
+  {
+    PrintParam(param, level + 1);
+  }
   if (directive.error == true)
   {
     std::cout << spaces << kRed_ << "<<< ERROR\n" << kReset_;
   }
 }
 
-void Parser::PrintBlockDirective(const BlockDirective& blockDirective, size_t level)
+void Parser::PrintBlockDirective(const Node& blockDirective, std::size_t level) const
 {
   std::string spaces = MakeSpaces(level);
   if (blockDirective.error == true)
@@ -450,12 +458,15 @@ void Parser::PrintBlockDirective(const BlockDirective& blockDirective, size_t le
             << spaces << "BLOCKDIRECTIVE:"
             << "   Name: " << IdentifierToString(blockDirective.name)
             << "   Context: " << IdentifierToString(blockDirective.context) << "\n";
-  PrintParams(blockDirective.params, level + 1);
-  for (auto dir : blockDirective.directives)
+  for (const Node& param : blockDirective.params)
+  {
+    PrintParam(param, level + 1);
+  }
+  for (const Node& dir : blockDirective.directives)
   {
     PrintDirective(dir, level + 1);
   }
-  for (auto blockDir : blockDirective.nestedBlocks)
+  for (const Node& blockDir : blockDirective.nestedBlocks)
   {
     PrintBlockDirective(blockDir, level + 1);
   }

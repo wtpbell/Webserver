@@ -1,0 +1,101 @@
+# incorrectly nested events
+
+events {events{}}
+
+http{events{}}
+
+http{server{events{}}}
+
+http{server{location /documents/{events{}}}}
+
+
+# incorrectly nested http
+
+events{http{}}
+
+http{http{}}
+
+http{server{http{}}}
+
+http{server{location /documents/{http{}}}}
+
+# incorrectly nested server
+
+server{}
+
+events{server{}}
+
+http{server{server{}}}
+
+http{location /documents/{server{}}}
+
+http{server{location /documents/{server{}}}}
+
+# incorrectly nested location /documents/
+
+location /documents/{}
+
+location /documents/{location /documents/{location /documents/{}}}
+
+events{location /documents/{}}
+
+http{server{location /documents/{location /documents/{}}}}
+
+http{location /documents/{location /documents/{}}}
+
+# multiple recursively incorrectly nested blocks
+
+http {server {location /documents/ {http{
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        server {
+          location path {
+            location /documents/ {
+              server {
+                events {
+                  http {
+                    events {
+                      http {
+                        events {
+                          location /documents/ /path {
+                            server {
+                              http {
+                                server {
+                                  location /documents/ {
+
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+

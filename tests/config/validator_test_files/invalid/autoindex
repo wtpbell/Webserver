@@ -1,0 +1,33 @@
+
+
+http {
+  
+  #valid
+
+  autoindex on;
+  autoindex off;
+
+  server {
+
+    #valid
+
+    autoindex on;
+    autoindex off;
+
+    location /path{
+
+      #valid
+
+      autoindex on;
+      autoindex off;
+
+      # invalid
+
+      autoindex ;
+      autoindex on off;
+      autoindex off on on on ;
+      autoindex huh?;
+      autoindex on;
+    }
+  }
+}

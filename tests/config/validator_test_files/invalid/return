@@ -1,0 +1,26 @@
+
+http {
+  server {
+    location  /path/path {
+
+      # valid
+
+      return 100 /path;
+      return 100 http://someplacesomewhere;
+      return 100;
+      return /path;
+      return http://someplace;
+
+      # invalid
+
+      return ;
+      return code;
+      return path;
+      return 100 path;
+      return code /path;
+      return 100 /path more more more;
+
+      return 100 /path;
+    }
+  }
+}

@@ -1,0 +1,76 @@
+listen 8080;
+server_name name;
+root /path;
+index file;
+alias /path;
+client_max_body_size 1G;
+error_page 401 http://path;
+allowed_methods DELETE;
+return 100;
+client_body_temp_path /path;
+
+events {
+  listen 8080;
+  server_name name;
+  root /path;
+  index file;
+  alias /path;
+  client_max_body_size 1G;
+  error_page 401 http://path;
+  allowed_methods DELETE;
+  return 100;
+  client_body_temp_path /path;
+}
+
+http {
+
+  listen 8080;
+  server_name name;
+  root /path;
+  index file;
+  alias /path;
+  client_max_body_size 1G;
+  error_page 401 http://path;
+  allowed_methods DELETE;
+  return 100;
+  client_body_temp_path /path;
+
+  server {
+    listen 8080;
+    server_name name;
+    root /path;
+    index file;
+    alias /path;
+    client_max_body_size 1G;
+    error_page 401 http://path;
+    allowed_methods DELETE;
+    return 100;
+    client_body_temp_path /path;
+    
+    location /path/ {
+      listen 8080;
+      server_name name;
+      root /path;
+      index file;
+      alias /path;
+      client_max_body_size 1G;
+      error_page 401 http://path;
+      allowed_methods DELETE;
+      return 100;
+      client_body_temp_path /path;
+    }
+  }
+
+  location /path/ {
+    listen 8080;
+    server_name name;
+    root /path;
+    index file;
+    alias /path;
+    client_max_body_size 1G;
+    error_page 401 http://path;
+    allowed_methods DELETE;
+    return 100;
+    client_body_temp_path /path;
+  }
+}

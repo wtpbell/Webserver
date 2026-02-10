@@ -9,7 +9,7 @@ BIN			:= bin/
 BIN_DIRS	:= $(BIN) $(BIN)exception/ $(BIN)config/ $(BIN)io/ $(BIN)http/
 MAIN		:= $(BIN)main.o
 SRCS		:= Logger.cpp helper.cpp signal.cpp Server.cpp EpollManager.cpp string.cpp
-SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp load_configs.cpp)
+SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp Validator.cpp load_configs.cpp)
 SRCS_EXCEPT	:= $(addprefix exception/, FileDescriptorException.cpp ServerException.cpp EPollManagerException.cpp)
 SRCS_IO		:= $(addprefix io/, SharedFD.cpp Socket.cpp)
 SRCS_HTTP	:= $(addprefix http/, HTTPMessage.cpp HTTPParser.cpp HTTPUtils.cpp HTTPRequest.cpp HTTPResponse.cpp\
@@ -24,7 +24,7 @@ TEST_DIR	:= tests/
 TEST_NAME	:= $(BIN)$(TEST_DIR)run_tests
 TEST_SRCS	:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_server.cpp test_epollmanager.cpp test_logger.cpp \
 				test_lexer.cpp test_parser.cpp test_http_paths.cpp test_http_parser.cpp test_http_validator.cpp \
-				test_integrate_parser_validator.cpp test_http_response.cpp
+				test_integrate_parser_validator.cpp test_http_response.cpp test_validator.cpp
 TEST_OBJS	:= $(TEST_SRCS:%.cpp=$(BIN)$(TEST_DIR)%.o)
 TEST_DIRS	:= $(BIN)$(TEST_DIR)
 

@@ -1,0 +1,67 @@
+http {
+  server {
+    location /path/{
+      http {
+        server {
+          location /path/    {
+            listen ;
+            server_name name;
+            root path;
+            index ;
+            try_files ;
+            alias path;
+            client_max_body_size size;
+            error_page ;
+            allowed_methods ;
+
+            location /path/ {
+              listen ;
+              server_name name;
+              root path;
+              index ;
+              try_files ;
+              alias path;
+              client_max_body_size size;
+              error_page ;
+              allowed_methods ;
+            }
+
+          }
+          events {
+            listen ;
+            server_name name;
+            root path;
+            index ;
+            try_files ;
+            alias path;
+            client_max_body_size size;
+            error_page ;
+            allowed_methods ;
+          }
+          http {
+            listen ;
+            server_name name;
+            root path;
+            index ;
+            try_files ;
+            alias path;
+            client_max_body_size size;
+            error_page ;
+            allowed_methods ;
+          }
+          server {
+            listen ;
+            server_name name;
+            root path;
+            index ;
+            try_files ;
+            alias path;
+            client_max_body_size size;
+            error_page ;
+            allowed_methods ;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+
+
+http {
+
+  # valid
+
+  client_body_temp_path /path;
+
+  # invalid
+
+  client_body_temp_path ;
+  client_body_temp_path path;
+  client_body_temp_path /path /path;
+  client_body_temp_path /path path;
+  client_body_temp_path path /path;
+}

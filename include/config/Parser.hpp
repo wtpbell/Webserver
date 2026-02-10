@@ -21,29 +21,37 @@
 enum class Identifier
 {
   Main,
-  Directive,
   Events,
   Http,
   Server,
-  Location
+  Location,
+  Listen,
+  Server_name,
+  Root,
+  Index,
+  Alias,
+  Client_max_body_size,
+  Client_body_temp_path,
+  Error_page,
+  Return,
+  Allowed_methods,
+  Autoindex,
+  Cgi,
+  Param
 };
 
-struct Directive
-{
-    std::string name;
-    Identifier context;
-    std::vector<std::string> params;
-    bool error;
-};
-
-struct BlockDirective
+struct Node
 {
     Identifier name;
     Identifier context;
-    std::vector<std::string> params;
-    std::vector<Directive> directives;
-    std::vector<BlockDirective> nestedBlocks;
-    bool error;
+    std::string lexeme;
+    std::size_t line;
+    std::size_t col;
+    std::vector<Node> params;
+    std::vector<Node> directives;
+    std::vector<Node> nestedBlocks;
+    std::size_t idxTokenList;
+    bool error = false;
 };
 
 class Parser
@@ -51,55 +59,53 @@ class Parser
   public:
     Parser(Lexer& lexer);
     Parser(const Parser& other) = delete;
-    Parser(Parser&& other) noexcept = delete;
+    Parser(Parser&& other) = delete;
     Parser& operator=(const Parser& other) = delete;
-    Parser& operator=(Parser&& other) noexcept = delete;
+    Parser& operator=(Parser&& other) = delete;
     ~Parser() = default;
 
-    void Parse(void);
-    void PrintDetailedAST(void);
+    void Parse();
+    void PrintDetailedAST() const;
+    Node& GetAst();
+    bool GetError() const;
+    std::string IdentifierToString(Identifier identifier) const;
 
   private:
     // helper functions
-    bool IsEof(void);
-    bool IsBlockDirective(void);
-    bool IsHttp(void);
-    bool IsEvents(void);
-    bool IsServer(void);
-    bool IsLocation(void);
-    bool IsLBrace(void);
-    bool IsRBrace(void);
-    bool IsDirective(void);
-    bool IsSemicolon(void);
-    bool IsParam(void);
-    Identifier TokenKindToIdentifier(TokenKind kind);
-    void Next(void);
-    void PrintError(std::string_view errorType, std::string_view expectedMessage = "");
-    void Error(std::string_view error_type, std::string_view message, bool skip);
-    void ContextError(BlockDirective& blockDirective);
-    void ValidateContext(BlockDirective& blockDirective);
-    void ValidateNumberOfEventsAndHtpp(BlockDirective& blockDirective);
+    bool IsEof() const;
+    bool IsBlockDirective() const;
+    bool IsHttp() const;
+    bool IsEvents() const;
+    bool IsServer() const;
+    bool IsLocation() const;
+    bool IsLBrace() const;
+    bool IsRBrace() const;
+    bool IsDirective() const;
+    bool IsSemicolon() const;
+    bool IsParam() const;
+    Identifier TokenKindToIdentifier(TokenKind kind) const;
+    void Next();
+    std::string BuildErrorMessage(std::string_view errorType, std::string_view expectedMessage = "");
+    void Error(std::string_view error_type, std::string_view message, bool skip, Node& node);
 
     // parsing logic
-    Directive ParseDirective(Identifier context);
-    void ParseLBrace(BlockDirective& blockDirective);
-    void ParseRBrace(BlockDirective& blockDirective);
-    void ParseBlock(BlockDirective& blockDirective);
-    void ParseLocationParam(BlockDirective& blockDirective);
-    BlockDirective ParseBlockDirective(Identifier context);
+    Node ParseDirective(Identifier context);
+    void ParseLBrace(Node& blockDirective);
+    void ParseRBrace(Node& blockDirective);
+    void ParseBlock(Node& blockDirective);
+    void ParseLocationParam(Node& blockDirective);
+    Node ParseBlockDirective(Identifier context);
 
     // printAST
-    std::string MakeSpaces(size_t level);
-    std::string IdentifierToString(Identifier identifier);
-    void PrintParams(const std::vector<std::string>& params, size_t level);
-    void PrintDirective(const Directive& directive, size_t level);
-    void PrintBlockDirective(const BlockDirective& blockDirective, size_t level);
+    std::string MakeSpaces(std::size_t level) const;
+    void PrintParam(const Node& param, std::size_t level) const;
+    void PrintDirective(const Node& directive, std::size_t level) const;
+    void PrintBlockDirective(const Node& blockDirective, std::size_t level) const;
 
-    BlockDirective configs_;
+    Node ast_;
     Lexer& lexer_;
     Token currentToken_;
-    int num_events_;
-    int num_http_;
+    bool error_ = false;
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
 };

@@ -1,0 +1,257 @@
+
+
+http {
+  server {
+
+    # PORT NUMBER
+    # valid
+
+    listen 0;
+    listen 8000;
+    listen 65535;
+
+    # invalid
+    listen -1;
+    listen 65536;
+    listen 018446744073709551616;
+    listen portNumber;
+    listen 65535a;
+    listen +65535;
+    listen 01;
+
+    # IPV4
+    # valid
+    listen 0.0.0.0;
+    listen 255.255.255.255;
+
+    # invalid
+    listen ;
+
+    listen 256.0.0.0;
+    listen 0.256.0.0;
+    listen 0.0.256.0;
+    listen 0.0.0.256;
+
+    listen 018446744073709551616.0.0.0;
+    listen 00.18446744073709551616.0.0;
+    listen 0.0.18446744073709551616.00;
+    listen 0.0.0.018446744073709551616;
+
+    listen 01.1.1.1;
+    listen 1.01.1.1;
+    listen 1.1.01.1;
+    listen 1.1.1.00000000000000000001;
+
+    listen 1a.1.1.1;
+    listen 1.a1.1.1;
+    listen 1.1.1a.1;
+    listen 1.1.1.a1;
+
+    listen .1.1.1;
+    listen 1..1.1;
+    listen 1.1..1;
+    listen 1.1.1.;
+
+    listen -1.1.1.1;
+    listen 1.-1.1.1;
+    listen 1.1.-1.1;
+    listen 1.1.1.-1;
+
+    listen 1.;
+    listen 1.1;
+    listen 1.1.;
+    listen 1.1.1;
+    listen 1.1.1.;
+    listen 1.1.1.1.;
+    listen 1.1.1.1.1;
+    listen 1.1.1.1.1.;
+
+    listen .;
+    listen ..;
+    listen ...;
+
+    listen 255.255.255.255 1.1.1.1 1.2.3.4;
+
+    listen 255255255255;
+    listen ipv4address;
+
+    # IPV6
+    # valid
+    listen [1:1:1:1:1:1:1:1];
+    listen [0001:0001:0001:0001:0001:0001:0001:0001];
+    listen [0123:4567:89ab:cdef:fedc:ba98:7654:3210];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff];
+
+    listen [::];
+    listen [::ffff];
+    listen [::ffff:ffff];
+    listen [::ffff:ffff:ffff];
+    listen [::ffff:ffff:ffff:ffff];
+    listen [::ffff:ffff:ffff:ffff:ffff];
+    listen [::ffff:ffff:ffff:ffff:ffff:ffff];
+    listen [::ffff:ffff:ffff:ffff:ffff:ffff:ffff];
+    listen [ffff::];
+    listen [ffff:ffff::];
+    listen [ffff:ffff:ffff::];
+    listen [ffff:ffff:ffff:ffff::];
+    listen [ffff:ffff:ffff:ffff:ffff::];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff::];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff::];
+    listen [abcd::6789];
+    listen [0001::0001];
+    listen [0001:0001::0001];
+    listen [0001:0001:0001::0001];
+    listen [0001:0001:0001:0001::0001];
+    listen [0001:0001:0001:0001:0001::0001];
+    listen [0001:0001:0001:0001:0001:0001::0001];
+
+    listen [a:0b:00d:000d:0000:001:02:3];
+
+    # invalid
+
+    listen [1:1:1:1:1:1:1:1] [1:1:1:1:1:1:1:1] [1:1:1:1:1:1:1:1] ;
+
+    listen [ipv6address];
+    listen [0001:ipv6address:0001:0001:0001:0001::ipv6address];
+
+    listen ;
+    listen [];
+    listen [;
+    listen [[]];
+    listen [[;
+    listen ]];
+    listen ];
+    listen [:];
+    listen [:::];
+
+    listen [1];
+    listen [1:1];
+    listen [1:1:1];
+    listen [1:1:1:1];
+    listen [1:1:1:1:1];
+    listen [1:1:1:1:1:1];
+    listen [1:1:1:1:1:1:1];
+
+    listen [1:1:1:1:1:1:1:1;
+    listen 1:1:1:1:1:1:1:1];
+    listen [[1:1:1:1:1:1:1:1];
+    listen [[1:1:1:1:1:1:1:1]];
+    listen [1:1:1:1:1:1:1:1]];
+
+    listen [11111:1:1:1:1:1:1:1];
+    listen [0001:0001:0001:0001:0001:0001:0001:00001];
+    listen [0123:4567:89ab:cdef:ffedc:ba98:7654:3210];
+    listen [ffff:ffff:fffff:ffff:ffff:ffff:ffff:ffff];
+
+    listen [1:1:1:1:1:1:1,1];
+    listen [0001:00k1:0001:0001:0001:0001:0001:0001];
+    listen [0123:4567:89ab:cdef:fedc:ba98:7654:32?0];
+    listen [fff-:ffff:ffff:ffff:ffff:ffff:ffff:ffff];
+
+    listen [1:1:1:1:1:1:1:1:];
+    listen [0001:0001:0001:0001:0001:0001:0001:0001:];
+    listen [0123:4567:89ab:cdef:fedc:ba98:7654:3210:];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:];
+
+    listen [::ffff:];
+    listen [::ffff:ffff:];
+    listen [::ffff:ffff:ffff:];
+    listen [::ffff:ffff:ffff:ffff:];
+    listen [::ffff:ffff:ffff:ffff:ffff:];
+    listen [::ffff:ffff:ffff:ffff:ffff:ffff:];
+    listen [::ffff:ffff:ffff:ffff:ffff:ffff:ffff:];
+    listen [ffff:::];
+    listen [ffff:ffff:::];
+    listen [ffff:ffff:ffff:::];
+    listen [ffff:ffff:ffff:ffff:::];
+    listen [ffff:ffff:ffff:ffff:ffff:::];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff:::];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff:::];
+    listen [abcd::6789:];
+    listen [0001::0001:];
+    listen [0001:0001::0001:];
+    listen [0001:0001:0001::0001:];
+    listen [0001:0001:0001:0001::0001:];
+    listen [0001:0001:0001:0001:0001::0001:];
+    listen [0001:0001:0001:0001:0001:0001::0001:];
+
+    listen [a:0b:00d:000d:0000:001:02:3:];
+
+    listen [1:1:1:1:1:1:1:1::];
+    listen [0001:0001:0001:0001:0001:0001:0001:0001::];
+    listen [0123:4567:89ab:cdef:fedc:ba98:7654:3210::];
+    listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff::];
+
+    listen [::ffff::];
+    listen [::ffff:ffff::];
+    listen [::ffff:ffff:ffff::];
+    listen [::ffff:ffff:ffff:ffff::];
+    listen [::ffff:ffff:ffff:ffff:ffff::];
+    listen [::ffff:ffff:ffff:ffff:ffff:ffff::];
+    listen [::ffff:ffff:ffff:ffff:ffff:ffff:ffff::];
+    listen [abcd::6789::];
+    listen [0001::0001::];
+    listen [0001:0001::0001::];
+    listen [0001:0001:0001::0001::];
+    listen [0001:0001:0001:0001::0001::];
+    listen [0001:0001:0001:0001:0001::0001::];
+    listen [0001:0001:0001:0001:0001:0001::0001::];
+
+    listen [a:0b:00d:000d:0000:001:02:3::];
+
+    listen [:1:1:1:1:1:1:1:1];
+    listen [:0001:0001:0001:0001:0001:0001:0001:0001];
+    listen [:0123:4567:89ab:cdef:fedc:ba98:7654:3210];
+    listen [:ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff];
+
+    listen [:::ffff];
+    listen [:::ffff:ffff];
+    listen [:::ffff:ffff:ffff];
+    listen [:::ffff:ffff:ffff:ffff];
+    listen [:::ffff:ffff:ffff:ffff:ffff];
+    listen [:::ffff:ffff:ffff:ffff:ffff:ffff];
+    listen [:::ffff:ffff:ffff:ffff:ffff:ffff:ffff];
+    listen [:ffff::];
+    listen [:ffff:ffff::];
+    listen [:ffff:ffff:ffff::];
+    listen [:ffff:ffff:ffff:ffff::];
+    listen [:ffff:ffff:ffff:ffff:ffff::];
+    listen [:ffff:ffff:ffff:ffff:ffff:ffff::];
+    listen [:ffff:ffff:ffff:ffff:ffff:ffff:ffff::];
+    listen [:abcd::6789];
+    listen [:0001::0001];
+    listen [:0001:0001::0001];
+    listen [:0001:0001:0001::0001];
+    listen [:0001:0001:0001:0001::0001];
+    listen [:0001:0001:0001:0001:0001::0001];
+    listen [:0001:0001:0001:0001:0001:0001::0001];
+
+    listen [:a:0b:00d:000d:0000:001:02:3];
+
+    listen [1:1:1:1:1:1:1:1:1];
+    listen [::1:1:1:1:1:1:1:1];
+    listen [::1:1:1:1:1:1:1::];
+    listen [1:1:1:1:1:1:1:1:];
+
+    # ipv4 and port number
+    # valid
+
+    listen 1.1.1.1:1;
+
+    # invalid
+
+    listen 1.1.1.1:65536;
+    listen 1.1.1.1,1;
+
+    # ipv6 and port number
+    # valid
+
+    listen [::]:1;
+
+    # invalid
+
+    listen [::]:65536;
+    listen [::],65535;
+    listen 1:1:1:1:1:1:1:1:8080;
+  }
+}

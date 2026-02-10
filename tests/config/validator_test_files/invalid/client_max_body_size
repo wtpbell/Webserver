@@ -1,0 +1,47 @@
+http {
+  server {
+    # valid
+    client_max_body_size 1;
+    client_max_body_size        1k;
+    client_max_body_size                    1m;
+    client_max_body_size 1g;
+    client_max_body_size        1K;
+    client_max_body_size                    1M;
+    client_max_body_size 1G;
+    client_max_body_size 18446744073709551615;
+    client_max_body_size 18014398509481983k;
+    client_max_body_size 17592186044415m;
+    client_max_body_size 17179869183g;
+    client_max_body_size 18014398509481983K;
+    client_max_body_size 17592186044415M;
+    client_max_body_size 17179869183G;
+
+
+    # invalid
+    client_max_body_size ;
+    client_max_body_size 0;
+    client_max_body_size -1;
+    client_max_body_size k;
+    client_max_body_size m;
+    client_max_body_size g;
+    client_max_body_size error error;
+    client_max_body_size 1ka;
+    client_max_body_size 1ma;
+    client_max_body_size 1g9;
+    client_max_body_size 01;
+    client_max_body_size 1 k;
+    client_max_body_size 1 m;
+    client_max_body_size 1 g;
+    client_max_body_size 1 1;
+    client_max_body_size 1k 1m 1g;
+    client_max_body_size 000000000000000000000000000000000000000000001;
+    client_max_body_size 18446744073709551616;
+    client_max_body_size 18014398509481984k;
+    client_max_body_size 17592186044416m;
+    client_max_body_size 17179869184g;
+    client_max_body_size 18014398509481984K;
+    client_max_body_size 17592186044416M;
+    client_max_body_size 17179869184G;
+    
+  }
+}

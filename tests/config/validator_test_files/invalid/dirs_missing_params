@@ -1,0 +1,25 @@
+
+events {}
+
+http {
+  server {
+    listen ;
+    server_name ;
+    root ;
+    client_max_body_size ;
+    error_page ;
+    location /path/{
+      alias ;
+    }
+  }
+}
+
+
+listen ;
+server_name ;
+root ;
+index ;
+alias ;
+client_max_body_size ;
+error_page ;
+allowed_methods ;

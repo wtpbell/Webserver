@@ -74,6 +74,7 @@ class HTTPParser
     bool NeedsBodyDecision() const;
 
     const HTTPRequest& GetRequest(void) const;
+    HTTPRequest& GetRequestMutable(void);
     ValidationResult GetError(void) const;
     HTTPRequest TakeRequest(void);
     void ResetNextRequest(void);
@@ -94,6 +95,7 @@ class HTTPParser
     bool ConsumeLine(const std::string& buf, size_t& pos, size_t& lineEnd);
     bool ParseRequestLine(const size_t lineStart, size_t lineEnd);
     bool ParseHeaderLine(const size_t lineStart, size_t lineEnd);
+
     void Fail(ValidationResult vr = ValidationResult::BadRequest);
 
     HTTPRequest req_;

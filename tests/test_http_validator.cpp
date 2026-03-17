@@ -276,3 +276,126 @@ TEST_CASE("HTTPValidator rejects chunked trailing comma", "[http][validator]")
 
   REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
 }
+
+TEST_CASE("HTTPValidator accept valid Cookie header", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: ID=31d4d96e407aad42; lang=en-US\r\n"
+      "\r\n");
+
+  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+}
+
+TEST_CASE("ValidateCookies accept empty Cookie header value", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie:\r\n"
+      "\r\n");
+
+  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+}
+
+TEST_CASE("ValidateCookies accept Cookie with empty value", "[http][validate][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: ID=31d4d96e407aad42; lang=\r\n"
+      "\r\n");
+
+  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+}
+
+TEST_CASE("ValidateCookies accept Cookie with empty input", "[http][validate][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: ID=31d4d96e407aad42;;lang=en-US\r\n"
+      "\r\n");
+
+  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+}
+
+TEST_CASE("ValidateCookies rejects cookie segment without '='", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a=b; c\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+}
+
+TEST_CASE("ValidateCookies rejects empty cookie name", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: =x\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+}
+
+TEST_CASE("ValidateCookies rejects space in cookie name", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a b=c\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+
+}
+
+TEST_CASE("ValidateCookies rejects space in cookie value", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a=hello world\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+}
+
+TEST_CASE("ValidateCookies rejects comma in cookie value", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a=1,2\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+}
+
+TEST_CASE("ValidateCookies rejects quote/backslash in cookie value", "[http][validator][cookie]")
+{
+  auto req1 = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a=\"x\"\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req1) == ValidationResult::BadRequest);
+
+  auto req2 = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a=\\x\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req2) == ValidationResult::BadRequest);
+}
+
+TEST_CASE("ValidateCookies rejects multiple Cookie headers", "[http][validator][cookie]")
+{
+  auto req = MakeParsedHeadersOnly(
+      "POST / HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Cookie: a=b\r\n"
+      "Cookie: c=d\r\n"
+      "\r\n");
+  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+}

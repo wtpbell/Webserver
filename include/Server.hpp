@@ -22,6 +22,7 @@
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPResponse.hpp"
+#include "http/SessionManager.hpp"
 #include "io/Socket.hpp"
 
 class Server
@@ -80,8 +81,10 @@ class Server
     HTTPResponse DispatchRequest(const HTTPRequest& req);
     void QueueResponse(EpollManager& manager, ConnectionIterator it, HTTPResponse resp, bool closeAfter);
     void QueueError(EpollManager& manager, ConnectionIterator it, ValidationResult result);
+
     Socket socket_;
     std::unordered_map<int, Connection> connections_;
+    SessionManager sessionManager_;
 };
 
 #endif  // SERVER_H_

@@ -19,6 +19,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <ctime>
 
 namespace HTTP
 {
@@ -32,6 +33,7 @@ namespace HTTP
   inline constexpr std::size_t kMaxRequestLine = 8000;
   inline constexpr std::size_t kMaxHeaderSize = 8192;
   inline constexpr std::size_t kMaxBodySize = 1024 * 1024;  // 1 MB (example)
+  inline constexpr std::time_t kTTL = 1800;
   inline constexpr std::string_view HTTP_TCHAR =
       "!#$%&'*+-.^_`|~"
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

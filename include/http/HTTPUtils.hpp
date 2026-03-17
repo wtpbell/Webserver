@@ -32,6 +32,7 @@ namespace HTTP
     std::string MakeChunk(const std::string& data);
     std::string MakeLastChunk(void);
   }  // namespace wire
+
 }  // namespace HTTP
 
 #endif  // HTTPUTILS_HPP

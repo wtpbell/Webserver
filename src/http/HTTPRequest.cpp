@@ -103,7 +103,7 @@ std::string_view HTTPRequest::GetPath(void) const
   return path_;
 }
 
-std::string_view HTTPRequest::GetHost() const
+std::string_view HTTPRequest::GetHost(void) const
 {
   std::string_view host = GetFirstHeaderValueOf("host");
   if (host.empty())
@@ -113,6 +113,16 @@ std::string_view HTTPRequest::GetHost() const
   return (colon == std::string_view::npos) ? host : host.substr(0, colon);
 }
 
+const HTTPRequest::CookieMap& HTTPRequest::GetCookies(void) const
+{
+  return cookies_;
+}
+
+std::string_view HTTPRequest::GetCookieOr(std::string_view name, std::string_view def) const
+{
+  auto it = cookies_.find(name);
+  return it == cookies_.end() ? def : std::string_view(it->second);
+}
 /************************************************** Setter ***********************************************************/
 
 void HTTPRequest::SetMethod(HTTP::Method method)
@@ -153,9 +163,19 @@ void HTTPRequest::SetComplete(bool complete)
   isComplete_ = complete;
 }
 
+void HTTPRequest::SetCookies(CookieMap&& cookies)
+{
+  cookies_ = std::move(cookies);
+}
+
 bool HTTPRequest::IsComplete(void) const
 {
   return isComplete_;
+}
+
+bool HTTPRequest::HasCookie(std::string_view name) const
+{
+  return cookies_.find(name) != cookies_.end();
 }
 
 void HTTPRequest::Clear(void)

@@ -49,12 +49,17 @@ namespace HTTP
 
     bool IsValidHeaderValue(std::string_view value);
 
+    bool IsValidCookieValue(std::string_view value);
+    bool IsValidCookieHeader(std::string_view header);
+    bool IsValidSid(std::string_view id);
+
   }  // namespace validate
 }  // namespace HTTP
 
 ValidationResult ValidateRequest(const HTTPRequest& req);
 ValidationResult ValidateStartLine(const HTTPRequest& req);
 ValidationResult ValidateHeader(const HTTPRequest& req);
+ValidationResult ValidateCookies(const HTTPRequest& req);
 ValidationResult ValidateTransferEncoding(const HTTPRequest& req);
 ValidationResult ValidateContentLength(const HTTPRequest& req);
 

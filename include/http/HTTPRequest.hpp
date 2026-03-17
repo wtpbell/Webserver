@@ -1,18 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   HTTPRequest.hpp                                    :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2025/12/12 12:12:54 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 16:55:44 by bewong        ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   HTTPRequest.hpp                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/12/12 12:12:54 by bewong            #+#    #+#             */
+/*   Updated: 2026/02/24 11:25:04 by bewong           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTPREQUEST_HPP
 #define HTTPREQUEST_HPP
 
+#include <map>
 #include <string>
 #include <string_view>
 
@@ -22,6 +23,8 @@
 class HTTPRequest : public HTTPMessage
 {
   public:
+    using CookieMap = std::map<std::string, std::string, std::less<>>;
+
     HTTPRequest(void) = default;
     HTTPRequest(const HTTPRequest&) = default;
     HTTPRequest& operator=(const HTTPRequest&) = default;
@@ -40,6 +43,11 @@ class HTTPRequest : public HTTPMessage
     std::string_view GetPath(void) const;  // decoded + normalized
     std::string_view GetHost(void) const;
 
+    const CookieMap& GetCookies(void) const;
+    bool HasCookie(std::string_view name) const;
+    std::string_view GetCookieOr(std::string_view name, std::string_view def) const;
+
+    void SetCookies(CookieMap&& cookies);
     void SetMethod(HTTP::Method method);
     bool SetTarget(std::string_view target);
     void SetMethod(std::string_view method);
@@ -58,6 +66,7 @@ class HTTPRequest : public HTTPMessage
     std::string query_;   // "x=1&y=2"
     bool isComplete_ = false;
     std::string path_;
+    CookieMap cookies_;
 };
 
 #endif  // HTTPREQUEST_HPP

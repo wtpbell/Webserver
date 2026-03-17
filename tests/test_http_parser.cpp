@@ -448,3 +448,18 @@ TEST_CASE("HTTPParser rejects headers larger than kMaxHeaderSize even without CR
   REQUIRE(p.HasError());
   REQUIRE(p.GetError() == ValidationResult::PayloadTooLarge);
 }
+
+TEST_CASE("HTTPParser accepts cookies header", "[http][parser][cookie]")
+{
+  HTTPParser p;
+  std::string req =
+      "GET / HTTP/1.1\r\n"
+      "Host: localhost\r\n"
+      "Cookie: SID=31d4d96e407aad42; lang=en-US\r\n"
+      "\r\n";
+  auto result = ParseToCompletion(p, req);
+
+  REQUIRE(result == ParseRes::Done);
+  REQUIRE(p.IsComplete() == true);
+  REQUIRE(p.HasError() == false);
+}

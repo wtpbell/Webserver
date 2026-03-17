@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   HTTPValidator.cpp                                  :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2026/01/13 19:07:39 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:33:37 by bewong        ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   HTTPValidator.cpp                                  :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/13 19:07:39 by bewong            #+#    #+#             */
+/*   Updated: 2026/02/25 13:26:12 by bewong           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,9 @@
 #include <string_view>
 #include <vector>
 
+#include "http/HTTPCookie.hpp"
 #include "http/HTTPTypes.hpp"
+#include "http/HTTPUtils.hpp"
 #include "string.hpp"
 
 namespace
@@ -89,6 +91,40 @@ namespace HTTP::validate
     }
     return true;
   }
+
+  // From RFC 6265: cookie-value = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+  bool IsValidCookieValue(std::string_view value)
+  {
+    for (unsigned char c : value)
+    {
+      if (c == ',' || c == ';' || c == ' ' || c == '"' || c == '\\')
+        return false;
+    }
+    return true;
+  }
+
+  /*
+  Accept:
+    session_id=abc123
+    a=b; c=d
+    a=b; c=
+    a=b;;c=d (because empty segment is skipped)
+  */
+  bool IsValidCookieHeader(std::string_view header)
+  {
+    return HTTP::cookie::ParseCookieHeader(header, nullptr);
+  }
+
+  bool IsValidSid(std::string_view id)
+  {
+    if (id.size() != 32)
+      return false;
+    for (unsigned char c : id)
+      if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+        return false;
+    return true;
+  }
+
 }  // namespace HTTP::validate
 
 ValidationResult ValidateStartLine(const HTTPRequest& req)
@@ -110,18 +146,30 @@ ValidationResult ValidateHeader(const HTTPRequest& req)
   {
     if (!HTTP::validate::IsValidHeaderName(name))
       return ValidationResult::BadRequest;
-    if (name == "cookie")
-    {
-      if (values.size() != 1 || !HTTP::validate::IsValidHeaderValue(values[0]))
-        return ValidationResult::BadRequest;
-      continue;
-    }
     for (const auto& v : values)
     {
       if (!HTTP::validate::IsValidHeaderValue(v))
         return ValidationResult::BadRequest;
     }
   }
+  return ValidationResult::OK;
+}
+
+/*
+    cookie-header = "Cookie:" OWS cookie-string OWS
+    cookie-string = cookie-pair *( ";" SP cookie-pair )
+    cookie-pair   = cookie-name "=" cookie-value
+    e.g Cookie: SID=31d4d96e407aad42; lang=en-US
+*/
+ValidationResult ValidateCookies(const HTTPRequest& req)
+{
+  const auto* vals = req.GetHeaderValuesOf("cookie");
+  if (!vals || vals->empty())
+    return ValidationResult::OK;
+  if (vals->size() != 1)
+    return ValidationResult::BadRequest;
+  if (!HTTP::validate::IsValidCookieHeader((*vals)[0]))
+    return ValidationResult::BadRequest;
   return ValidationResult::OK;
 }
 
@@ -172,6 +220,8 @@ ValidationResult ValidateRequest(const HTTPRequest& req)
   if (auto r = ValidateStartLine(req); r != ValidationResult::OK)
     return r;
   if (auto r = ValidateHeader(req); r != ValidationResult::OK)
+    return r;
+  if (auto r = ValidateCookies(req); r != ValidationResult::OK)
     return r;
   if (auto r = ValidateTransferEncoding(req); r != ValidationResult::OK)
     return r;

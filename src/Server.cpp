@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        ::::::::            */
-/*   Server.cpp                                         :+:    :+:            */
-/*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
-/*                                                   +#+                      */
-/*   Created: 2026/01/13 19:08:02 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:42:12 by bewong        ########   odam.nl         */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/13 19:08:02 by bewong            #+#    #+#             */
+/*   Updated: 2026/02/25 14:12:53 by bewong           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,8 +29,15 @@
 #include "http/HTTPTypes.hpp"
 #include "http/HTTPUtils.hpp"
 #include "http/HTTPValidator.hpp"
+#include "http/SessionManager.hpp"
+#include "http/HTTPCookie.hpp"
 #include "io/Socket.hpp"
 #include "string.hpp"
+
+namespace
+{
+
+}  // namespace
 
 /******************************************** Server Lifecycle ********************************************************/
 
@@ -172,7 +179,7 @@ void Server::InitBodyParser(HTTPParser& parser, const HTTPRequest& req)
 
 void Server::HandleHeadersDone(EpollManager& manager, ConnectionIterator it, Connection& connection, int client_fd)
 {
-  const HTTPRequest& partial = connection.parser.GetRequest();
+  HTTPRequest& partial = connection.parser.GetRequestMutable();
   const ValidationResult vr = ValidateRequest(partial);
 
   if (vr != ValidationResult::OK)
@@ -180,6 +187,13 @@ void Server::HandleHeadersDone(EpollManager& manager, ConnectionIterator it, Con
     Logger::Log(LogLevel::ERROR, "Validation error ({}) on req [{} {}] from client {}", static_cast<int>(vr),
                 partial.GetMethodString(), partial.GetTarget(), client_fd);
     QueueError(manager, it, vr);
+    connection.closeAfterSend = true;
+    connection.parser.ResetNextRequest();
+    return;
+  }
+  if (!HTTP::cookie::AttachCookies(partial))
+  {
+    QueueError(manager, it, ValidationResult::BadRequest);
     connection.closeAfterSend = true;
     connection.parser.ResetNextRequest();
     return;
@@ -302,6 +316,7 @@ void Server::HandleRequest(EpollManager& manager, const epoll_event& event)
     HTTPRequest req = connection.parser.TakeRequest();
     connection.parser.ResetNextRequest();
     HTTPResponse resp = DispatchRequest(req);
+    sessionManager_.UseOrCreateSession(req, resp);
     const bool closeAfter = CheckConnectionClose(&req, resp);
 
     if (closeAfter)

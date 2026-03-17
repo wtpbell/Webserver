@@ -61,14 +61,8 @@ bool HTTPParser::HasError(void) const
   return state_ == ParserState::Error;
 }
 
-ValidationResult HTTPParser::GetError(void) const
-{
-  return error_;
-}
-
 void HTTPParser::Fail(ValidationResult vr)
 {
-  Logger::Log(LogLevel::LDEBUG, "Parser failed in state {} (vr={})", static_cast<int>(state_), static_cast<int>(vr));
   error_ = vr;
   state_ = ParserState::Error;
 }
@@ -76,6 +70,16 @@ void HTTPParser::Fail(ValidationResult vr)
 /************************************************** Getter ***********************************************************/
 
 const HTTPRequest& HTTPParser::GetRequest(void) const
+{
+  return req_;
+}
+
+ValidationResult HTTPParser::GetError(void) const
+{
+  return error_;
+}
+
+HTTPRequest& HTTPParser::GetRequestMutable(void)
 {
   return req_;
 }

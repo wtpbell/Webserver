@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 15:17:37 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/13 19:08:25 by bewong        ########   odam.nl         */
+/*   Updated: 2026/03/17 15:52:45 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -169,7 +169,7 @@ ssize_t Socket::Recv(std::string& message, int flags, std::size_t max_chunk_size
   message.resize(message.length() + max_chunk_size);
 
   ssize_t bytes = recv(fd_, (message.data() + len), max_chunk_size, flags);
-  if (bytes > 0)
+  if (bytes >= 0)
     message.resize(len + bytes);
   return (bytes);
 }

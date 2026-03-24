@@ -35,11 +35,15 @@ http {
 
     location /path {
 
+      # valid
+
+      cgi off;
+      cgi on;
+
       # invalid
 
       cgi ;
-      cgi off;
-      cgi on;
+
       cgi error;
       cgi on off;
       cgi off on;

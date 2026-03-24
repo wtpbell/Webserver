@@ -1,0 +1,21 @@
+http {
+	server {
+		location path {
+
+			 # valid
+
+			 cgi_extension py /path/path/path;
+			 cgi_extension php path/path/path;
+
+			 # invalid
+
+			 cgi_extension ;
+			 cgi_extension py;
+			 cgi_extension php;
+			 cgi_extension py py py;
+			 cgi_extension pyp /path 1 2 3 4;
+			 cgi_extension error /path/path;
+
+		}
+	}
+}

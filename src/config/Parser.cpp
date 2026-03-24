@@ -14,19 +14,23 @@
 
 #include <cassert>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
 
 #include "config/Lexer.hpp"
 
-Parser::Parser(Lexer& lexer) : lexer_(lexer) {}
+Parser::Parser(Lexer& lexer)
+  : lexer_(lexer)
+  , currentTokenIdx_{}
+  , error_(false)
+{}
 
 //////////////////// PUBLIC ////////////////////
 void Parser::Parse()
 {
-  currentToken_ = lexer_.Current();
   ast_.name = Identifier::Main;
+  ast_.context = Identifier::Main;
   while (!IsEof())
   {
     if (IsDirective())
@@ -37,12 +41,12 @@ void Parser::Parse()
     {
       ast_.nestedBlocks.emplace_back(ParseBlockDirective(Identifier::Main));
     }
-
     else
     {
       Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true, ast_);
     }
   }
+  ast_.idxTokenListEnd = currentTokenIdx_;
 }
 
 void Parser::PrintDetailedAST() const
@@ -71,12 +75,12 @@ void Parser::PrintDetailedAST() const
 
 Node& Parser::GetAst()
 {
-  return (ast_);
+  return ast_;
 }
 
 bool Parser::GetError() const
 {
-  return (error_);
+  return error_;
 }
 
 std::string Parser::IdentifierToString(Identifier identifier) const
@@ -84,41 +88,47 @@ std::string Parser::IdentifierToString(Identifier identifier) const
   switch (identifier)
   {
     case Identifier::Main:
-      return ("main");
+      return "main";
     case Identifier::Listen:
-      return ("listen");
+      return "listen";
     case Identifier::Server_name:
-      return ("server_name");
+      return "server_name";
     case Identifier::Root:
-      return ("root");
+      return "root";
     case Identifier::Index:
-      return ("index");
+      return "index";
     case Identifier::Alias:
-      return ("alias");
+      return "alias";
     case Identifier::Client_max_body_size:
-      return ("client_max_body_size");
+      return "client_max_body_size";
     case Identifier::Client_body_temp_path:
-      return ("client_body_temp_path");
+      return "client_body_temp_path";
     case Identifier::Error_page:
-      return ("error_page");
+      return "error_page";
     case Identifier::Return:
-      return ("return");
+      return "return";
     case Identifier::Allowed_methods:
-      return ("allowed_methods");
+      return "allowed_methods";
     case Identifier::Autoindex:
-      return ("autoindex");
+      return "autoindex";
     case Identifier::Cgi:
-      return ("cgi");
+      return "cgi";
+    case Identifier::Cgi_root:
+      return "cgi_root";
+    case Identifier::Cgi_alias:
+      return "cgi_alias";
+    case Identifier::Cgi_extension:
+    	return "cgi_extension";
     case Identifier::Events:
-      return ("events");
+      return "events";
     case Identifier::Http:
-      return ("http");
+      return "http";
     case Identifier::Server:
-      return ("server");
+      return "server";
     case Identifier::Location:
-      return ("location");
+      return "location";
     case Identifier::Param:
-      return ("param");
+      return "param";
   }
   assert(false && "Invalid Identifier passed to IdentifierToString");
   __builtin_unreachable();
@@ -128,63 +138,74 @@ std::string Parser::IdentifierToString(Identifier identifier) const
 //////////////////// helper functions ////////////////////
 bool Parser::IsEof() const
 {
-  return (currentToken_.kind == TokenKind::Eof);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Eof;
 }
 
 bool Parser::IsBlockDirective() const
 {
-  return (currentToken_.kind == TokenKind::Events || currentToken_.kind == TokenKind::Http ||
-          currentToken_.kind == TokenKind::Server || currentToken_.kind == TokenKind::Location);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Events ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Http ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Server ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Location;
 }
 
 bool Parser::IsHttp() const
 {
-  return (currentToken_.kind == TokenKind::Http);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Http;
 }
 
 bool Parser::IsEvents() const
 {
-  return (currentToken_.kind == TokenKind::Events);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Events;
 }
 
 bool Parser::IsServer() const
 {
-  return (currentToken_.kind == TokenKind::Server);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Server;
 }
 
 bool Parser::IsLocation() const
 {
-  return (currentToken_.kind == TokenKind::Location);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Location;
 }
 
 bool Parser::IsLBrace() const
 {
-  return (currentToken_.kind == TokenKind::LBrace);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::LBrace;
 }
 
 bool Parser::IsRBrace() const
 {
-  return (currentToken_.kind == TokenKind::RBrace);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::RBrace;
 }
 
 bool Parser::IsDirective() const
 {
-  return (currentToken_.kind == TokenKind::Listen || currentToken_.kind == TokenKind::Server_name ||
-          currentToken_.kind == TokenKind::Root || currentToken_.kind == TokenKind::Index ||
-          currentToken_.kind == TokenKind::Alias || currentToken_.kind == TokenKind::Client_max_body_size ||
-          currentToken_.kind == TokenKind::Client_body_temp_path || currentToken_.kind == TokenKind::Error_page ||
-          currentToken_.kind == TokenKind::Return || currentToken_.kind == TokenKind::Allowed_methods ||
-          currentToken_.kind == TokenKind::Autoindex || currentToken_.kind == TokenKind::Cgi);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Listen ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Server_name ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Root ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Index ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Alias ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Client_max_body_size ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Client_body_temp_path ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Error_page ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Return ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Allowed_methods ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Autoindex ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi_root ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi_alias ||
+  			 lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi_extension;
 }
 
 bool Parser::IsSemicolon() const
 {
-  return (currentToken_.kind == TokenKind::Semicolon);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Semicolon;
 }
 
 bool Parser::IsParam() const
 {
-  return (currentToken_.kind == TokenKind::String);
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::String;
 }
 
 Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
@@ -192,37 +213,43 @@ Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
   switch (kind)
   {
     case TokenKind::Events:
-      return (Identifier::Events);
+      return Identifier::Events;
     case TokenKind::Http:
-      return (Identifier::Http);
+      return Identifier::Http;
     case TokenKind::Server:
-      return (Identifier::Server);
+      return Identifier::Server;
     case TokenKind::Location:
-      return (Identifier::Location);
+      return Identifier::Location;
     case TokenKind::Listen:
-      return (Identifier::Listen);
+      return Identifier::Listen;
     case TokenKind::Server_name:
-      return (Identifier::Server_name);
+      return Identifier::Server_name;
     case TokenKind::Root:
-      return (Identifier::Root);
+      return Identifier::Root;
     case TokenKind::Index:
-      return (Identifier::Index);
+      return Identifier::Index;
     case TokenKind::Alias:
-      return (Identifier::Alias);
+      return Identifier::Alias;
     case TokenKind::Client_max_body_size:
-      return (Identifier::Client_max_body_size);
+      return Identifier::Client_max_body_size;
     case TokenKind::Client_body_temp_path:
-      return (Identifier::Client_body_temp_path);
+      return Identifier::Client_body_temp_path;
     case TokenKind::Error_page:
-      return (Identifier::Error_page);
+      return Identifier::Error_page;
     case TokenKind::Return:
-      return (Identifier::Return);
+      return Identifier::Return;
     case TokenKind::Allowed_methods:
-      return (Identifier::Allowed_methods);
+      return Identifier::Allowed_methods;
     case TokenKind::Autoindex:
-      return (Identifier::Autoindex);
+      return Identifier::Autoindex;
     case TokenKind::Cgi:
-      return (Identifier::Cgi);
+      return Identifier::Cgi;
+    case TokenKind::Cgi_root:
+      return Identifier::Cgi_root;
+    case TokenKind::Cgi_alias:
+      return Identifier::Cgi_alias;
+    case TokenKind::Cgi_extension:
+    	return Identifier::Cgi_extension;
     default:
       assert(false && "Invalid TokenKind passed to TokenKindToIdentifier");
       __builtin_unreachable();
@@ -231,30 +258,30 @@ Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
 
 void Parser::Next()
 {
-  currentToken_ = lexer_.Next();
+  ++currentTokenIdx_;
 }
 
 std::string Parser::BuildErrorMessage(std::string_view errorType, std::string_view expectedMessage)
 {
   std::stringstream ss;
-  ss << currentToken_.line << ":" << currentToken_.col << ": " << kRed_ << "error:" << kReset_ << " "
-            << errorType << ": ";
-  if (currentToken_.kind == TokenKind::Eof)
+  ss << lexer_.GetLine(currentTokenIdx_) << ":" << lexer_.GetCol(currentTokenIdx_) << ": " << kRed_ << "error:" << kReset_ << " " << errorType
+     << ": ";
+  if (lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Eof)
   {
     ss << kRed_ << "EOF" << kReset_;
   }
   else
   {
-    ss << "`" << kRed_ << currentToken_.lexeme << kReset_ << "`";
+    ss << "`" << kRed_ << lexer_.GetLexeme(currentTokenIdx_) << kReset_ << "`";
   }
   ss << expectedMessage << "\n";
-  return (ss.str());
+  return ss.str();
 }
 
 void Parser::Error(std::string_view error_type, std::string_view message, bool skip, Node& node)
 {
-  lexer_.SetTokenErrorMessage(currentToken_.idxTokenList, BuildErrorMessage(error_type, message));
-  lexer_.SetTokenErrorTrue(currentToken_.idxTokenList);
+  lexer_.SetTokenErrorMessage(currentTokenIdx_, BuildErrorMessage(error_type, message));
+  lexer_.SetTokenErrorTrue(currentTokenIdx_);
   node.error = true;
   error_ = true;
   if (skip && !IsEof())
@@ -266,14 +293,7 @@ void Parser::Error(std::string_view error_type, std::string_view message, bool s
 //////////////////// parsing logic ////////////////////
 Node Parser::ParseDirective(Identifier context)
 {
-  Node directive;
-
-  directive.name = TokenKindToIdentifier(currentToken_.kind);
-  directive.context = context;
-  directive.idxTokenList = currentToken_.idxTokenList;
-  directive.lexeme = currentToken_.lexeme;
-  directive.line = currentToken_.line;
-  directive.col = currentToken_.col;
+  Node directive(TokenKindToIdentifier(lexer_.GetTokenKind(currentTokenIdx_)), context, lexer_, currentTokenIdx_);
   Next();
   while (!IsSemicolon() && !IsEof())
   {
@@ -283,17 +303,11 @@ Node Parser::ParseDirective(Identifier context)
     }
     else
     {
-      Node param;
-      param.name = Identifier::Param;
-      param.context = directive.name;
-      param.idxTokenList = currentToken_.idxTokenList;
-      param.lexeme = currentToken_.lexeme;
-      param.line = currentToken_.line;
-      param.col = currentToken_.col;
-      directive.params.emplace_back(param);
+      directive.params.emplace_back(Node(Identifier::Param, directive.name, lexer_, currentTokenIdx_));
       Next();
     }
   }
+  directive.idxTokenListEnd = currentTokenIdx_;
   if (IsSemicolon())
   {
     Next();
@@ -302,7 +316,7 @@ Node Parser::ParseDirective(Identifier context)
   {
     Error("unexpected token", " expected: `;`", true, directive);
   }
-  return (directive);
+  return directive;
 }
 
 void Parser::ParseLBrace(Node& blockDirective)
@@ -326,6 +340,7 @@ void Parser::ParseLBrace(Node& blockDirective)
 
 void Parser::ParseRBrace(Node& blockDirective)
 {
+  blockDirective.idxTokenListEnd = currentTokenIdx_;
   if (IsRBrace())
   {
     Next();
@@ -374,32 +389,18 @@ void Parser::ParseLocationParam(Node& blockDirective)
   }
   if (IsParam())
   {
-    Node param;
-    param.name = Identifier::Param;
-    param.context = Identifier::Location;
-    param.idxTokenList = currentToken_.idxTokenList;
-    param.lexeme = currentToken_.lexeme;
-    param.line = currentToken_.line;
-    param.col = currentToken_.col;
-    blockDirective.params.emplace_back(param);
+    blockDirective.params.emplace_back(Node(Identifier::Param, Identifier::Location, lexer_, currentTokenIdx_));
     Next();
   }
 }
 
 Node Parser::ParseBlockDirective(Identifier context)
 {
-  Node blockDirective;
-
-  blockDirective.name = TokenKindToIdentifier(currentToken_.kind);
-  blockDirective.context = context;
-  blockDirective.idxTokenList = currentToken_.idxTokenList;
-  blockDirective.lexeme = currentToken_.lexeme;
-  blockDirective.line = currentToken_.line;
-  blockDirective.col = currentToken_.col;
+  Node blockDirective(TokenKindToIdentifier(lexer_.GetTokenKind(currentTokenIdx_)), context, lexer_, currentTokenIdx_);
   Next();
   ParseLocationParam(blockDirective);
   ParseBlock(blockDirective);
-  return (blockDirective);
+  return blockDirective;
 }
 
 //////////////////// print detailed AST ////////////////////
@@ -410,7 +411,7 @@ std::string Parser::MakeSpaces(std::size_t level) const
   {
     spaces.append("    ");
   }
-  return (spaces);
+  return spaces;
 }
 
 void Parser::PrintParam(const Node& param, std::size_t level) const
@@ -436,7 +437,8 @@ void Parser::PrintDirective(const Node& directive, std::size_t level) const
   }
   std::cout << "\n"
             << spaces << "DIRECTIVE:"
-            << "   Name: " << IdentifierToString(directive.name) << "   Context: " << IdentifierToString(directive.context) << "\n";
+            << "   Name: " << IdentifierToString(directive.name)
+            << "   Context: " << IdentifierToString(directive.context) << "\n";
   for (const Node& param : directive.params)
   {
     PrintParam(param, level + 1);

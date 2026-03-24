@@ -37,21 +37,38 @@ enum class Identifier
   Allowed_methods,
   Autoindex,
   Cgi,
+  Cgi_root,
+  Cgi_alias,
+  Cgi_extension,
   Param
 };
 
 struct Node
 {
-    Identifier name;
-    Identifier context;
-    std::string lexeme;
-    std::size_t line;
-    std::size_t col;
-    std::vector<Node> params;
-    std::vector<Node> directives;
-    std::vector<Node> nestedBlocks;
-    std::size_t idxTokenList;
-    bool error = false;
+  Identifier name;
+  Identifier context;
+  std::string lexeme;
+  std::vector<Node> params;
+  std::vector<Node> directives;
+  std::vector<Node> nestedBlocks;
+  std::size_t idxTokenListStart;
+  std::size_t idxTokenListEnd;
+  bool error;
+
+  Node(Identifier name, Identifier context, const Lexer& lexer, std::size_t currentTokenIdx)
+    : name(name)
+    , context(context)
+    , lexeme(lexer.GetLexeme(currentTokenIdx))
+    , idxTokenListStart(currentTokenIdx)
+    , idxTokenListEnd(currentTokenIdx)
+    , error(false)
+  {}
+
+  Node()
+    : idxTokenListStart(0)
+    , idxTokenListEnd(0)
+    , error(false)
+  {}
 };
 
 class Parser
@@ -102,10 +119,10 @@ class Parser
     void PrintDirective(const Node& directive, std::size_t level) const;
     void PrintBlockDirective(const Node& blockDirective, std::size_t level) const;
 
-    Node ast_;
     Lexer& lexer_;
-    Token currentToken_;
-    bool error_ = false;
+    std::size_t currentTokenIdx_;
+    bool error_;
+    Node ast_;
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
 };

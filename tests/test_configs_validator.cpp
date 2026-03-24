@@ -7,6 +7,7 @@
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
 #include "config/Validator.hpp"
+#include "config/ValidatorIpPort.hpp"
 
 // Test: empty input
 
@@ -19,16 +20,18 @@ TEST_CASE("empty input", "[Validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
 
-
-  REQUIRE(output.empty());
-  REQUIRE(lexer.GetTokenError(0) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(0).empty() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetTokenError(0) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == true);
 }
 
 // Test: whitespace
@@ -42,18 +45,20 @@ TEST_CASE("whitespace", "[Validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
-
-  REQUIRE(output.empty());
-  REQUIRE(lexer.GetTokenError(0) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(0).empty() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetTokenError(0) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == true);
 }
 
 // Test: comments
@@ -67,17 +72,19 @@ TEST_CASE("comments", "[Validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
 
-
-  REQUIRE(output.empty());
-  REQUIRE(lexer.GetTokenError(0) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(0).empty() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetTokenError(0) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == true);
 }
 
 TEST_CASE("events", "[validator]")
@@ -89,15 +96,17 @@ TEST_CASE("events", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == false);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == true);
   REQUIRE(lexer.GetTokenError(1) == true);
@@ -113,15 +122,17 @@ TEST_CASE("http", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == false);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == true);
   REQUIRE(lexer.GetTokenError(1) == true);
@@ -137,13 +148,15 @@ TEST_CASE("location", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
@@ -161,13 +174,15 @@ TEST_CASE("server", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
@@ -185,19 +200,21 @@ TEST_CASE("LBrace", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
-  REQUIRE(lexer.GetTokenError(1) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
+  REQUIRE(lexer.GetTokenError(1) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == false);
 }
 
 TEST_CASE("RBrace", "[validator]")
@@ -209,19 +226,21 @@ TEST_CASE("RBrace", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
-  REQUIRE(lexer.GetTokenError(1) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
+  REQUIRE(lexer.GetTokenError(1) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == false);
 }
 
 TEST_CASE("semicolon", "[validator]")
@@ -233,19 +252,21 @@ TEST_CASE("semicolon", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
-  REQUIRE(lexer.GetTokenError(1) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
+  REQUIRE(lexer.GetTokenError(1) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == false);
 }
 
 TEST_CASE("non-printable character", "[validator]")
@@ -257,20 +278,21 @@ TEST_CASE("non-printable character", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
   
-
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
-  REQUIRE(lexer.GetTokenError(1) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
+  REQUIRE(lexer.GetTokenError(1) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == false);
 }
 
 TEST_CASE("string", "[validator]")
@@ -282,19 +304,21 @@ TEST_CASE("string", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
   REQUIRE(lexer.GetTokenErrorMessage(0).empty() == false);
-  REQUIRE(lexer.GetTokenError(1) == false);
-  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
+  REQUIRE(lexer.GetTokenError(1) == true);
+  REQUIRE(lexer.GetTokenErrorMessage(1).empty() == false);
 }
 
 TEST_CASE("missing LBrace", "[validator]")
@@ -307,13 +331,16 @@ TEST_CASE("missing LBrace", "[validator]")
   Parser parser(lexer);
   parser.Parse();
   lexer.PrintErrorMessages();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   std::cerr.rdbuf(oldBuf);
   std::string output = buffer.str();
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
+  REQUIRE(validator.GetError() == true);
 
   std::set<std::size_t> errorsIdx{1,2,3,4,5,6,7,8,9};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
@@ -342,15 +369,17 @@ TEST_CASE("missing RBrace", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::cerr.rdbuf(oldBuf);
   std::string output = buffer.str();
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == false);
+  REQUIRE(validator.GetError() == true);
 
   std::set<std::size_t> errorsIdx{9};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
@@ -379,13 +408,15 @@ TEST_CASE("missing semicolon", "[validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::cerr.rdbuf(oldBuf);
   std::string output = buffer.str();
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(validator.GetError() == true);
   
@@ -417,13 +448,15 @@ TEST_CASE("all token kinds once", "[validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::cerr.rdbuf(oldBuf);
   std::string output = buffer.str();
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(validator.GetError() == true);
   
@@ -456,7 +489,8 @@ TEST_CASE("validator.Validate prints no errors for correct config tree", "[Valid
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -477,7 +511,107 @@ TEST_CASE("validator.Validate prints no errors for correct config tree", "[Valid
 
 TEST_CASE("errors incorrectly nested blocks", "[Validator]")
 {
-  std::string raw = "events {events{}}http{events{}}http{server{events{}}}http{server{location /documents/{events{}}}}events{http{}}http{http{}}http{server{http{}}}http{server{location /documents/{http{}}}}server{}events{server{}}http{server{server{}}}http{location /documents/{server{}}}http{server{location /documents/{server{}}}}location /documents/{}location /documents/{location /documents/{location /documents/{}}}events{location /documents/{}}http{server{location /documents/{location /documents/{}}}}http{location /documents/{location /documents/{}}}http {server {location /documents/ {http{                server {          location path {            location /documents/ {              server {                events {                  http {                    events {                      http {                        events {                          location /documents/ /path {                            server {                              http {                                server {                                  location /documents/ {                                  }                                }                              }                            }                          }                        }                      }                    }                  }                }              }            }          }        }      }    }  }}";
+  std::string raw = "# incorrectly nested events\n"
+                    "\n"
+                    "events {events{}}\n"
+                    "\n"
+                    "http{events{}}\n"
+                    "\n"
+                    "http{server{events{}}}\n"
+                    "\n"
+                    "http{server{location /documents/{events{}}}}\n"
+                    "\n"
+                    "\n"
+                    "# incorrectly nested http\n"
+                    "\n"
+                    "events{http{}}\n"
+                    "\n"
+                    "http{http{}}\n"
+                    "\n"
+                    "http{server{http{}}}\n"
+                    "\n"
+                    "http{server{location /documents/{http{}}}}\n"
+                    "\n"
+                    "# incorrectly nested server\n"
+                    "\n"
+                    "server{}\n"
+                    "\n"
+                    "events{server{}}\n"
+                    "\n"
+                    "http{server{server{}}}\n"
+                    "\n"
+                    "http{location /documents/{server{}}}\n"
+                    "\n"
+                    "http{server{location /documents/{server{}}}}\n"
+                    "\n"
+                    "# incorrectly nested location /documents/\n"
+                    "\n"
+                    "location /documents/{}\n"
+                    "\n"
+                    "location /documents/{location /documents/{location /documents/{}}}\n"
+                    "\n"
+                    "events{location /documents/{}}\n"
+                    "\n"
+                    "http{server{location /documents/{location /documents/{}}}}\n"
+                    "\n"
+                    "http{location /documents/{location /documents/{}}}\n"
+                    "\n"
+                    "# multiple recursively incorrectly nested blocks\n"
+                    "\n"
+                    "http {server {location /documents/ {http{\n"
+                    "        \n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "        server {\n"
+                    "          location path {\n"
+                    "            location /documents/ {\n"
+                    "              server {\n"
+                    "                events {\n"
+                    "                  http {\n"
+                    "                    events {\n"
+                    "                      http {\n"
+                    "                        events {\n"
+                    "                          location /documents/ /path {\n"
+                    "                            server {\n"
+                    "                              http {\n"
+                    "                                server {\n"
+                    "                                  location /documents/ {\n"
+                    "\n"
+                    "                                  }\n"
+                    "                                }\n"
+                    "                              }\n"
+                    "                            }\n"
+                    "                          }\n"
+                    "                        }\n"
+                    "                      }\n"
+                    "                    }\n"
+                    "                  }\n"
+                    "                }\n"
+                    "              }\n"
+                    "            }\n"
+                    "          }\n"
+                    "        }\n"
+                    "      }\n"
+                    "    }\n"
+                    "  }\n"
+                    "}\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -485,16 +619,16 @@ TEST_CASE("errors incorrectly nested blocks", "[Validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
-
   REQUIRE(output.empty() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{2,8,16,28,36,42,50,62,68,73,81,88,91,103,109,113,116,119,127,139,148,151,164,169,171,174,176,178,180,182,184,186,188,190,192,197};
+  std::set<std::size_t> errorsIdx{2, 8, 11, 16, 28, 36, 38, 42, 44, 45, 50, 52, 62, 64, 68, 73, 81, 88, 91, 95, 103, 109, 113, 116, 119, 127, 139, 148, 151, 156, 164, 171, 174, 176, 178, 180, 182, 184, 186, 188, 190, 192, 197, 205, 207, 217};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -514,7 +648,82 @@ TEST_CASE("errors incorrectly nested blocks", "[Validator]")
 
 TEST_CASE("errors incorrectly nested dirs", "[Validator]")
 {
-  std::string raw = "listen 8080;server_name name;root /path;index file;alias /path;client_max_body_size 1G;error_page 401 http://path;allowed_methods DELETE;return 100;client_body_temp_path /path;events {  listen 8080;  server_name name;  root /path;  index file;  alias /path;  client_max_body_size 1G;  error_page 401 http://path;  allowed_methods DELETE;  return 100;  client_body_temp_path /path;}http {  listen 8080;  server_name name;  root /path;  index file;  alias /path;  client_max_body_size 1G;  error_page 401 http://path;  allowed_methods DELETE;  return 100;  client_body_temp_path /path;  server {    listen 8080;    server_name name;    root /path;    index file;    alias /path;    client_max_body_size 1G;    error_page 401 http://path;    allowed_methods DELETE;    return 100;    client_body_temp_path /path;        location /path/ {      listen 8080;      server_name name;      root /path;      index file;      alias /path;      client_max_body_size 1G;      error_page 401 http://path;      allowed_methods DELETE;      return 100;      client_body_temp_path /path;    }  }  location /path/ {    listen 8080;    server_name name;    root /path;    index file;    alias /path;    client_max_body_size 1G;    error_page 401 http://path;    allowed_methods DELETE;    return 100;    client_body_temp_path /path;  }}";
+  std::string raw = "listen 8080;\n"
+                    "server_name name;\n"
+                    "root /path;\n"
+                    "index file;\n"
+                    "alias /path;\n"
+                    "client_max_body_size 1G;\n"
+                    "error_page 401 http://path;\n"
+                    "allowed_methods DELETE;\n"
+                    "return 100;\n"
+                    "client_body_temp_path /path;\n"
+                    "\n"
+                    "events {\n"
+                    "  listen 8080;\n"
+                    "  server_name name;\n"
+                    "  root /path;\n"
+                    "  index file;\n"
+                    "  alias /path;\n"
+                    "  client_max_body_size 1G;\n"
+                    "  error_page 401 http://path;\n"
+                    "  allowed_methods DELETE;\n"
+                    "  return 100;\n"
+                    "  client_body_temp_path /path;\n"
+                    "}\n"
+                    "\n"
+                    "http {\n"
+                    "\n"
+                    "  listen 8080;\n"
+                    "  server_name name;\n"
+                    "  root /path;\n"
+                    "  index file;\n"
+                    "  alias /path;\n"
+                    "  client_max_body_size 1G;\n"
+                    "  error_page 401 http://path;\n"
+                    "  allowed_methods DELETE;\n"
+                    "  return 100;\n"
+                    "  client_body_temp_path /path;\n"
+                    "\n"
+                    "  server {\n"
+                    "    listen 8080;\n"
+                    "    server_name name;\n"
+                    "    root /path;\n"
+                    "    index file;\n"
+                    "    alias /path;\n"
+                    "    client_max_body_size 1G;\n"
+                    "    error_page 401 http://path;\n"
+                    "    allowed_methods DELETE;\n"
+                    "    return 100;\n"
+                    "    client_body_temp_path /path;\n"
+                    "    \n"
+                    "    location /path/ {\n"
+                    "      listen 8080;\n"
+                    "      server_name name;\n"
+                    "      root /path;\n"
+                    "      index file;\n"
+                    "      alias /path;\n"
+                    "      client_max_body_size 1G;\n"
+                    "      error_page 401 http://path;\n"
+                    "      allowed_methods DELETE;\n"
+                    "      return 100;\n"
+                    "      client_body_temp_path /path;\n"
+                    "    }\n"
+                    "  }\n"
+                    "\n"
+                    "  location /path/ {\n"
+                    "    listen 8080;\n"
+                    "    server_name name;\n"
+                    "    root /path;\n"
+                    "    index file;\n"
+                    "    alias /path;\n"
+                    "    client_max_body_size 1G;\n"
+                    "    error_page 401 http://path;\n"
+                    "    allowed_methods DELETE;\n"
+                    "    return 100;\n"
+                    "    client_body_temp_path /path;\n"
+                    "  }\n"
+                    "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -522,7 +731,8 @@ TEST_CASE("errors incorrectly nested dirs", "[Validator]")
   lexer.Lex(raw);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -531,7 +741,7 @@ TEST_CASE("errors incorrectly nested dirs", "[Validator]")
 
   REQUIRE(output.empty() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{0,3,6,9,12,15,18,22,25,28,33,36,39,42,45,48,51,55,58,61,67,70,73,79,89,92,112,134,137,167,170,173};
+  std::set<std::size_t> errorsIdx{0, 3, 6, 9, 12, 15, 18, 22, 25, 28, 33, 36, 39, 42, 45, 48, 51, 55, 58, 61, 67, 70, 73, 79, 89, 92, 112, 134, 137, 146, 167, 170, 173, 182};
 
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
@@ -563,7 +773,8 @@ TEST_CASE("errors alias", "[Validator]")
   REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -573,7 +784,7 @@ TEST_CASE("errors alias", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{11,14,17,18,22};
+  std::set<std::size_t> errorsIdx{10, 13, 14, 16, 18, 20, 22};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -601,7 +812,8 @@ TEST_CASE("errors allowed_methods", "[Validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -611,7 +823,7 @@ TEST_CASE("errors allowed_methods", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{5,27,31,35,38,41,47,48,49,52,53,54,57,58,59,61,62,63,64,65,66};
+  std::set<std::size_t> errorsIdx{12, 15, 18, 21, 26, 27, 28, 31, 34, 35, 37, 38, 40, 41, 43, 47, 48, 49, 51, 52, 53, 54, 57, 58, 59, 61, 62, 63, 64, 65, 66};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) > 0)
@@ -640,7 +852,8 @@ TEST_CASE("errors autoindex", "[Validator]")
   REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -650,7 +863,7 @@ TEST_CASE("errors autoindex", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{26,29,33,34,35,38,41};
+  std::set<std::size_t> errorsIdx{5, 13, 22, 25, 26, 27, 29, 31, 33, 34, 35, 37, 38, 40, 41};
 
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
@@ -671,7 +884,16 @@ TEST_CASE("errors autoindex", "[Validator]")
 
 TEST_CASE("errors cgi", "[Validator]")
 {
-  std::string raw = "http {"
+  std::string raw = "# invalid\n"
+                    "\n"
+                    "cgi ;\n"
+                    "cgi off;\n"
+                    "cgi on;\n"
+                    "cgi error;\n"
+                    "cgi on off;\n"
+                    "cgi off on;\n"
+                    "\n"
+                    "http {"
                     "# valid \n"
                     "cgi on;\n"
                     "\n"
@@ -697,11 +919,14 @@ TEST_CASE("errors cgi", "[Validator]")
                     "\n"
                     "    location /path { \n"
                     "\n"
+                    "     # valid\n"
+                    "\n"
+                    "     cgi on;\n"
+                    "     cgi off;\n"
+                    "\n"
                     "     # invalid \n \n"
                     "\n"
                     "      cgi ; \n"
-                    "      cgi off; \n"
-                    "      cgi on; \n"
                     "      cgi error; \n"
                     "      cgi on off; \n"
                     "      cgi off on; \n"
@@ -716,7 +941,8 @@ TEST_CASE("errors cgi", "[Validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -726,7 +952,7 @@ TEST_CASE("errors cgi", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{6, 8, 12, 16, 24, 26, 30, 34, 39, 40, 41, 44, 47, 48, 50, 52, 54, 56};
+  std::set<std::size_t> errorsIdx{0, 1, 2, 5, 8, 9, 11, 13, 15, 17, 21, 24, 25, 26, 27, 29, 31, 33, 35, 39, 42, 43, 44, 45, 47, 49, 51, 53, 61, 64, 65, 66, 67, 69, 71, 73, 75};
 
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
@@ -756,7 +982,8 @@ TEST_CASE("errors client_body_temp_path", "[Validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -766,7 +993,7 @@ TEST_CASE("errors client_body_temp_path", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{6,8,12,16,19,20};
+  std::set<std::size_t> errorsIdx{5, 6, 7, 10, 12, 14, 16, 18, 20, 22};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -808,6 +1035,7 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
                     "    # invalid\n"
                     "    client_max_body_size ;\n"
                     "    client_max_body_size 0;\n"
+                    "    client_max_body_size -1;\n"
                     "    client_max_body_size k;\n"
                     "    client_max_body_size m;\n"
                     "    client_max_body_size g;\n"
@@ -831,7 +1059,7 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
                     "    client_max_body_size 17179869184G;\n"
                     "    \n"
                     "  }\n"
-                    "}";
+                    "}\n";
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer;
@@ -839,7 +1067,8 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -849,7 +1078,7 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{47, 49, 52, 55, 58, 61, 62, 65, 68, 71, 74, 78, 82, 86, 90, 94, 95, 98, 101, 104, 107, 110, 113, 116, 119};
+  std::set<std::size_t> errorsIdx{7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 47, 48, 49, 51, 52, 54, 55, 57, 58, 60, 61, 63, 64, 65, 67, 68, 70, 71, 73, 74, 76, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 98, 100, 101, 103, 104, 106, 107, 109, 110, 112, 113, 115, 116, 118, 119, 121, 122};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -869,7 +1098,27 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
 
 TEST_CASE("errors error_page", "[Validator]")
 {
-  std::string raw = "http {  server {    location path {      error_page 504 301 503 400 502 401 500 404 /path;      error_page 504 301 503 400 502 401 500 404 http://path;      error_page ;      error_page 400 100 401 402 404 path;      error_page 400 500 600 401 402 403 path;      error_page /path 401;      error_page 504 301 503 400 502 401 500 404 /path /path /path;      error_page 504 301 503 400 502 401 500 404 http://path http://path;      error_page 504 301 503 400 502 401 500 404 /path;    }  }}";
+  std::string raw = "http {\n"
+                    "  server {\n"
+                    "    location path {\n"
+                    "\n"
+                    "      # valid\n"
+                    "\n"
+                    "      error_page 504 301 503 400 502 401 500 404 /path;\n"
+                    "      error_page 504 301 503 400 502 401 500 404 http://path;\n"
+                    "      \n"
+                    "      # invalid\n"
+                    "\n"
+                    "      error_page ;\n"
+                    "      error_page 400 100 401 402 404 path;\n"
+                    "      error_page 400 500 600 401 402 999 path;\n"
+                    "      error_page /path 401;\n"
+                    "      error_page 504 301 503 400 502 401 500 404 /path /path /path;\n"
+                    "      error_page 504 301 503 400 502 401 500 404 http://path http://path;\n"
+                    "      error_page 504 301 503 400 502 401 500 404 /path;\n"
+                    "    }\n"
+                    "  }\n"
+                    "}";
 
   std::stringstream buffer;
 
@@ -880,7 +1129,8 @@ TEST_CASE("errors error_page", "[Validator]")
   REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -890,7 +1140,8 @@ TEST_CASE("errors error_page", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{5,30,33,37,42,45,46,49,50,61,62,74,86};
+  std::set<std::size_t> errorsIdx{30, 33, 37, 42, 45, 46, 49, 50, 61, 62, 74, 86};
+                                    
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -918,7 +1169,8 @@ TEST_CASE("errors index", "[Validator]")
   REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -928,7 +1180,7 @@ TEST_CASE("errors index", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{8,12};
+  std::set<std::size_t> errorsIdx{7, 8, 9, 12, 14};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -956,7 +1208,8 @@ TEST_CASE("errors listen", "[Validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -994,7 +1247,8 @@ TEST_CASE("errors return", "[Validator]")
   REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -1004,7 +1258,7 @@ TEST_CASE("errors return", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{25,27,30,34,37,43,44,45,49};
+  std::set<std::size_t> errorsIdx{11, 15, 18, 21, 24, 25, 26, 27, 29, 30, 32, 34, 36, 37, 40, 43, 44, 45, 47, 49};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -1033,7 +1287,8 @@ TEST_CASE("errors root", "[Validator]")
   REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -1043,7 +1298,7 @@ TEST_CASE("errors root", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{8,10,14,17};
+  std::set<std::size_t> errorsIdx{7, 8, 9, 12, 14, 16, 17};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -1072,7 +1327,8 @@ TEST_CASE("errors server_name", "[Validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();
@@ -1083,6 +1339,66 @@ TEST_CASE("errors server_name", "[Validator]")
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{22,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72,76,77,80,81};
+  for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
+  {
+    if (errorsIdx.count(i) != 0)
+    {
+      CAPTURE(i);
+      REQUIRE(lexer.GetTokenError(i) == true);
+      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == false);
+    }
+    else
+    {
+      CAPTURE(i);
+      REQUIRE(lexer.GetTokenError(i) == false);
+      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == true);
+    }
+  }
+}
+
+TEST_CASE("errors cgi_extension", "[Validator]")
+{
+  std::string raw = "http {"
+										"	server {\n"
+										"		location path {\n"
+										"\n"
+										"			 # valid\n"
+										"\n"
+										"			 cgi_extension py /path/path/path;\n"
+										"			 cgi_extension php path/path/path;\n"
+										"\n"
+										"			 # invalid\n"
+										"\n"
+										"			 cgi_extension ;\n"
+										"			 cgi_extension py;\n"
+										"			 cgi_extension php;\n"
+										"			 cgi_extension py py py;\n"
+										"			 cgi_extension php /path 1 2 3 4;\n"
+										"			 cgi_extension unknown /path/path;\n"
+										"\n"
+										"		}\n"
+										"	}\n"
+										"}";
+
+  std::stringstream buffer;
+  auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
+  Lexer lexer;
+  lexer.Lex(raw);
+  REQUIRE(lexer.GetError() == false);
+  Parser parser(lexer);
+  parser.Parse();
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  validator.ValidateAst();
+  lexer.PrintErrorMessages();
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
+
+
+  REQUIRE(output.empty() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == true);
+  std::set<std::size_t> errorsIdx{16, 19, 22, 26, 31, 32, 33, 34};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -1113,7 +1429,8 @@ TEST_CASE("multi_error05.conf", "[validator]")
   REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   parser.Parse();
-  Validator validator(lexer, parser);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
   validator.ValidateAst();
   lexer.PrintErrorMessages();
   std::string output = buffer.str();

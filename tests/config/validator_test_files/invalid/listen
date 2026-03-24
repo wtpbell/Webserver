@@ -79,35 +79,74 @@ http {
     # valid
     listen [1:1:1:1:1:1:1:1];
     listen [0001:0001:0001:0001:0001:0001:0001:0001];
+    listen [0000:0000:0000:0000:0000:0000:0000:0000];
+    listen [0:0:0:0:0:0:0:0];
     listen [0123:4567:89ab:cdef:fedc:ba98:7654:3210];
     listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff];
 
-    listen [::];
-    listen [::ffff];
-    listen [::ffff:ffff];
-    listen [::ffff:ffff:ffff];
-    listen [::ffff:ffff:ffff:ffff];
-    listen [::ffff:ffff:ffff:ffff:ffff];
-    listen [::ffff:ffff:ffff:ffff:ffff:ffff];
-    listen [::ffff:ffff:ffff:ffff:ffff:ffff:ffff];
-    listen [ffff::];
-    listen [ffff:ffff::];
-    listen [ffff:ffff:ffff::];
-    listen [ffff:ffff:ffff:ffff::];
-    listen [ffff:ffff:ffff:ffff:ffff::];
-    listen [ffff:ffff:ffff:ffff:ffff:ffff::];
-    listen [ffff:ffff:ffff:ffff:ffff:ffff:ffff::];
-    listen [abcd::6789];
-    listen [0001::0001];
-    listen [0001:0001::0001];
-    listen [0001:0001:0001::0001];
-    listen [0001:0001:0001:0001::0001];
-    listen [0001:0001:0001:0001:0001::0001];
-    listen [0001:0001:0001:0001:0001:0001::0001];
+    listen [2001:db8:0:0:0::1];
+    listen   [2001:db8:0:0::1];
+    listen   [2001:db8:0::1];
+    listen   [2001:db8::1];
 
+    listen [::];
+
+    listen [::0];
+    listen [0::];
+
+    listen [::0000:0000];
+    listen [0000::0000];
+    listen [0000:0000::];
+
+    listen [::ABCD:ABCD:ABCD];
+    listen [ABCD::ABCD:ABCD];
+    listen [ABCD:ABCD::ABCD];
+    listen [ABCD:ABCD:ABCD::];
+
+    listen [::f:f:f:f];
+    listen [f::f:f:f];
+    listen [f:f::f:f];
+    listen [f:f:f::f];
+    listen [f:f:f:f::];
+
+    listen [::000a:000a:000a:000a:000a];
+    listen [000a::000a:000a:000a:000a];
+    listen [000a:000a::000a:000a:000a];
+    listen [000a:000a:000a::000a:000a];
+    listen [000a:000a:000a:000a::000a];
+    listen [000a:000a:000a:000a:000a::];
+
+    listen [::89ab:89ab:89ab:89ab:89ab:89ab];
+    listen [89ab::89ab:89ab:89ab:89ab:89ab];
+    listen [89ab:89ab::89ab:89ab:89ab:89ab];
+    listen [89ab:89ab:89ab::89ab:89ab:89ab];
+    listen [89ab:89ab:89ab:89ab::89ab:89ab];
+    listen [89ab:89ab:89ab:89ab:89ab::89ab];
+    listen [89ab:89ab:89ab:89ab:89ab:89ab::];
+
+    listen [::89ab:89ab:89ab:89ab:89ab:89ab:89ab];
+    listen [89ab::89ab:89ab:89ab:89ab:89ab:89ab];
+    listen [89ab:89ab::89ab:89ab:89ab:89ab:89ab];
+    listen [89ab:89ab:89ab::89ab:89ab:89ab:89ab];
+    listen [89ab:89ab:89ab:89ab::89ab:89ab:89ab];
+    listen [89ab:89ab:89ab:89ab:89ab::89ab:89ab];
+    listen [89ab:89ab:89ab:89ab:89ab:89ab::89ab];
+    listen [89ab:89ab:89ab:89ab:89ab:89ab:89ab::];
+    
+    listen [0123::4567];
+    listen [89ab::cdef];
+    listen [0123:4567::89AB];
+    listen [CDEF:0123:4567::89ab];
+    listen [cdef:0123:4567:89AB::CDEF];
+    listen [0123:4567:89ab:cdef:0123::4567];
+    listen [89AB:CDEF:0123:4567:89ab:cdef::0123];
+    
     listen [a:0b:00d:000d:0000:001:02:3];
 
     # invalid
+
+    listen [1:1:1:1:1:1:1:-1];
+    listen [1:1:+1:1:1:1:1:1];
 
     listen [1:1:1:1:1:1:1:1] [1:1:1:1:1:1:1:1] [1:1:1:1:1:1:1:1] ;
 
@@ -176,7 +215,7 @@ http {
     listen [0001:0001:0001:0001:0001:0001::0001:];
 
     listen [a:0b:00d:000d:0000:001:02:3:];
-
+    
     listen [1:1:1:1:1:1:1:1::];
     listen [0001:0001:0001:0001:0001:0001:0001:0001::];
     listen [0123:4567:89ab:cdef:fedc:ba98:7654:3210::];

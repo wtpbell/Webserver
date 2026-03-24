@@ -10,37 +10,41 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "config/Validator.hpp"
+
+#include <array>
+#include <cassert>
+#include <charconv>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
+#include <vector>
+#include <optional>
 
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
-#include "config/Validator.hpp"
+#include "config/ValidatorIpPort.hpp"
 
-#include <cassert>
-#include <iostream>
-#include <vector>
-#include <array>
-#include <set>
-#include <map>
-#include <cstdint>
-#include <charconv>
-#include <sstream>
-
-Validator::Validator(Lexer& lexer, Parser& parser)
+Validator::Validator(Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpPort)
   : lexer_(lexer)
   , parser_(parser)
+  , validatorIpPort_(validatorIpPort)
+  , error_(false)
 {
   std::string::size_type size = 25 + (supportedErrorPageCodesSet_.size() * 4);
   supportedErrorPageCodesStr_.reserve(size);
   supportedErrorPageCodesStr_.append(" supported status codes:");
   for (std::string_view s : supportedErrorPageCodesSet_)
-  {  
+  {
     supportedErrorPageCodesStr_.append(" ");
     supportedErrorPageCodesStr_.append(s);
   }
 
   size = 25 + (supportedReturnCodesSet_.size() * 4);
   supportedReturnCodesStr_.reserve(size);
-  supportedReturnCodesStr_.append(" supported status code:");
+  supportedReturnCodesStr_.append(" supported return codes:");
   for (std::string_view s : supportedReturnCodesSet_)
   {
     supportedReturnCodesStr_.append(" ");
@@ -60,6 +64,11 @@ bool Validator::GetError() const
   return error_;
 }
 
+void Validator::SetErrorTrue()
+{
+  error_ = true;
+}
+
 //////////////////// PRIVATE ////////////////////
 //////////////////// helper functions ////////////////////
 
@@ -67,52 +76,37 @@ bool Validator::IsParamsEmpty(Node& dir, std::string_view message)
 {
   if (dir.params.empty())
   {
-    Error("unexpected token", message, dir, true);
+    Error("unexpected token", message, dir, dir.idxTokenListStart + 1);
     return true;
   }
   return false;
-}
-
-void Validator::ValidatePath(Node& node)
-{
-  if (node.lexeme.front() != '/')
-  {
-    Error("invalid path", " path must begin with `/`", node, false);
-  }
 }
 
 bool Validator::IsValidURL(Node& param)
 {
-  if (param.lexeme.front() == '/' || param.lexeme.substr(0, 7) == "http://")
+  if (param.lexeme.front() == '/' || !param.lexeme.compare(0, 7, "http://") || !param.lexeme.compare(0, 8, "https://"))
   {
     return true;
   }
   return false;
 }
 
-std::string Validator::BuildErrorMessage(std::string_view errorType, std::string_view message, Node& node, bool displayNextToken)
+std::string Validator::BuildErrorMessage(std::string_view errorType, std::string_view message, std::size_t idx)
 {
   std::stringstream ss;
 
-  std::size_t line = displayNextToken ? lexer_.GetLine(node.idxTokenList + 1) : node.line;
-  std::size_t col = displayNextToken ? lexer_.GetCol(node.idxTokenList + 1) : node.col;
-  std::string_view lexeme = displayNextToken ? lexer_.GetLexeme(node.idxTokenList + 1) : node.lexeme;
-  Identifier context = displayNextToken ? node.name : node.context;
+  std::size_t line = lexer_.GetLine(idx);
+  std::size_t col = lexer_.GetCol(idx);
+  std::string_view lexeme = lexer_.GetLexeme(idx);
 
-  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " "
-            << errorType  << ": ";
-  if (!lexeme.empty())
-  {
-    ss << "`" << kRed_ << lexeme << kReset_ << "`";
-  }
-  ss << message << " context: " << parser_.IdentifierToString(context) << "\n";
+  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " " << errorType << ": " << "`" << kRed_ << lexeme
+    << kReset_ << "`" << message << "\n";
   return ss.str();
 }
 
-void Validator::Error(std::string_view error_type, std::string_view message, Node& node, bool displayNextToken)
+void Validator::Error(std::string_view error_type, std::string_view message, Node& node, std::size_t idx)
 {
-  ssize_t idx = displayNextToken ? node.idxTokenList + 1 : node.idxTokenList;
-  lexer_.SetTokenErrorMessage(idx, BuildErrorMessage(error_type, message, node, displayNextToken));
+  lexer_.SetTokenErrorMessage(idx, BuildErrorMessage(error_type, message, idx));
   lexer_.SetTokenErrorTrue(idx);
   node.error = true;
   error_ = true;
@@ -124,9 +118,9 @@ void Validator::ValidateContextDirs(Node& block)
 {
   for (Node& dir : block.directives)
   {
-    if (!valid_dirs_.at(block.name).count(dir.name))
+    if (!validDirectives_.at(block.name).count(dir.name))
     {
-      Error("invalid context", "", dir, false);
+      Error("invalid context", "", dir, dir.idxTokenListStart);
     }
   }
 }
@@ -135,21 +129,74 @@ void Validator::ValidateContextBlocks(Node& block)
 {
   for (Node& nestedBlock : block.nestedBlocks)
   {
-    if (!valid_blocks_.at(block.name).count(nestedBlock.name))
+    if (!validBlocks_.at(block.name).count(nestedBlock.name))
     {
-      Error("invalid context", "", nestedBlock, false);
+      Error("invalid context", "", nestedBlock, nestedBlock.idxTokenListStart);
     }
   }
 }
 
 void Validator::ValidateNumDirs(Node& block)
 {
-  (void)block;
+  std::set<Identifier> directivesSet;
+  for (Node& dir : block.directives)
+  {
+    if (duplicatesIllegal_.count(dir.name) != 0)
+    {
+      auto result = directivesSet.insert(dir.name);
+      if (result.second == false)
+      {
+        Error("invalid duplicate", "", dir, dir.idxTokenListStart);
+      }
+    }
+    if (block.name == Identifier::Location)
+    {
+      if ((dir.name == Identifier::Root && directivesSet.count(Identifier::Alias)) ||
+          (dir.name == Identifier::Alias && directivesSet.count(Identifier::Root)))
+      {
+        Error("unexpected token", " location block must not contain both `alias` and `root`", dir, dir.idxTokenListStart);
+      }
+    }
+  }
 }
 
 void Validator::ValidateNumBlocks(Node& block)
 {
-  (void)block;
+  if (block.name == Identifier::Main)
+  {
+    std::size_t http = 0;
+    for (Node& nestedBlock : block.nestedBlocks)
+    {
+      if (nestedBlock.name == Identifier::Http)
+      {
+        ++http;
+        if (http > 1)
+        {
+          Error("duplicate http", "", block, block.idxTokenListEnd);
+        }
+      }
+    }
+    if (http == 0)
+    {
+      Error("unexpected token", " expected `http`", block, block.idxTokenListEnd);
+    }
+  }
+  else if (block.name == Identifier::Http)
+  {
+    std::size_t server = 0;
+    for (Node& nestedBlock : block.nestedBlocks)
+    {
+      if (nestedBlock.name == Identifier::Server)
+      {
+        ++server;
+        break;
+      }
+    }
+    if (server == 0)
+    {
+      Error("unexpected token", " expected `server`", block, block.idxTokenListEnd);
+    }
+  }
 }
 
 void Validator::ValidateNestedDirs(Node& block)
@@ -158,45 +205,54 @@ void Validator::ValidateNestedDirs(Node& block)
   {
     switch (dir.name)
     {
-    case Identifier::Listen:
-      ValidateListen(dir);
-      break;
-    case Identifier::Server_name:
-      ValidateServer_name(dir);
-      break;
-    case Identifier::Root:
-      ValidateRoot(dir);
-      break;
-    case Identifier::Index:
-      ValidateIndex(dir);
-      break;
-    case Identifier::Alias:
-      ValidateAlias(dir);
-      break;
-    case Identifier::Client_max_body_size:
-      ValidateClient_max_body_size(dir);
-      break;
-    case Identifier::Client_body_temp_path:
-      ValidateClient_body_temp_path(dir);
-      break;
-    case Identifier::Error_page:
-      ValidateError_page(dir);
-      break;
-    case Identifier::Return:
-      ValidateReturn(dir);
-      break;
-    case Identifier::Allowed_methods:
-      ValidateAllowed_methods(dir);
-      break;
-    case Identifier::Autoindex:
-      ValidateAutoindex(dir);
-      break;
-    case Identifier::Cgi:
-      ValidateCgi(dir);
-      break;
-    default:
-      assert(false && "Invalid node in block.directives in ValidateNestedDirs");
-      __builtin_unreachable();
+      case Identifier::Listen:
+        ValidateListen(dir);
+        break;
+      case Identifier::Server_name:
+        ValidateServer_name(dir);
+        break;
+      case Identifier::Root:
+        ValidateRoot(dir);
+        break;
+      case Identifier::Index:
+        ValidateIndex(dir);
+        break;
+      case Identifier::Alias:
+        ValidateAlias(dir);
+        break;
+      case Identifier::Client_max_body_size:
+        ValidateClient_max_body_size(dir);
+        break;
+      case Identifier::Client_body_temp_path:
+        ValidateClient_body_temp_path(dir);
+        break;
+      case Identifier::Error_page:
+        ValidateError_page(dir);
+        break;
+      case Identifier::Return:
+        ValidateReturn(dir);
+        break;
+      case Identifier::Allowed_methods:
+        ValidateAllowed_methods(dir);
+        break;
+      case Identifier::Autoindex:
+        ValidateAutoindex(dir);
+        break;
+      case Identifier::Cgi:
+        ValidateCgi(dir);
+        break;
+      case Identifier::Cgi_root:
+        ValidateCgi_root(dir);
+        break;
+      case Identifier::Cgi_alias:
+        ValidateCgi_alias(dir);
+        break;
+      case Identifier::Cgi_extension:
+      	ValidateCgi_extension(dir);
+      	break;
+      default:
+        assert(false && "Invalid node in block.directives in ValidateNestedDirs");
+        __builtin_unreachable();
     }
   }
 }
@@ -205,10 +261,6 @@ void Validator::ValidateNestedBlocks(Node& block)
 {
   for (Node& nestedBlock : block.nestedBlocks)
   {
-    if (nestedBlock.name == Identifier::Location && !nestedBlock.params.empty())
-    {
-      ValidatePath(nestedBlock.params.front());
-    }
     ValidateBlock(nestedBlock);
   }
 }
@@ -223,334 +275,56 @@ void Validator::ValidateBlock(Node& block)
   ValidateNestedBlocks(block);
 }
 
-
 //////////////////// validation individual directive //////////////////
 //////////////////// listen //////////////////
 
-void Validator::ValidateIpv4(Node& param, const std::string& ipv4)
+bool Validator::HandleIpv4(Node& dir)
 {
-  std::vector<std::string> octetts;
-  std::string::size_type start = 0;
-  std::string::size_type end = ipv4.find('.');
-  while (end != std::string::npos)
+  std::string ipv4;
+  std::string errorMessage;
+  if (validatorIpPort_.ExtractIpv4(dir.params[0].lexeme, ipv4))
   {
-    octetts.emplace_back(ipv4.substr(start, end - start));
-    start = end + 1;
-    end = ipv4.find('.', start);
-  }
-  octetts.emplace_back(ipv4.substr(start));
-  if (octetts.size() != 4)
-  {
-    Error("ipv4 address must have four octetts", "", param, false);
-    return;
-  }
-  for (const std::string& octett : octetts)
-  {
-    for (char c : octett)
+    if (!validatorIpPort_.ValidateIpv4(ipv4, errorMessage))
     {
-      if (!std::isdigit(static_cast<unsigned char>(c)))
-      {
-        Error("illegal character", "", param, false);
-        return;
-      }
+      Error(errorMessage, "", dir.params[0], dir.params[0].idxTokenListStart);
     }
-    if (octett.empty())
-    {
-      Error("empty octett in ipv4 address", "", param, false);
-      return;
-    }
-    if (octett[0] == '0' && std::isdigit(static_cast<unsigned char>(octett[1])))
-    {
-      Error("leading zero", "", param, false);
-      return;
-    }
-    std::size_t octettNum{};
-    auto [ptr, ec] = std::from_chars(octett.data(), octett.data() + octett.size(), octettNum);
-    if (ec == std::errc::result_out_of_range)
-    {
-      Error("overflow", "", param, false);
-      return;
-    }
-    if (octettNum > 255)
-    {
-      Error("number too large", "", param, false);
-      return;
-    }
-  }
-}
-
-bool Validator::ValidateDoubleColon(Node& param, const std::string& ipv6)
-{
-  std::string::size_type posDoubleColon = ipv6.find("::");
-  if (posDoubleColon == std::string::npos)
-  {
     return true;
   }
-  posDoubleColon = ipv6.find("::", posDoubleColon + 1);
-  if (posDoubleColon == std::string::npos)
-  {
-    return true;
-  }
-  Error("unexpected `::`", "", param, false);
   return false;
 }
 
-bool Validator::ExpandIpv6Left(Node& param, const std::string& ipv6, std::array<std::string, 8>&  quartets, std::size_t& numQuartets)
+void Validator::HandleIpv6(Node& dir)
 {
-  std::string::size_type start = 0;
-  std::string::size_type end = ipv6.find("::");
-  if (end == std::string::npos)
+  std::string ipv6;
+  std::string errorMessage;
+  if (validatorIpPort_.ExtractIpv6(dir.params[0].lexeme, ipv6, errorMessage))
   {
-    end = ipv6.size();
-  }
-  else
-  {
-    ++numQuartets;
-  }
-  std::string ipv6Left = ipv6.substr(start, end - start);
-  if (ipv6Left.empty())
-  {
-    return true;
-  }
-  if (ipv6Left.front() == ':' || ipv6Left.back() == ':')
-  {
-    Error("empty quartet in ipv6 address", "", param, false);
-    return false;
-  }
-  end = ipv6Left.find(':');
-  std::size_t i = 0;
-  while (true)
-  {
-    if (end == std::string::npos)
+    if (!validatorIpPort_.ValidateIpv6(ipv6, &errorMessage))
     {
-      end = ipv6Left.size();
+      Error(errorMessage, "", dir.params[0], dir.params[0].idxTokenListStart);
     }
-    ++numQuartets;
-    if (numQuartets > 8)
-    {
-      Error("number of quartets too large", "", param, false);
-      return false;
-    }
-    quartets[i] = ipv6Left.substr(start, end - start);
-    
-    ++i;
-    if (end == ipv6Left.size())
-    {
-      break;
-    }
-    start = end + 1;
-    end = ipv6Left.find(':', start);
   }
-  return true;
-}
-
-bool Validator::ExpandIpv6Right(Node& param, const std::string& ipv6, std::array<std::string, 8>& quartets, std::size_t& numQuartets)
-{
-  if (ipv6.find("::") == std::string::npos)
+  else if (!errorMessage.empty())
   {
-    return true;
-  }
-  std::string::size_type start = ipv6.find("::") + 2;
-  std::string::size_type end = ipv6.size();
-  std::string ipv6Right = ipv6.substr(start, end - start);
-  if (ipv6Right.empty())
-  {
-    return true;
-  }
-  if (ipv6Right.front() == ':' || ipv6Right.back() == ':')
-  {
-    Error("empty quartet in ipv6 address", "", param, false);
-    return false;
-  }
-  std::string::size_type colon = ipv6Right.find_last_of(':');
-  start = colon + 1;
-  end = ipv6Right.size();
-  std::size_t i = 7;
-  while (true)
-  {
-    if (colon == std::string::npos)
-    {
-      start = 0;
-    }
-    ++numQuartets;
-    if (numQuartets > 8)
-    {
-      Error("number of quartets too large", "", param, false);
-      return false;
-    }
-    quartets[i] = ipv6Right.substr(start, end - start);
-    --i;
-    if (start == 0)
-    {
-      break;
-    }
-    end = colon;
-    colon = ipv6Right.find_last_of(':', colon - 1);
-    start = colon + 1;
-  }
-  return true;
-}
-
-bool Validator::ExpandIpv6(Node& param, const std::string& ipv6, std::array<std::string, 8>& quartets)
-{
-  std::string::size_type end = ipv6.find(':');
-  if (end == std::string::npos)
-  {
-    Error("invalid ipv6 address", "", param, false);
-    return false;
-  }
-  std::size_t numQuartets = 0;
-  bool hasZeroCompression = ipv6.find("::") == std::string::npos ? false : true;
-  if (!ExpandIpv6Left(param, ipv6, quartets, numQuartets) || !ExpandIpv6Right(param, ipv6, quartets, numQuartets))
-  {
-    return false;
-  }
-  if (!hasZeroCompression && numQuartets < 8)
-  {
-    Error("too few quartets in ipv6 address", "", param, false);
-    return false;
-  }
-  return true;
-}
-
-void Validator::ValidateQuartets(Node& param, std::array<std::string, 8>& quartets)
-{
-  for (const std::string& q : quartets)
-  {
-    if (q.size() > 4)
-    {
-      Error("ipv6 quartet too long", "", param, false);
-      return;
-    }
-    for (const char c : q)
-    {
-      if (!std::isxdigit(static_cast<unsigned char>(c)))
-      {
-        Error("illegal character in ipv6 quartet", "", param, false);
-        return;
-      }
-    }
+    Error(errorMessage, "", dir.params[0], dir.params[0].idxTokenListStart);
   }
 }
 
-void Validator::ValidateIpv6(Node& param, const std::string& ipv6)
+void Validator::HandlePortNum(Node& dir)
 {
-  if (ipv6.empty())
+  std::string portNum;
+  std::string errorMessage;
+  if (validatorIpPort_.ExtractPortNum(dir.params[0].lexeme, portNum, errorMessage))
   {
-    Error("empty ipv6 address", "", param, false);
-    return;
-  }
-  if (!ValidateDoubleColon(param, ipv6))
-  {
-    return;
-  }
-  std::array<std::string, 8> quartets;
-  for (std::string& q : quartets)
-  {
-    q = "0000";
-  }
-  if (!ExpandIpv6(param, ipv6, quartets))
-  {
-    return;
-  }
-  ValidateQuartets(param, quartets);
-}
-
-void  Validator::ValidatePortNum(Node& param, const std::string& portNum)
-{
-  for (const char c : portNum)
-  {
-    if (!std::isdigit(static_cast<unsigned char>(c)))
+    if (!validatorIpPort_.ValidatePortNum(portNum, errorMessage))
     {
-      Error("illegal character", "", param, false);
-      return;
+      Error(errorMessage, "", dir.params[0], dir.params[0].idxTokenListStart);
     }
   }
-  if (portNum.size() > 1 && portNum[0] == '0')
+  else if (!errorMessage.empty())
   {
-    Error("leading zero", "", param, false);
-    return;
+    Error(errorMessage, "", dir.params[0], dir.params[0].idxTokenListStart);
   }
-  std::size_t num{};
-  auto [ptr, ec] = std::from_chars(portNum.data(), portNum.data() + portNum.size(), num);
-  if (ec == std::errc())
-  {
-    if (num > 65535)
-    {
-      Error("port number out of range", "", param, false);
-    }
-  }
-  else if (ec == std::errc::result_out_of_range)
-  {
-    Error("overflow", "", param, false);
-  }
-}
-
-bool Validator::ExtractIpv4(Node& param, std::string& ipv4)
-{
-  if (param.lexeme.front() == '[' || param.lexeme.find('.') == std::string::npos)
-  {
-    return false;
-  }
-  std::string::size_type end = param.lexeme.find(':');
-  if (end == std::string::npos)
-  {
-    ipv4 = param.lexeme;
-    return true;
-  }
-  ipv4 = param.lexeme.substr(0, end);
-  return true;
-}
-
-bool Validator::ExtractIpv6(Node& param, std::string& ipv6)
-{
-  if (param.lexeme.front() != '[')
-  {
-    return false;
-  }
-  std::string::size_type end = param.lexeme.find(']');
-  if (end == std::string::npos)
-  {
-    Error("missing `]`", "", param, false);
-    return false;
-  }
-  ipv6 = param.lexeme.substr(1, end - 1);
-  return true;
-}
-
-bool Validator::ExtractPortNum(Node& param, std::string& portNum)
-{
-  if (param.lexeme.front() == '[')
-  {
-    std::string::size_type posRBrace = param.lexeme.find(']');
-    if (posRBrace == std::string::npos)
-    {
-      return false;
-    }
-    if (posRBrace + 1 != param.lexeme.size() && param.lexeme[posRBrace + 1] != ':')
-    {
-      Error("illegal character", "", param, false);
-    }
-    std::string::size_type start = param.lexeme.find(':', posRBrace);
-    if (start == std::string::npos)
-    {
-      return false;
-    }
-    portNum = param.lexeme.substr(start + 1);
-    return true;
-  }
-  if (param.lexeme.find('.') != std::string::npos)
-  {
-    std::string::size_type start = param.lexeme.find(':');
-    if (start == std::string::npos)
-    {
-      return false;
-    }
-    portNum = param.lexeme.substr(start + 1);
-    return true;
-  }
-  portNum = param.lexeme;
-  return true;
 }
 
 void Validator::ValidateListen(Node& dir)
@@ -572,24 +346,14 @@ void Validator::ValidateListen(Node& dir)
   {
     return;
   }
-  std::string ipv4; 
-  std::string ipv6;
-  std::string portNum;
-  if (ExtractIpv4(dir.params[0], ipv4))
+  if (!HandleIpv4(dir))
   {
-    ValidateIpv4(dir.params[0], ipv4);
+    HandleIpv6(dir);
   }
-  else if (ExtractIpv6(dir.params[0], ipv6))
-  {
-    ValidateIpv6(dir.params[0], ipv6);
-  }
-  if(ExtractPortNum(dir.params[0], portNum))
-  {
-    ValidatePortNum(dir.params[0], portNum);
-  }
+  HandlePortNum(dir);
   for (std::size_t i = 1; i < dir.params.size(); ++i)
   {
-    Error("unexpected token", " expected: `;`", dir.params[i], false);
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -599,7 +363,7 @@ void Validator::ValidateName(Node& param)
 {
   if (param.lexeme.size() > 253)
   {
-    Error("name exceeds maximum length of 253 characters", "", param, false);
+    Error("name exceeds maximum length of 253 characters", "", param, param.idxTokenListStart);
     return;
   }
   std::vector<std::string> labels;
@@ -618,28 +382,28 @@ void Validator::ValidateName(Node& param)
     {
       if (!islower(static_cast<unsigned char>(c)) && !std::isdigit(static_cast<unsigned char>(c)) && c != '-')
       {
-        Error("name contains illegal character", "", param, false);
+        Error("name contains illegal character", "", param, param.idxTokenListStart);
         return;
       }
     }
     if (label.size() == 0)
     {
-      Error("label has length zero", "", param, false);
+      Error("label has length zero", "", param, param.idxTokenListStart);
       return;
     }
     if (label.size() > 63)
     {
-      Error("label exceeds maximum length of 63 characters", "", param, false);
+      Error("label exceeds maximum length of 63 characters", "", param, param.idxTokenListStart);
       return;
     }
     if (label.front() == '-')
     {
-      Error("label starts with hyphen", "", param, false);
+      Error("label starts with hyphen", "", param, param.idxTokenListStart);
       return;
     }
     if (label.back() == '-')
     {
-      Error("label ends with hyphen", "", param, false);
+      Error("label ends with hyphen", "", param, param.idxTokenListStart);
       return;
     }
   }
@@ -670,17 +434,16 @@ void Validator::ValidateRoot(Node& dir)
 {
   /*
   Syntax:   root path;
-  Default:  root html;
-  Context:  http, server, location, if in location
+  Default:  root -
+  Context:  http, server, location
   */
   if (IsParamsEmpty(dir, " expected: PATH"))
   {
     return;
   }
-  ValidatePath(dir.params[0]);
   for (std::size_t i = 1; i < dir.params.size(); ++i)
   {
-    Error("unexpected token", " expected: `;`", dir.params[i], false);
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -712,10 +475,9 @@ void Validator::ValidateAlias(Node& dir)
   {
     return;
   }
-  ValidatePath(dir.params[0]);
   for (std::size_t i = 1; i < dir.params.size(); ++i)
   {
-    Error("unexpected token", " expected: `;`", dir.params[i], false);
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -729,13 +491,13 @@ bool Validator::ValidateUnitPrefix(Node& param, std::string& unitPrefix)
   }
   if (unitPrefix.size() > 1)
   {
-    Error("invalid unit prefix", " valid unit prefixes: `k`, `m`, `g`, `K`, `M`, `G`", param, false);
+    Error("invalid unit prefix", " valid unit prefixes: `k`, `m`, `g`, `K`, `M`, `G`", param, param.idxTokenListStart);
     return false;
   }
   unitPrefix.front() = std::tolower(static_cast<unsigned char>(unitPrefix.front()));
   if (unitPrefix != "k" && unitPrefix != "m" && unitPrefix != "g")
   {
-    Error("invalid unit prefix", " valid unit prefixes: `k`, `m`, `g`, `K`, `M`, `G`", param, false);
+    Error("invalid unit prefix", " valid unit prefixes: `k`, `m`, `g`, `K`, `M`, `G`", param, param.idxTokenListStart);
     return false;
   }
   return true;
@@ -745,23 +507,23 @@ bool Validator::ValidateNumPart(Node& param, const std::string& numPart, std::si
 {
   if (numPart.empty())
   {
-    Error("invalid size parameter", "", param, false);
+    Error("invalid size parameter", "", param, param.idxTokenListStart);
     return false;
   }
   if (numPart.front() == '0' && std::isdigit(static_cast<unsigned char>(numPart[1])))
   {
-  Error("leading zeros", "", param, false);
-  return false;
+    Error("leading zeros", "", param, param.idxTokenListStart);
+    return false;
   }
   auto [ptr, ec] = std::from_chars(numPart.data(), numPart.data() + numPart.size(), number);
   if (ec == std::errc::result_out_of_range)
   {
-    Error("overflow", "", param, false);
+    Error("overflow", "", param, param.idxTokenListStart);
     return false;
   }
   if (ec == std::errc() && number == 0)
   {
-    Error("size must not be zero", "", param, false);
+    Error("size must not be zero", "", param, param.idxTokenListStart);
     return false;
   }
   return true;
@@ -771,11 +533,10 @@ void Validator::ValidateNumTimesUnitPrefix(Node& param, const std::size_t& numbe
 {
   if (!unitPrefix.empty())
   {
-    if ((unitPrefix == "k" && number > SIZE_MAX / 1024) ||
-        (unitPrefix == "m" && number > SIZE_MAX / 1048576) ||
+    if ((unitPrefix == "k" && number > SIZE_MAX / 1024) || (unitPrefix == "m" && number > SIZE_MAX / 1048576) ||
         (unitPrefix == "g" && number > SIZE_MAX / 1073741824))
     {
-      Error("overflow", "", param, false);
+      Error("overflow", "", param, param.idxTokenListStart);
     }
   }
 }
@@ -784,7 +545,9 @@ void Validator::ValidateSize(Node& param)
 {
   std::size_t posFirstNonDigit = param.lexeme.find_first_not_of("0123456789");
   std::string numPart = param.lexeme.substr(0, posFirstNonDigit);
-  std::string unitPrefix = posFirstNonDigit == std::string::npos ? "" : param.lexeme.substr(posFirstNonDigit, param.lexeme.size() - posFirstNonDigit);
+  std::string unitPrefix = posFirstNonDigit == std::string::npos
+                               ? ""
+                               : param.lexeme.substr(posFirstNonDigit, param.lexeme.size() - posFirstNonDigit);
   std::size_t number{};
 
   if (!ValidateNumPart(param, numPart, number))
@@ -813,7 +576,7 @@ void Validator::ValidateClient_max_body_size(Node& dir)
   ValidateSize(dir.params[0]);
   for (std::size_t i = 1; i < dir.params.size(); ++i)
   {
-    Error("unexpected token", " expected: `;`", dir.params[i], false);
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -830,10 +593,9 @@ void Validator::ValidateClient_body_temp_path(Node& dir)
   {
     return;
   }
-  ValidatePath(dir.params.front());
   for (std::size_t i = 1; i < dir.params.size(); ++i)
   {
-    Error("unexpected token", " expected: `;`", dir.params[i], false);
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -852,19 +614,19 @@ void Validator::ValidateError_page(Node& dir)
   }
   if (dir.params.size() < 2)
   {
-    Error("unexpected token", " expected: CODE ... URI", dir.params[0], true);
+    Error("unexpected token", " expected: CODE ... URI", dir.params[0], dir.params[0].idxTokenListStart + 1);
   }
   std::size_t i = 0;
   for (; i < dir.params.size() - 1; ++i)
   {
     if (supportedErrorPageCodesSet_.count(dir.params[i].lexeme) == 0)
     {
-      Error("unknown http status code", supportedErrorPageCodesStr_, dir.params[i], false);
+      Error("unknown http status code", supportedErrorPageCodesStr_, dir.params[i], dir.params[i].idxTokenListStart);
     }
   }
   if (!IsValidURL(dir.params[i]))
   {
-    Error("invalid URL prefix", " URL may begin with `/` or `http://`", dir.params[i], false);
+    Error("invalid URL prefix", " URL may begin with `/` or `http://` or `https://`", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -888,14 +650,14 @@ void Validator::ValidateReturn(Node& dir)
   Default:  —
   Context:  server, location
   */
-  if (IsParamsEmpty(dir, " expected: CODE"))
+  if (IsParamsEmpty(dir, " expected: CODE or URL"))
   {
     return;
   }
   std::size_t i = 0;
   if (!IsValidReturnCode(dir.params[i]) && !IsValidURL(dir.params[i]))
   {
-    Error("invalid parameter", " expected CODE or URL", dir.params[i], false);
+    Error("invalid parameter", " expected CODE or URL," + supportedReturnCodesStr_, dir.params[i], dir.params[i].idxTokenListStart);
     return;
   }
   if (IsValidReturnCode(dir.params[i]))
@@ -903,12 +665,12 @@ void Validator::ValidateReturn(Node& dir)
     ++i;
     if (dir.params.size() >= 2 && !IsValidURL(dir.params[i]))
     {
-      Error("invalid URL prefix", " URL may begin with `/` or `http://`", dir.params[i], false);
+      Error("invalid URL prefix", " URL may begin with `/` or `http://` or `https://`", dir.params[i], dir.params[i].idxTokenListStart);
     }
     ++i;
     for (; i < dir.params.size(); ++i)
     {
-      Error("unexpected token", " expected `;`", dir.params[i], false);
+      Error("unexpected token", " expected `;`", dir.params[i], dir.params[i].idxTokenListStart);
     }
     return;
   }
@@ -917,7 +679,7 @@ void Validator::ValidateReturn(Node& dir)
     ++i;
     for (; i < dir.params.size(); ++i)
     {
-      Error("unexpected token", " expected `;`", dir.params[i], false);
+      Error("unexpected token", " expected `;`", dir.params[i], dir.params[i].idxTokenListStart);
     }
   }
 }
@@ -969,11 +731,11 @@ void Validator::ValidateAllowed_methods(Node& dir)
   {
     if (!IsAllowedMethod(param.lexeme))
     {
-      Error("unexpected token", " expected: GET | POST | DELETE", param, false);
+      Error("unexpected token", " expected: GET | POST | DELETE", param, param.idxTokenListStart);
     }
     else if (IsDuplicate(param.lexeme, counts))
     {
-      Error("duplicate token", "", param, false);
+      Error("duplicate token", "", param, param.idxTokenListStart);
     }
   }
 }
@@ -982,17 +744,17 @@ void Validator::ValidateAllowed_methods(Node& dir)
 
 void Validator::ValidateOnOffParam(Node& dir)
 {
-    if (IsParamsEmpty(dir, " expected: `on` | `off`"))
+  if (IsParamsEmpty(dir, " expected: `on` | `off`"))
   {
     return;
   }
   if (dir.params.front().lexeme != "on" && dir.params.front().lexeme != "off")
   {
-    Error("unexpected token", " expected: `on` | `off`", dir.params.front(), false);
+    Error("unexpected token", " expected: `on` | `off`", dir.params.front(), dir.params.front().idxTokenListStart);
   }
   for (std::size_t i = 1; i < dir.params.size(); ++i)
   {
-    Error("unexpected token", " expected: ';'", dir.params[i], false);
+    Error("unexpected token", " expected: ';'", dir.params[i], dir.params[i].idxTokenListStart);
   }
 }
 
@@ -1020,4 +782,66 @@ void Validator::ValidateCgi(Node& dir)
   */
 
   ValidateOnOffParam(dir);
+}
+
+//////////////////// cgi_root //////////////////
+
+void Validator::ValidateCgi_root(Node& dir)
+{
+  /*
+  Syntax:   cgi_root path;
+  Default:  cgi_root html;
+  Context:  server, location
+  */
+  if (IsParamsEmpty(dir, " expected: PATH"))
+  {
+    return;
+  }
+  for (std::size_t i = 1; i < dir.params.size(); ++i)
+  {
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
+  }
+}
+
+//////////////////// cgi_alias //////////////////
+
+void Validator::ValidateCgi_alias(Node& dir)
+{
+  /*
+  Syntax:   cgi_alias path;
+  Default:  —
+  Context:  location
+  */
+  if (IsParamsEmpty(dir, " expected: PATH"))
+  {
+    return;
+  }
+  for (std::size_t i = 1; i < dir.params.size(); ++i)
+  {
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
+  }
+}
+
+//////////////////// cgi_extension //////////////////
+
+void Validator::ValidateCgi_extension(Node& dir)
+{
+	/*
+	Syntax: cgi_extension type path;
+	Default: -
+	Context: location
+	*/
+	if (IsParamsEmpty(dir, " expected: TYPE PATH"))
+  {
+    return;
+  }
+  if (dir.params.size() == 1)
+  {
+  	Error("unexpected token", " expected: PATH", dir.params[0], dir.params[0].idxTokenListStart + 1);
+  	return;
+  }
+  for (std::size_t i = 2; i < dir.params.size(); ++i)
+  {
+    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
+  }
 }

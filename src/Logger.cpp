@@ -15,31 +15,23 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <ostream>
+#include <string_view>
 
 std::ostream Logger::cout_{std::cout.rdbuf()};
 std::ostream Logger::cerr_{std::cerr.rdbuf()};
 LogLevel Logger::filter_{LogLevel::ALL};
 
-char* Logger::GetTime(char* stime, std::size_t n, TimeFormat fmt)
+char* Logger::GetTime(char* stime, std::size_t n)
 {
   using sclock = std::chrono::system_clock;
 
   auto now = sclock::now();
   const std::time_t time = sclock::to_time_t(now);
   std::tm tm{};
-  const char* format = nullptr;
 
-  if (fmt == TimeFormat::HTTP_GMT)
-  {
-    gmtime_r(&time, &tm);
-    format = "%a, %d %b %Y %H:%M:%S GMT";
-  }
-  else
-  {
-    localtime_r(&time, &tm);
-    format = "%Y-%m-%d %H:%M:%S";  // logger
-  }
-  if (std::strftime(stime, n, format, &tm) > 0)
+  localtime_r(&time, &tm);
+  if (std::strftime(stime, n, "%Y-%m-%d %H:%M:%S", &tm) > 0)
     return stime;
   GetOutputStream(LogLevel::CRITICAL) << LevelToString(LogLevel::CRITICAL)
                                       << "strftime exceeded the maximum size of `stime`!" << std::endl;

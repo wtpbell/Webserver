@@ -21,5 +21,9 @@ jobs:
         make fclean test
     - name: http request/response
       run: |
-        make fclean all
+        make fclean all > /dev/null
         bash ./tests/bash/run_all.sh
+    - name: cgi integration test
+      run: |
+          make fclean > /dev/null
+          bash ./tests/cgi/run_cgi_basic.sh

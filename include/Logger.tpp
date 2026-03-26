@@ -33,7 +33,7 @@ void Logger::Log(LogLevel level, std::string_view format, Args&&... args)
   if (IsFiltered(level))
     return;
 
-  LogFormat(ss, "[{}] {}: ", GetTime(stime, 32, TimeFormat::LOG_LOCAL), LevelToString(level));
+  LogFormat(ss, "[{}] {}: ", GetTime(stime, 32), LevelToString(level));
   if (level == LogLevel::LDEBUG)
     LogFormat(ss, LOG_DEBUG "{} ({}): " LOG_CLEAR, __FILE__, __LINE__);  // TODO: HAHA!
   LogFormat(ss, format, std::forward<Args>(args)...);

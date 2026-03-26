@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include <cerrno>
 #include <charconv>
@@ -171,6 +172,8 @@ ssize_t Socket::Recv(std::string& message, int flags, std::size_t max_chunk_size
   ssize_t bytes = recv(fd_, (message.data() + len), max_chunk_size, flags);
   if (bytes >= 0)
     message.resize(len + bytes);
+  else
+    message.resize(len);
   return (bytes);
 }
 
@@ -179,11 +182,6 @@ ssize_t Socket::Recv(std::string& message, int flags, std::size_t max_chunk_size
  * Updates leftover by substracting the amount of bytes that were sent.
  * @return total amount of bytes sent or -1 if an error occurred
  */
-// ssize_t Socket::Send(const std::string& msg, std::size_t& leftover, int flags, std::size_t max_chunk_size)
-// {
-//   return Send(std::string_view(msg), leftover, flags, max_chunk_size);
-// }
-
 ssize_t Socket::Send(std::string_view message, std::size_t& leftover, int flags, std::size_t max_chunk_size)
 {
   const char* buf = message.data() + (message.size() - leftover);
@@ -192,6 +190,11 @@ ssize_t Socket::Send(std::string_view message, std::size_t& leftover, int flags,
   if (bytes > 0)
     leftover -= static_cast<std::size_t>(bytes);
   return (bytes);
+}
+
+bool Socket::Shutdown(Socket::ShutdownState how)
+{
+  return shutdown(fd_, static_cast<int>(how)) == 0;
 }
 
 std::string_view Socket::GetSocketInfo(void) const

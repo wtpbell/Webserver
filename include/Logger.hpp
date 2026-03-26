@@ -13,7 +13,12 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
-#include <iostream>
+#include <ostream>
+#include <string_view>
+
+#ifdef UNIT_TEST
+#include <streambuf>
+#endif
 
 #define LOG_BOLD "\033[1m"
 #define LOG_CLEAR "\033[0m"
@@ -36,12 +41,6 @@ enum class LogLevel
   ALL = (STDOUT | STDERR)
 };
 
-enum class TimeFormat
-{
-  LOG_LOCAL,
-  HTTP_GMT
-};
-
 class Logger
 {
   public:
@@ -57,7 +56,7 @@ class Logger
     static std::ostream cerr_;
     static LogLevel filter_;
 
-    static char* GetTime(char* stime, std::size_t n, TimeFormat fmt);
+    static char* GetTime(char* stime, std::size_t n);
     static std::ostream& GetOutputStream(LogLevel level);
     static bool IsFiltered(LogLevel level);
     static void LogFormat(std::ostream& out, std::string_view format);

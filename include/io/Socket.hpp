@@ -27,11 +27,18 @@ class Socket : public SharedFD
     using addrinfo_t = struct addrinfo;
     using sockaddr_storage_t = struct sockaddr_storage;
 
+    enum class ShutdownState
+    {
+      kShutRd = SHUT_RD,
+      kShutWr = SHUT_WR,
+      kShutRdWr = SHUT_RDWR
+    };
+
     Socket(void) = default;
     Socket(const Socket& other) = default;
     Socket(Socket&& other) noexcept = default;
     Socket& operator=(const Socket& rhs) = default;
-    Socket& operator=(Socket&& rhs) = default;
+    Socket& operator=(Socket&& rhs) noexcept = default;
     ~Socket(void) = default;
 
     static Socket CreateSocket(int domain, int type, int protocol);
@@ -47,6 +54,7 @@ class Socket : public SharedFD
     void SetNonBlocking(bool is_non_blocking);
     ssize_t Recv(std::string& message, int flags = 0, std::size_t max_chunk_size = 1024);
     ssize_t Send(std::string_view message, std::size_t& leftover, int flags = 0, std::size_t max_chunk_size = 4096);
+    bool Shutdown(ShutdownState how);
     std::string_view GetSocketInfo(void) const;
     friend std::ostream& operator<<(std::ostream& out, const Socket& socket);
 

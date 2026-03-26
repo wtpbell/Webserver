@@ -6,12 +6,15 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:22:46 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/06 17:42:48 by bewong        ########   odam.nl         */
+/*   Updated: 2026/02/10 17:47:11 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <chrono>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -31,6 +34,15 @@ namespace String
     return (true);
   }
 
+  bool IsDigitOnly(std::string_view sv)
+  {
+    return std::all_of(sv.begin(), sv.end(),
+                       [](unsigned char c)
+                       {
+                         return std::isdigit(c);
+                       });
+  }
+
   bool IsEmptyOrNull(const char* s)
   {
     return (s == nullptr || *s == '\0');
@@ -43,6 +55,17 @@ namespace String
       return {};
     std::size_t end = str.find_last_not_of(HTTP::kWHITESPACE);
     return str.substr(start, end - start + 1);
+  }
+
+  std::string_view RightTrim(std::string_view sv, std::size_t last, std::size_t to = 0, std::string_view space = " \t")
+  {
+    if (last > sv.length())
+      last = sv.length();
+    if (to > last)
+      to = last;
+    while (last > to && space.find(sv[last - 1]) != sv.npos)
+      --last;
+    return sv.substr(to, last - to);
   }
 
   std::string ToLower(std::string_view str)
@@ -65,6 +88,16 @@ namespace String
       unsigned char uc = static_cast<unsigned char>(c);
       c = static_cast<char>(std::tolower(uc));
     }
+  }
+
+  std::string& ToUpper(std::string& str)
+  {
+    std::transform(str.begin(), str.end(), str.begin(),
+                   [](unsigned char c)
+                   {
+                     return std::toupper(c);
+                   });
+    return str;
   }
 
   void AppendHex(std::string& result, unsigned char c)
@@ -123,4 +156,27 @@ namespace String
     return out;
   }
 
+  std::string& ReplaceOccurrence(std::string& str, char occurrence, char replacement)
+  {
+    std::transform(str.begin(), str.end(), str.begin(),
+                   [occurrence, replacement](char c)
+                   {
+                     return c == occurrence ? replacement : c;
+                   });
+    return str;
+  }
+
+  const char* GMTCstring(char* stime, std::size_t n)
+  {
+    using sclock = std::chrono::system_clock;
+
+    auto now = sclock::now();
+    const std::time_t time = sclock::to_time_t(now);
+    std::tm tm{};
+
+    gmtime_r(&time, &tm);
+    if (std::strftime(stime, n, "%a, %d %b %Y %H:%M:%S GMT", &tm) > 0)
+      return stime;
+    return std::strncpy(stime, "Fri, 13 Dec 1901 20:45:52 GMT", n);
+  }
 }  // namespace String

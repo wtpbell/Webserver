@@ -15,12 +15,17 @@
 #include "Logger.hpp"
 #include "Server.hpp"
 #include "webserv.hpp"
+#include "config/ServerRegistry.hpp"
+
+#include <iostream>
 
 int main(int argc, char* argv[])
 {
-  if (LoadConfigs(argc, argv) != EXIT_SUCCESS && false)
+  std::optional<ServerRegistry> serverRegistry = LoadConfigs(argc, argv);
+  if (serverRegistry == std::nullopt && false)
+  {
     return (EXIT_FAILURE);
-
+  }
   try
   {
     setupSignals();

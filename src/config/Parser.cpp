@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   Parser.cpp                                          :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:37:01 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:37:02 by jstuhrin       ########   codam.nl        */
+/*   Updated: 2025/12/02 10:37:02 by jstuhrin      ########   codam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,22 +24,18 @@ Parser::Parser(Lexer& lexer)
   : lexer_(lexer)
   , currentTokenIdx_{}
   , error_(false)
-{}
-
-//////////////////// PUBLIC ////////////////////
-void Parser::Parse()
 {
-  ast_.name = Identifier::Main;
-  ast_.context = Identifier::Main;
+  ast_.name = Identifier::kMain;
+  ast_.context = Identifier::kMain;
   while (!IsEof())
   {
     if (IsDirective())
     {
-      ast_.directives.emplace_back(ParseDirective(Identifier::Main));
+      ast_.directives.emplace_back(ParseDirective(Identifier::kMain));
     }
     else if (IsBlockDirective())
     {
-      ast_.nestedBlocks.emplace_back(ParseBlockDirective(Identifier::Main));
+      ast_.nestedBlocks.emplace_back(ParseBlockDirective(Identifier::kMain));
     }
     else
     {
@@ -48,6 +44,8 @@ void Parser::Parse()
   }
   ast_.idxTokenListEnd = currentTokenIdx_;
 }
+
+//////////////////// PUBLIC ////////////////////
 
 void Parser::PrintDetailedAST() const
 {
@@ -87,47 +85,39 @@ std::string Parser::IdentifierToString(Identifier identifier) const
 {
   switch (identifier)
   {
-    case Identifier::Main:
+    case Identifier::kMain:
       return "main";
-    case Identifier::Listen:
+    case Identifier::kListen:
       return "listen";
-    case Identifier::Server_name:
+    case Identifier::kServerName:
       return "server_name";
-    case Identifier::Root:
+    case Identifier::kRoot:
       return "root";
-    case Identifier::Index:
+    case Identifier::kIndex:
       return "index";
-    case Identifier::Alias:
+    case Identifier::kAlias:
       return "alias";
-    case Identifier::Client_max_body_size:
+    case Identifier::kClientMaxBodySize:
       return "client_max_body_size";
-    case Identifier::Client_body_temp_path:
-      return "client_body_temp_path";
-    case Identifier::Error_page:
+    case Identifier::kErrorPage:
       return "error_page";
-    case Identifier::Return:
+    case Identifier::kReturn:
       return "return";
-    case Identifier::Allowed_methods:
+    case Identifier::kAllowedMethods:
       return "allowed_methods";
-    case Identifier::Autoindex:
+    case Identifier::kAutoindex:
       return "autoindex";
-    case Identifier::Cgi:
+    case Identifier::kCgi:
       return "cgi";
-    case Identifier::Cgi_root:
-      return "cgi_root";
-    case Identifier::Cgi_alias:
-      return "cgi_alias";
-    case Identifier::Cgi_extension:
+    case Identifier::kCgiExtension:
     	return "cgi_extension";
-    case Identifier::Events:
-      return "events";
-    case Identifier::Http:
+    case Identifier::kHttp:
       return "http";
-    case Identifier::Server:
+    case Identifier::kServer:
       return "server";
-    case Identifier::Location:
+    case Identifier::kLocation:
       return "location";
-    case Identifier::Param:
+    case Identifier::kParam:
       return "param";
   }
   assert(false && "Invalid Identifier passed to IdentifierToString");
@@ -138,118 +128,101 @@ std::string Parser::IdentifierToString(Identifier identifier) const
 //////////////////// helper functions ////////////////////
 bool Parser::IsEof() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Eof;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kEof;
 }
 
 bool Parser::IsBlockDirective() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Events ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Http ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Server ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Location;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kHttp ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kServer ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kLocation;
 }
 
 bool Parser::IsHttp() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Http;
-}
-
-bool Parser::IsEvents() const
-{
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Events;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kHttp;
 }
 
 bool Parser::IsServer() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Server;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kServer;
 }
 
 bool Parser::IsLocation() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Location;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kLocation;
 }
 
 bool Parser::IsLBrace() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::LBrace;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kLBrace;
 }
 
 bool Parser::IsRBrace() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::RBrace;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kRBrace;
 }
 
 bool Parser::IsDirective() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Listen ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Server_name ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Root ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Index ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Alias ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Client_max_body_size ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Client_body_temp_path ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Error_page ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Return ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Allowed_methods ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Autoindex ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi_root ||
-         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi_alias ||
-  			 lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Cgi_extension;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kListen ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kServerName ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kRoot ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kIndex ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kAlias ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kClientMaxBodySize ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kErrorPage ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kReturn ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kAllowedMethods ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kAutoindex ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kCgi ||
+  			 lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kCgiExtension;
 }
 
 bool Parser::IsSemicolon() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Semicolon;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kSemicolon;
 }
 
 bool Parser::IsParam() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::String;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kString;
 }
 
 Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
 {
   switch (kind)
   {
-    case TokenKind::Events:
-      return Identifier::Events;
-    case TokenKind::Http:
-      return Identifier::Http;
-    case TokenKind::Server:
-      return Identifier::Server;
-    case TokenKind::Location:
-      return Identifier::Location;
-    case TokenKind::Listen:
-      return Identifier::Listen;
-    case TokenKind::Server_name:
-      return Identifier::Server_name;
-    case TokenKind::Root:
-      return Identifier::Root;
-    case TokenKind::Index:
-      return Identifier::Index;
-    case TokenKind::Alias:
-      return Identifier::Alias;
-    case TokenKind::Client_max_body_size:
-      return Identifier::Client_max_body_size;
-    case TokenKind::Client_body_temp_path:
-      return Identifier::Client_body_temp_path;
-    case TokenKind::Error_page:
-      return Identifier::Error_page;
-    case TokenKind::Return:
-      return Identifier::Return;
-    case TokenKind::Allowed_methods:
-      return Identifier::Allowed_methods;
-    case TokenKind::Autoindex:
-      return Identifier::Autoindex;
-    case TokenKind::Cgi:
-      return Identifier::Cgi;
-    case TokenKind::Cgi_root:
-      return Identifier::Cgi_root;
-    case TokenKind::Cgi_alias:
-      return Identifier::Cgi_alias;
-    case TokenKind::Cgi_extension:
-    	return Identifier::Cgi_extension;
+    case TokenKind::kHttp:
+      return Identifier::kHttp;
+    case TokenKind::kServer:
+      return Identifier::kServer;
+    case TokenKind::kLocation:
+      return Identifier::kLocation;
+    case TokenKind::kListen:
+      return Identifier::kListen;
+    case TokenKind::kServerName:
+      return Identifier::kServerName;
+    case TokenKind::kRoot:
+      return Identifier::kRoot;
+    case TokenKind::kIndex:
+      return Identifier::kIndex;
+    case TokenKind::kAlias:
+      return Identifier::kAlias;
+    case TokenKind::kClientMaxBodySize:
+      return Identifier::kClientMaxBodySize;
+    case TokenKind::kErrorPage:
+      return Identifier::kErrorPage;
+    case TokenKind::kReturn:
+      return Identifier::kReturn;
+    case TokenKind::kAllowedMethods:
+      return Identifier::kAllowedMethods;
+    case TokenKind::kAutoindex:
+      return Identifier::kAutoindex;
+    case TokenKind::kCgi:
+      return Identifier::kCgi;
+    case TokenKind::kCgiExtension:
+    	return Identifier::kCgiExtension;
     default:
       assert(false && "Invalid TokenKind passed to TokenKindToIdentifier");
       __builtin_unreachable();
@@ -266,7 +239,7 @@ std::string Parser::BuildErrorMessage(std::string_view errorType, std::string_vi
   std::stringstream ss;
   ss << lexer_.GetLine(currentTokenIdx_) << ":" << lexer_.GetCol(currentTokenIdx_) << ": " << kRed_ << "error:" << kReset_ << " " << errorType
      << ": ";
-  if (lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::Eof)
+  if (lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kEof)
   {
     ss << kRed_ << "EOF" << kReset_;
   }
@@ -303,7 +276,7 @@ Node Parser::ParseDirective(Identifier context)
     }
     else
     {
-      directive.params.emplace_back(Node(Identifier::Param, directive.name, lexer_, currentTokenIdx_));
+      directive.params.emplace_back(Node(Identifier::kParam, directive.name, lexer_, currentTokenIdx_));
       Next();
     }
   }
@@ -374,7 +347,7 @@ void Parser::ParseBlock(Node& blockDirective)
 
 void Parser::ParseLocationParam(Node& blockDirective)
 {
-  if (blockDirective.name != Identifier::Location)
+  if (blockDirective.name != Identifier::kLocation)
   {
     return;
   }
@@ -389,7 +362,7 @@ void Parser::ParseLocationParam(Node& blockDirective)
   }
   if (IsParam())
   {
-    blockDirective.params.emplace_back(Node(Identifier::Param, Identifier::Location, lexer_, currentTokenIdx_));
+    blockDirective.params.emplace_back(Node(Identifier::kParam, Identifier::kLocation, lexer_, currentTokenIdx_));
     Next();
   }
 }

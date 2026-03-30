@@ -8,8 +8,9 @@ SRC_DIR		:= src/
 BIN			:= bin/
 BIN_DIRS	:= $(BIN) $(BIN)exception/ $(BIN)config/ $(BIN)io/ $(BIN)http/ $(BIN)cgi/
 MAIN		:= $(BIN)main.o
+
 SRCS		:= Logger.cpp helper.cpp signal.cpp Server.cpp EpollManager.cpp string.cpp Connection.cpp
-SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp Validator.cpp ValidatorIpPort.cpp Builder.cpp load_configs.cpp)
+SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp Validator.cpp ValidatorIpPort.cpp Builder.cpp ServerRegistry.cpp loadConfigs.cpp)
 SRCS_EXCEPT	:= $(addprefix exception/, FileDescriptorException.cpp ServerException.cpp EPollManagerException.cpp)
 SRCS_IO		:= $(addprefix io/, SharedFD.cpp Socket.cpp TimerFD.cpp)
 SRCS_HTTP	:= $(addprefix http/, HTTPMessage.cpp HTTPParser.cpp HTTPUtils.cpp HTTPRequest.cpp HTTPResponse.cpp\
@@ -25,7 +26,7 @@ TEST_DIR		:= tests/
 TEST_DIRS		:= $(BIN)$(TEST_DIR) $(BIN)$(TEST_DIR)cgi/
 TEST_NAME		:= $(BIN)$(TEST_DIR)run_tests
 TEST_SRCS		:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_server.cpp test_epollmanager.cpp test_logger.cpp\
-					test_configs_lexer.cpp test_configs_parser.cpp test_configs_validator.cpp test_configs_builder.cpp test_http_paths.cpp test_http_parser.cpp test_http_validator.cpp\
+					test_configs_lexer.cpp test_configs_parser.cpp test_configs_validator.cpp test_configs_builder.cpp test_configs_server_registry.cpp test_http_paths.cpp test_http_parser.cpp test_http_validator.cpp\
 					test_integrate_parser_validator.cpp test_http_response.cpp test_TimerFD.cpp test_http_session_manager.cpp
 TEST_SRCS_CGI	:= $(addprefix cgi/, test_CGI.cpp test_CGIRequest.cpp test_CGIResponse.cpp test_CGIParser.cpp)
 TEST_SRCS		:= $(TEST_SRCS) $(TEST_SRCS_CGI)

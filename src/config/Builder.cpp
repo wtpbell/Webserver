@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                         ::::::::           */
-/*   Validator.cpp                                       :+:    :+:           */
+/*   Builder.cpp                                         :+:    :+:           */
 /*                                                      +:+                   */
 /*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
@@ -25,9 +25,13 @@
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
 #include "config/Validator.hpp"
+#include "config/ValidatorIpPort.hpp"
 #include "config/Builder.hpp"
+#include "config/ServerRegistry.hpp"
+#include "config/RouteView.hpp"
+#include "config/ServerView.hpp"
 
-Builder::Builder( Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpPort)
+Builder::Builder(Lexer& lexer, Parser& parser, const ValidatorIpPort& validatorIpPort)
   : lexer_(lexer)
   , parser_(parser)
   , validatorIpPort_(validatorIpPort)
@@ -35,109 +39,26 @@ Builder::Builder( Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpPort
   , defaultPort_(80)
   , defaultIp_("::")
   , defaultReturnCode_(302)
-{}
-
-//////////////////// PUBLIC ////////////////////
-
-void Builder::Build()
 {
   ExtractHttpData();
   PopulateRouteViewMap();
-  PopulateRouteViewMapIp();
 }
 
-std::size_t Builder::GetServerCount() const
-{
-  return servers_.size();
-}
-
-const ServerView& Builder::GetServerView(std::size_t i) const
-{
-  assert(i < servers_.size());
-  return servers_[i];
-}
-
-const RouteView* Builder::GetRouteView(const std::string& hostName, const std::string& targetPath) const
-{
-  auto hostIt = routeViewMap_.find(hostName);
-  if (hostIt == routeViewMap_.end())
-  {
-    return nullptr;
-  }
-  std::size_t longestMatch = 0;
-  RouteView* routeView = nullptr;
-  for (auto it = hostIt->second.begin(); it != hostIt->second.end(); ++it)
-  {
-    std::size_t currentMatch = GetLenMatch(targetPath, it->first);
-    if (currentMatch > longestMatch)
-    {
-      routeView = it->second;
-      longestMatch = currentMatch;
-    }
-  }
-  return routeView;
-}
-
-const RouteView* Builder::GetRouteView(const std::string& ip, const uint16_t port, const std::string& hostName, const std::string& targetPath) const
-{
-  auto ipPortIt = routeViewMapIp_.find({ip, port});
-  if (ipPortIt == routeViewMapIp_.end())
-  {
-    return nullptr;
-  }
-  for (auto it = ipPortIt->second.begin(); it != ipPortIt->second.end(); ++it)
-  {
-    if (it->first == hostName)
-    {
-      return GetRouteView(hostName, targetPath);
-    }
-  }
-  return nullptr;
-}
+//////////////////// PUBLIC ////////////////////
 
 bool Builder::GetError() const
 {
   return error_;
 }
 
+ServerRegistry Builder::BuildServerRegistry()
+{
+  return ServerRegistry(std::move(servers_), std::move(RouteViewMap_));
+}
+
 //////////////////// PRIVATE ////////////////////
 
-std::size_t Builder::GetLenMatch(const std::string& targetPath, const std::string& locationPrefix) const
-{
-  if (locationPrefix.size() > targetPath.size())
-  {
-    return 0;
-  }
-  if (targetPath.compare(0, locationPrefix.size(), locationPrefix) != 0)
-  {
-    return 0;
-  }
-  if (locationPrefix.back() == '/' && targetPath[locationPrefix.size() - 1] == '/')
-  {
-    return locationPrefix.size();
-  }
-  if (targetPath[locationPrefix.size()] != '/' && targetPath[locationPrefix.size()] != '\0')
-  {
-    return 0;
-  }
-  return locationPrefix.size();
-}
-
 void Builder::PopulateRouteViewMap()
-{
-  for (ServerView& serverView : servers_)
-  {
-    for (std::string& hostName : serverView.hostNames)
-    {
-      for (RouteView& routeView : serverView.routes)
-      {
-        routeViewMap_[hostName].emplace(routeView.locationPrefix, &routeView);
-      }
-    }
-  }
-}
-
-void Builder::PopulateRouteViewMapIp()
 {
   for (ServerView& serverView : servers_)
   {
@@ -147,34 +68,46 @@ void Builder::PopulateRouteViewMapIp()
       {
         for (RouteView& routeView : serverView.routes)
         {
-          routeViewMapIp_[ipPort][hostName].emplace(routeView.locationPrefix, &routeView);
+          RouteViewMap_[ipPort][hostName].emplace(routeView.locationPrefix, &routeView);
         }
       }
     }
   }
 }
 
-void Builder::Error(Node& dir, std::string_view errorType, std::string_view message)
+void Builder::SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message, std::size_t tokenIndex)
 {
   std::stringstream ss;
+  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme << kReset_ << "`" << message << "\n";
+  lexer_.SetTokenErrorMessage(tokenIndex, ss.str());
+  lexer_.SetTokenErrorTrue(tokenIndex);
+}
 
-  ss << lexer_.GetLine(dir.params[0].idxTokenListStart) << ":" << lexer_.GetCol(dir.params[0].idxTokenListStart) << ": " << kRed_ << "error:"
-    << kReset_ << " " << errorType << ": " << "`" << kRed_ << dir.params[0].lexeme << kReset_ << "`" << message << "\n";
-  lexer_.SetTokenErrorMessage(dir.params[0].idxTokenListStart, ss.str());
-  lexer_.SetTokenErrorTrue(dir.params[0].idxTokenListStart);
-  dir.error = true;
+void Builder::Error(Node& node, std::string_view message)
+{
+  if (node.name == Identifier::kListen)
+  {
+    SetErrorMessage(lexer_.GetLine(node.params[0].idxTokenListStart), lexer_.GetCol(node.params[0].idxTokenListStart), node.params[0].lexeme, message, node.params[0].idxTokenListStart);
+  }
+  else if (node.name == Identifier::kServer)
+  {
+    SetErrorMessage(lexer_.GetLine(node.idxTokenListEnd), lexer_.GetCol(node.idxTokenListEnd), lexer_.GetLexeme(node.idxTokenListEnd), message, node.idxTokenListEnd);
+  }
+  node.error = true;
   error_ = true;
 }
 
-void Builder::ValidateIpPortDuplicate(Node& dir, const std::string& ip, const std::uint16_t port, const ServerView& currentServerView)
+bool Builder::ValidateIpPortDuplicate(Node& node, const std::string& ip, const std::uint16_t port, const ServerView& currentServerView)
 {
+  bool valid = true;
   for (const ServerView& serverView : servers_)
   {
     for (const std::pair<std::string, std::uint16_t>& ipPort : serverView.ipPortList)
     {
       if (ipPort.first == ip && ipPort.second == port)
       {
-        Error(dir, "unexpected token", " identical IP-port pair in different servers");
+        Error(node, " duplicate IP-port pair in different servers");
+        valid = false;
       }
     }
   }
@@ -182,9 +115,11 @@ void Builder::ValidateIpPortDuplicate(Node& dir, const std::string& ip, const st
   {
     if (ipPort.first == ip && ipPort.second == port)
     {
-      Error(dir, "unexpected token", " duplicate IP-port pair in server");
+      Error(node, " duplicate IP-port pair in server");
+      valid = false;
     }
   }
+  return valid;
 }
 
 void Builder::ExtractListen(Node& dir, ServerView& serverView)
@@ -235,11 +170,13 @@ void Builder::ExtractListen(Node& dir, ServerView& serverView)
     portNum = lexeme;
     std::from_chars(portNum.data(), portNum.data() + portNum.size(), portInt);
   }
-  ValidateIpPortDuplicate(dir, ip, portInt, serverView);
-  serverView.ipPortList.emplace_back(ip, portInt);
+  if (ValidateIpPortDuplicate(dir, ip, portInt, serverView))
+  {
+    serverView.ipPortList.emplace_back(ip, portInt);
+  }
 }
 
-void Builder::ExtractServer_name(const Node& dir, ServerView& serverView)
+void Builder::ExtractServerName(const Node& dir, ServerView& serverView)
 {
   for (const Node& param : dir.params)
   {
@@ -249,10 +186,10 @@ void Builder::ExtractServer_name(const Node& dir, ServerView& serverView)
 
 void Builder::ExtractCgi(const Node& dir, RouteView& routeView)
 {
-  dir.params[0].lexeme == "on" ? routeView.cgi = true : routeView.cgi = false;
+  routeView.cgi = dir.params[0].lexeme == "on";
 }
 
-void Builder::ExtractCgi_extension(const Node& dir, RouteView& routeView)
+void Builder::ExtractCgiExtension(const Node& dir, RouteView& routeView)
 {
   if (!routeView.cgiExePaths.has_value())
   {
@@ -268,7 +205,7 @@ void Builder::ExtractIndex(const Node& dir, RouteView& routeView)
 
 void Builder::ExtractAutoindex(const Node& dir, RouteView& routeView)
 {
-  dir.params[0].lexeme == "on" ? routeView.autoindex = true : routeView.autoindex = false;
+  routeView.autoindex = dir.params[0].lexeme == "on";
 }
 
 void Builder::ExtractClientMaxBodySize(const Node& dir, RouteView& routeView)
@@ -292,7 +229,7 @@ void Builder::ExtractClientMaxBodySize(const Node& dir, RouteView& routeView)
   routeView.clientMaxBody = number;
 }
 
-void Builder::ExtractAllowed_methods(const Node& dir, RouteView& routeView)
+void Builder::ExtractAllowedMethods(const Node& dir, RouteView& routeView)
 {
   routeView.allowedMask = RouteView::MethodMask::None;
   for (const Node& param : dir.params)
@@ -340,12 +277,12 @@ void Builder::ExtractAlias(const Node& dir, RouteView& routeView)
   routeView.alias.emplace(std::filesystem::path(dir.params[0].lexeme));
 }
 
-void Builder::ExtractError_page(const Node& dir, RouteView& routeView)
+void Builder::ExtractErrorPage(const Node& dir, RouteView& routeView)
 {
   for (std::size_t i = 0; i < dir.params.size() - 1; ++i)
   {
     std::uint16_t code{};
-    std::from_chars(dir.params[i].lexeme.data(), dir.params[i].lexeme.data() - dir.params[i].lexeme.size(), code);
+    std::from_chars(dir.params[i].lexeme.data(), dir.params[i].lexeme.data() + dir.params[i].lexeme.size(), code);
     routeView.errorPages[code] = dir.params[dir.params.size() - 1].lexeme;
   }
 }
@@ -363,138 +300,166 @@ void Builder::ExtractHttpData()
   {
     switch (dir.name)
     {
-      case Identifier::Index:
+      case Identifier::kIndex:
         ExtractIndex(dir, routeView);
         break;
-      case Identifier::Client_max_body_size:
+      case Identifier::kClientMaxBodySize:
         ExtractClientMaxBodySize(dir, routeView);
         break;
-      case Identifier::Error_page:
-        ExtractError_page(dir, routeView);
+      case Identifier::kErrorPage:
+        ExtractErrorPage(dir, routeView);
         break;
-      case Identifier::Autoindex:
+      case Identifier::kAutoindex:
         ExtractAutoindex(dir, routeView);
         break;
       default:
-        break;
+        assert(false && "invalid directive in http block");
+        __builtin_unreachable();
     }
   }
   ExtractServerData(http, routeView);
 }
 
-void Builder::ExtractServerData(Node& http, const RouteView& routeView)
+void Builder::ExtractServerDirectives(Node& server, ServerView& serverView, RouteView& routeView)
 {
-  std::size_t i = 0;
+  for (Node& dir : server.directives)
+  {
+    switch (dir.name)
+    {
+      case Identifier::kListen:
+        ExtractListen(dir, serverView);
+        break;
+      case Identifier::kServerName:
+        ExtractServerName(dir, serverView);
+        break;
+      case Identifier::kAllowedMethods:
+        ExtractAllowedMethods(dir, routeView);
+        break;
+      case Identifier::kReturn:
+        ExtractReturn(dir, routeView);
+        break;
+      case Identifier::kRoot:
+        ExtractRoot(dir, routeView);
+        break;
+      case Identifier::kIndex:
+        ExtractIndex(dir, routeView);
+        break;
+      case Identifier::kAutoindex:
+        ExtractAutoindex(dir, routeView);
+        break;
+      case Identifier::kClientMaxBodySize:
+        ExtractClientMaxBodySize(dir, routeView);
+        break;
+      case Identifier::kErrorPage:
+        ExtractErrorPage(dir, routeView);
+        break;
+      case Identifier::kCgiExtension:
+        ExtractCgiExtension(dir, routeView);
+        break;
+      default:
+        assert(false && "invalid directive in server block");
+        __builtin_unreachable();
+    }
+  }
+}
+
+void Builder::ExtractServerData(Node& http, RouteView& routeView)
+{
+  std::size_t currentServerIdx = 0;
+  std::size_t lastServerIdx = http.nestedBlocks.size() - 1;
   for (Node& server : http.nestedBlocks)
   {
     ServerView serverView;
-    for (Node& dir : server.directives)
+    if (currentServerIdx == lastServerIdx)
     {
-      switch (dir.name)
-      {
-        case Identifier::Listen:
-          ExtractListen(dir, serverView);
-          break;
-        case Identifier::Server_name:
-          ExtractServer_name(dir, serverView);
-          break;
-        default:
-          break;
-      }
+      ExtractServerDirectives(server, serverView, routeView);
+      SetServerViewDefaults(server, serverView);
+      servers_.emplace_back(serverView);
+      ExtractLocationData(server, routeView, currentServerIdx++);
     }
-    SetServerViewDefaults(serverView);
-    servers_.emplace_back(serverView);
-    RouteView routeViewCopy(routeView);
-    for (const Node& dir : server.directives)
+    else
     {
-      switch (dir.name)
-      {
-        case Identifier::Allowed_methods:
-          ExtractAllowed_methods(dir, routeViewCopy);
-          break;
-        case Identifier::Return:
-          ExtractReturn(dir, routeViewCopy);
-          break;
-        case Identifier::Root:
-          ExtractRoot(dir, routeViewCopy);
-          break;
-        case Identifier::Index:
-          ExtractIndex(dir, routeViewCopy);
-          break;
-        case Identifier::Autoindex:
-          ExtractAutoindex(dir, routeViewCopy);
-          break;
-        case Identifier::Client_max_body_size:
-          ExtractClientMaxBodySize(dir, routeViewCopy);
-          break;
-        case Identifier::Error_page:
-          ExtractError_page(dir, routeViewCopy);
-          break;
-        case Identifier::Cgi_extension:
-          ExtractCgi_extension(dir, routeViewCopy);
-          break;
-        default:
-          break;
-      }
+      RouteView routeViewCopy(routeView);
+      ExtractServerDirectives(server, serverView, routeViewCopy);
+      SetServerViewDefaults(server, serverView);
+      servers_.emplace_back(serverView);
+      ExtractLocationData(server, routeViewCopy, currentServerIdx++);
     }
-    ExtractLocationData(server, routeViewCopy, i++);
   }
 }
 
-void Builder::ExtractLocationData(const Node& server, RouteView& routeView, std::size_t i)
+void Builder::ExtractLocationDirectives(const Node& location, RouteView& routeView)
+{
+  for (const Node& dir : location.directives)
+  {
+    switch (dir.name)
+    {
+      case Identifier::kAllowedMethods:
+        ExtractAllowedMethods(dir, routeView);
+        break;
+      case Identifier::kReturn:
+        ExtractReturn(dir, routeView);
+        break;
+      case Identifier::kRoot:
+        ExtractRoot(dir, routeView);
+        break;
+      case Identifier::kAlias:
+        ExtractAlias(dir, routeView);
+        break;
+      case Identifier::kIndex:
+        ExtractIndex(dir, routeView);
+        break;
+      case Identifier::kAutoindex:
+        ExtractAutoindex(dir, routeView);
+        break;
+      case Identifier::kClientMaxBodySize:
+        ExtractClientMaxBodySize(dir, routeView);
+        break;
+      case Identifier::kErrorPage:
+        ExtractErrorPage(dir, routeView);
+        break;
+      case Identifier::kCgi:
+        ExtractCgi(dir, routeView);
+        break;
+      case Identifier::kCgiExtension:
+        ExtractCgiExtension(dir, routeView);
+        break;
+      default:
+        assert(false && "invalid directive in location block");
+        __builtin_unreachable();
+    }
+  }
+}
+
+void Builder::ExtractLocationData(const Node& server, RouteView& routeView, std::size_t currentServerIdx)
 {
   if (server.nestedBlocks.empty())
   {
-    servers_[i].routes.emplace_back(routeView);
+    servers_[currentServerIdx].routes.emplace_back(routeView);
     return;
   }
+  std::size_t currentRouteIdx = 0;
+  std::size_t lastRouteIdx = server.nestedBlocks.size() - 1;
   for (const Node& location : server.nestedBlocks)
   {
-    RouteView copy(routeView);
-    ExtractLocationPrefix(location, copy);
-    for (const Node& dir : location.directives)
+    if (currentRouteIdx == lastRouteIdx)
     {
-      switch (dir.name)
-      {
-        case Identifier::Allowed_methods:
-          ExtractAllowed_methods(dir, copy);
-          break;
-        case Identifier::Return:
-          ExtractReturn(dir, copy);
-          break;
-        case Identifier::Root:
-          ExtractRoot(dir, copy);
-          break;
-        case Identifier::Alias:
-          ExtractAlias(dir, copy);
-          break;
-        case Identifier::Index:
-          ExtractIndex(dir, copy);
-          break;
-        case Identifier::Autoindex:
-          ExtractAutoindex(dir, copy);
-          break;
-        case Identifier::Client_max_body_size:
-          ExtractClientMaxBodySize(dir, copy);
-          break;
-        case Identifier::Error_page:
-          ExtractError_page(dir, copy);
-          break;
-        case Identifier::Cgi:
-          ExtractCgi(dir, copy);
-          break;
-        case Identifier::Cgi_extension:
-          ExtractCgi_extension(dir, copy);
-          break;
-        default:
-          break;
-      }
+      ExtractLocationPrefix(location, routeView);
+      ExtractLocationDirectives(location, routeView);
+      servers_[currentServerIdx].routes.emplace_back(routeView);
     }
-    servers_[i].routes.emplace_back(copy);
+    else
+    {
+      RouteView routeViewCopy(routeView);
+      ExtractLocationPrefix(location, routeViewCopy);
+      ExtractLocationDirectives(location, routeViewCopy);
+      servers_[currentServerIdx].routes.emplace_back(routeViewCopy);
+    }
+    ++currentRouteIdx;
   }
 }
 
-void Builder::SetServerViewDefaults(ServerView& serverView)
+void Builder::SetServerViewDefaults(Node& server, ServerView& serverView)
 {
   if (serverView.hostNames.empty())
   {
@@ -502,6 +467,9 @@ void Builder::SetServerViewDefaults(ServerView& serverView)
   }
   if (serverView.ipPortList.empty())
   {
-    serverView.ipPortList.emplace_back(defaultIp_, defaultPort_);
+    if (ValidateIpPortDuplicate(server, defaultIp_, defaultPort_, serverView))
+    {
+      serverView.ipPortList.emplace_back(defaultIp_, defaultPort_);
+    }
   }
 }

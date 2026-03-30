@@ -34,14 +34,11 @@ class Validator
     Validator& operator=(Validator&& other) = delete;
     ~Validator() = default;
 
-    void ValidateAst();
     bool GetError() const;
-    void SetErrorTrue();
 
   private:
     // helper functions
     bool IsParamsEmpty(Node& dir, std::string_view message);
-    void ValidatePath(Node& node);
     bool IsValidURL(Node& param);
     std::string BuildErrorMessage(std::string_view errorType, std::string_view message, std::size_t idx);
     void Error(std::string_view error_type, std::string_view message, Node& node, std::size_t idx);
@@ -59,7 +56,7 @@ class Validator
     void HandlePortNum(Node& dir);
     void ValidateListen(Node& dir);
     void ValidateName(Node& param);
-    void ValidateServer_name(Node& dir);
+    void ValidateServerName(Node& dir);
     void ValidateRoot(Node& dir);
     void ValidateIndex(Node& dir);
     void ValidateAlias(Node& dir);
@@ -67,20 +64,17 @@ class Validator
     bool ValidateNumPart(Node& param, const std::string& numPart, std::size_t& number);
     void ValidateNumTimesUnitPrefix(Node& param, const std::size_t& number, const std::string& unitPrefix);
     void ValidateSize(Node& param);
-    void ValidateClient_max_body_size(Node& dir);
-    void ValidateClient_body_temp_path(Node& dir);
-    void ValidateError_page(Node& dir);
+    void ValidateClientMaxBodySize(Node& dir);
+    void ValidateErrorPage(Node& dir);
     bool IsValidReturnCode(Node& param);
     void ValidateReturn(Node& dir);
     bool IsAllowedMethod(std::string_view lexeme);
     bool IsDuplicate(std::string_view lexeme, std::array<std::size_t, 3>& counts);
-    void ValidateAllowed_methods(Node& dir);
+    void ValidateAllowedMethods(Node& dir);
     void ValidateOnOffParam(Node& dir);
     void ValidateAutoindex(Node& dir);
     void ValidateCgi(Node& dir);
-    void ValidateCgi_root(Node& dir);
-    void ValidateCgi_alias(Node& dir);
-    void ValidateCgi_extension(Node& dir);
+    void ValidateCgiExtension(Node& dir);
 
     Lexer& lexer_;
     Parser& parser_;
@@ -119,97 +113,82 @@ class Validator
     std::string supportedReturnCodesStr_;
 
     const std::set<Identifier> duplicatesIllegal_{
-      Identifier::Cgi,
-      Identifier::Index,
-      Identifier::Autoindex,
-      Identifier::Client_max_body_size,
-      Identifier::Allowed_methods,
-      Identifier::Return,
-      Identifier::Root,
-      Identifier::Alias,
-      Identifier::Client_body_temp_path,
-      Identifier::Cgi_root,
-      Identifier::Cgi_alias
+      Identifier::kCgi,
+      Identifier::kIndex,
+      Identifier::kAutoindex,
+      Identifier::kClientMaxBodySize,
+      Identifier::kAllowedMethods,
+      Identifier::kReturn,
+      Identifier::kRoot,
+      Identifier::kAlias,
     };
 
     const std::map<Identifier, std::set<Identifier>> validDirectives_{
       {
-        Identifier::Main, {}
+        Identifier::kMain, {}
       },
       {
-        Identifier::Events, {}
-      },
-      {
-        Identifier::Http,
+        Identifier::kHttp,
         {
-          Identifier::Index,
-          Identifier::Client_max_body_size,
-          Identifier::Client_body_temp_path,
-          Identifier::Error_page,
-          Identifier::Autoindex,
-          Identifier::Cgi_root
+          Identifier::kIndex,
+          Identifier::kClientMaxBodySize,
+          Identifier::kErrorPage,
+          Identifier::kAutoindex
         }
       },
       {
-        Identifier::Server,
+        Identifier::kServer,
         {
-          Identifier::Listen,
-          Identifier::Server_name,
-          Identifier::Root,
-          Identifier::Index,
-          Identifier::Client_max_body_size,
-          Identifier::Client_body_temp_path,
-          Identifier::Error_page,
-          Identifier::Return,
-          Identifier::Allowed_methods,
-          Identifier::Autoindex,
-          Identifier::Cgi_root,
-          Identifier::Cgi_extension
+          Identifier::kListen,
+          Identifier::kServerName,
+          Identifier::kRoot,
+          Identifier::kIndex,
+          Identifier::kClientMaxBodySize,
+          Identifier::kErrorPage,
+          Identifier::kReturn,
+          Identifier::kAllowedMethods,
+          Identifier::kAutoindex,
+          Identifier::kCgiExtension
         }
       },
       {
-        Identifier::Location,
+        Identifier::kLocation,
         {
-          Identifier::Root,
-          Identifier::Index,
-          Identifier::Alias,
-          Identifier::Client_max_body_size,
-          Identifier::Client_body_temp_path,
-          Identifier::Error_page,
-          Identifier::Return,
-          Identifier::Allowed_methods,
-          Identifier::Autoindex,
-          Identifier::Cgi,
-          Identifier::Cgi_extension
+          Identifier::kRoot,
+          Identifier::kIndex,
+          Identifier::kAlias,
+          Identifier::kClientMaxBodySize,
+          Identifier::kErrorPage,
+          Identifier::kReturn,
+          Identifier::kAllowedMethods,
+          Identifier::kAutoindex,
+          Identifier::kCgi,
+          Identifier::kCgiExtension
         }
       }
     };
   
     const std::map<Identifier, std::set<Identifier>> validBlocks_{
       {
-        Identifier::Main,
+        Identifier::kMain,
         {
-          Identifier::Events,
-          Identifier::Http
+          Identifier::kHttp
         }
       },
       {
-        Identifier::Events, {}
-      },
-      {
-        Identifier::Http,
+        Identifier::kHttp,
         {
-          Identifier::Server
+          Identifier::kServer
         }
       },
       {
-        Identifier::Server,
+        Identifier::kServer,
         {
-          Identifier::Location
+          Identifier::kLocation
         }
       },
       {
-        Identifier::Location, {}
+        Identifier::kLocation, {}
       }
     };
 };

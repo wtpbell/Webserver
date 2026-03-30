@@ -41,7 +41,6 @@ Validator::Validator(Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpP
     supportedErrorPageCodesStr_.append(" ");
     supportedErrorPageCodesStr_.append(s);
   }
-
   size = 25 + (supportedReturnCodesSet_.size() * 4);
   supportedReturnCodesStr_.reserve(size);
   supportedReturnCodesStr_.append(" supported return codes:");
@@ -50,23 +49,14 @@ Validator::Validator(Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpP
     supportedReturnCodesStr_.append(" ");
     supportedReturnCodesStr_.append(s);
   }
+  ValidateBlock(parser_.GetAst());
 }
 
 //////////////////// PUBLIC ////////////////////
 
-void Validator::ValidateAst()
-{
-  ValidateBlock(parser_.GetAst());
-}
-
 bool Validator::GetError() const
 {
   return error_;
-}
-
-void Validator::SetErrorTrue()
-{
-  error_ = true;
 }
 
 //////////////////// PRIVATE ////////////////////
@@ -120,7 +110,7 @@ void Validator::ValidateContextDirs(Node& block)
   {
     if (!validDirectives_.at(block.name).count(dir.name))
     {
-      Error("invalid context", "", dir, dir.idxTokenListStart);
+      Error("unexpected token", " invalid context", dir, dir.idxTokenListStart);
     }
   }
 }
@@ -131,7 +121,7 @@ void Validator::ValidateContextBlocks(Node& block)
   {
     if (!validBlocks_.at(block.name).count(nestedBlock.name))
     {
-      Error("invalid context", "", nestedBlock, nestedBlock.idxTokenListStart);
+      Error("unexpected token", " invalid context", block, nestedBlock.idxTokenListStart);
     }
   }
 }
@@ -149,10 +139,10 @@ void Validator::ValidateNumDirs(Node& block)
         Error("invalid duplicate", "", dir, dir.idxTokenListStart);
       }
     }
-    if (block.name == Identifier::Location)
+    if (block.name == Identifier::kLocation)
     {
-      if ((dir.name == Identifier::Root && directivesSet.count(Identifier::Alias)) ||
-          (dir.name == Identifier::Alias && directivesSet.count(Identifier::Root)))
+      if ((dir.name == Identifier::kRoot && directivesSet.count(Identifier::kAlias)) ||
+          (dir.name == Identifier::kAlias && directivesSet.count(Identifier::kRoot)))
       {
         Error("unexpected token", " location block must not contain both `alias` and `root`", dir, dir.idxTokenListStart);
       }
@@ -162,17 +152,17 @@ void Validator::ValidateNumDirs(Node& block)
 
 void Validator::ValidateNumBlocks(Node& block)
 {
-  if (block.name == Identifier::Main)
+  if (block.name == Identifier::kMain)
   {
     std::size_t http = 0;
     for (Node& nestedBlock : block.nestedBlocks)
     {
-      if (nestedBlock.name == Identifier::Http)
+      if (nestedBlock.name == Identifier::kHttp)
       {
         ++http;
         if (http > 1)
         {
-          Error("duplicate http", "", block, block.idxTokenListEnd);
+          Error("duplicate http", "", block, nestedBlock.idxTokenListStart);
         }
       }
     }
@@ -181,12 +171,12 @@ void Validator::ValidateNumBlocks(Node& block)
       Error("unexpected token", " expected `http`", block, block.idxTokenListEnd);
     }
   }
-  else if (block.name == Identifier::Http)
+  else if (block.name == Identifier::kHttp)
   {
     std::size_t server = 0;
     for (Node& nestedBlock : block.nestedBlocks)
     {
-      if (nestedBlock.name == Identifier::Server)
+      if (nestedBlock.name == Identifier::kServer)
       {
         ++server;
         break;
@@ -205,50 +195,41 @@ void Validator::ValidateNestedDirs(Node& block)
   {
     switch (dir.name)
     {
-      case Identifier::Listen:
+      case Identifier::kListen:
         ValidateListen(dir);
         break;
-      case Identifier::Server_name:
-        ValidateServer_name(dir);
+      case Identifier::kServerName:
+        ValidateServerName(dir);
         break;
-      case Identifier::Root:
+      case Identifier::kRoot:
         ValidateRoot(dir);
         break;
-      case Identifier::Index:
+      case Identifier::kIndex:
         ValidateIndex(dir);
         break;
-      case Identifier::Alias:
+      case Identifier::kAlias:
         ValidateAlias(dir);
         break;
-      case Identifier::Client_max_body_size:
-        ValidateClient_max_body_size(dir);
+      case Identifier::kClientMaxBodySize:
+        ValidateClientMaxBodySize(dir);
         break;
-      case Identifier::Client_body_temp_path:
-        ValidateClient_body_temp_path(dir);
+      case Identifier::kErrorPage:
+        ValidateErrorPage(dir);
         break;
-      case Identifier::Error_page:
-        ValidateError_page(dir);
-        break;
-      case Identifier::Return:
+      case Identifier::kReturn:
         ValidateReturn(dir);
         break;
-      case Identifier::Allowed_methods:
-        ValidateAllowed_methods(dir);
+      case Identifier::kAllowedMethods:
+        ValidateAllowedMethods(dir);
         break;
-      case Identifier::Autoindex:
+      case Identifier::kAutoindex:
         ValidateAutoindex(dir);
         break;
-      case Identifier::Cgi:
+      case Identifier::kCgi:
         ValidateCgi(dir);
         break;
-      case Identifier::Cgi_root:
-        ValidateCgi_root(dir);
-        break;
-      case Identifier::Cgi_alias:
-        ValidateCgi_alias(dir);
-        break;
-      case Identifier::Cgi_extension:
-      	ValidateCgi_extension(dir);
+      case Identifier::kCgiExtension:
+      	ValidateCgiExtension(dir);
       	break;
       default:
         assert(false && "Invalid node in block.directives in ValidateNestedDirs");
@@ -299,7 +280,7 @@ void Validator::HandleIpv6(Node& dir)
   std::string errorMessage;
   if (validatorIpPort_.ExtractIpv6(dir.params[0].lexeme, ipv6, errorMessage))
   {
-    if (!validatorIpPort_.ValidateIpv6(ipv6, &errorMessage))
+    if (!validatorIpPort_.ValidateIpv6(ipv6, errorMessage))
     {
       Error(errorMessage, "", dir.params[0], dir.params[0].idxTokenListStart);
     }
@@ -409,7 +390,7 @@ void Validator::ValidateName(Node& param)
   }
 }
 
-void Validator::ValidateServer_name(Node& dir)
+void Validator::ValidateServerName(Node& dir)
 {
   /*
   Syntax:   server_name name ...;
@@ -561,7 +542,7 @@ void Validator::ValidateSize(Node& param)
   ValidateNumTimesUnitPrefix(param, number, unitPrefix);
 }
 
-void Validator::ValidateClient_max_body_size(Node& dir)
+void Validator::ValidateClientMaxBodySize(Node& dir)
 {
   /*
   Syntax:   client_max_body_size size;
@@ -580,28 +561,9 @@ void Validator::ValidateClient_max_body_size(Node& dir)
   }
 }
 
-//////////////////// client_body_temp_path //////////////////
-
-void Validator::ValidateClient_body_temp_path(Node& dir)
-{
-  /*
-  Syntax:   client_body_temp_path path;
-  Default:  client_body_temp_path client_body_temp;
-  Context:  http, server, location
-  */
-  if (IsParamsEmpty(dir, " expected: /PATH"))
-  {
-    return;
-  }
-  for (std::size_t i = 1; i < dir.params.size(); ++i)
-  {
-    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
-  }
-}
-
 //////////////////// error_page //////////////////
 
-void Validator::ValidateError_page(Node& dir)
+void Validator::ValidateErrorPage(Node& dir)
 {
   /*
   Syntax:   error_page code ... [=[response]] uri; // currently no support for [=[response]] - do we want that?
@@ -714,7 +676,7 @@ bool Validator::IsDuplicate(std::string_view lexeme, std::array<std::size_t, 3>&
   return false;
 }
 
-void Validator::ValidateAllowed_methods(Node& dir)
+void Validator::ValidateAllowedMethods(Node& dir)
 {
   /*
   Syntax:  allowed_methods 1*3method;
@@ -784,47 +746,10 @@ void Validator::ValidateCgi(Node& dir)
   ValidateOnOffParam(dir);
 }
 
-//////////////////// cgi_root //////////////////
-
-void Validator::ValidateCgi_root(Node& dir)
-{
-  /*
-  Syntax:   cgi_root path;
-  Default:  cgi_root html;
-  Context:  server, location
-  */
-  if (IsParamsEmpty(dir, " expected: PATH"))
-  {
-    return;
-  }
-  for (std::size_t i = 1; i < dir.params.size(); ++i)
-  {
-    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
-  }
-}
-
-//////////////////// cgi_alias //////////////////
-
-void Validator::ValidateCgi_alias(Node& dir)
-{
-  /*
-  Syntax:   cgi_alias path;
-  Default:  —
-  Context:  location
-  */
-  if (IsParamsEmpty(dir, " expected: PATH"))
-  {
-    return;
-  }
-  for (std::size_t i = 1; i < dir.params.size(); ++i)
-  {
-    Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
-  }
-}
 
 //////////////////// cgi_extension //////////////////
 
-void Validator::ValidateCgi_extension(Node& dir)
+void Validator::ValidateCgiExtension(Node& dir)
 {
 	/*
 	Syntax: cgi_extension type path;

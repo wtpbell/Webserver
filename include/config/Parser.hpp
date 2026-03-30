@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   Parser.hpp                                          :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:35:32 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:35:34 by jstuhrin       ########   codam.nl        */
+/*   Updated: 2025/12/02 10:35:34 by jstuhrin       ########   codam.nl       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,27 +20,23 @@
 
 enum class Identifier
 {
-  Main,
-  Events,
-  Http,
-  Server,
-  Location,
-  Listen,
-  Server_name,
-  Root,
-  Index,
-  Alias,
-  Client_max_body_size,
-  Client_body_temp_path,
-  Error_page,
-  Return,
-  Allowed_methods,
-  Autoindex,
-  Cgi,
-  Cgi_root,
-  Cgi_alias,
-  Cgi_extension,
-  Param
+  kMain,
+  kHttp,
+  kServer,
+  kLocation,
+  kListen,
+  kServerName,
+  kRoot,
+  kIndex,
+  kAlias,
+  kClientMaxBodySize,
+  kErrorPage,
+  kReturn,
+  kAllowedMethods,
+  kAutoindex,
+  kCgi,
+  kCgiExtension,
+  kParam
 };
 
 struct Node
@@ -81,7 +77,6 @@ class Parser
     Parser& operator=(Parser&& other) = delete;
     ~Parser() = default;
 
-    void Parse();
     void PrintDetailedAST() const;
     Node& GetAst();
     bool GetError() const;
@@ -92,7 +87,6 @@ class Parser
     bool IsEof() const;
     bool IsBlockDirective() const;
     bool IsHttp() const;
-    bool IsEvents() const;
     bool IsServer() const;
     bool IsLocation() const;
     bool IsLBrace() const;

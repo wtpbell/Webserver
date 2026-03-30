@@ -18,10 +18,12 @@
 #include <string>
 #include <vector>
 
+#include "config/ServerRegistry.hpp"
+
 extern std::atomic<bool> g_shutdown;
 
 void setupSignals(void);
-int LoadConfigs(int argc, char* argv[]);
+std::optional<ServerRegistry> LoadConfigs(int argc, char* argv[]);
 std::size_t NextPOT(std::size_t n);
 std::vector<char*> ConvertToCstrVector(const std::vector<std::string>& v);
 

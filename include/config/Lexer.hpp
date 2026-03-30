@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   Lexer.hpp                                           :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:35:18 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:35:23 by jstuhrin       ########   codam.nl        */
+/*   Updated: 2025/12/02 10:35:23 by jstuhrin       ########   codam.nl       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,34 +14,31 @@
 #define LEXER_HPP
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 enum class TokenKind
 {
-  LBrace,
-  RBrace,
-  Semicolon,
-  Listen,
-  Server_name,
-  Root,
-  Index,
-  Alias,
-  Client_max_body_size,
-  Client_body_temp_path,
-  Error_page,
-  Return,
-  Allowed_methods,
-  Autoindex,
-  Cgi,
-  Cgi_root,
-  Cgi_alias,
-  Cgi_extension,
-  Events,
-  Http,
-  Location,
-  Server,
-  String,
-  Eof
+  kLBrace,
+  kRBrace,
+  kSemicolon,
+  kListen,
+  kServerName,
+  kRoot,
+  kIndex,
+  kAlias,
+  kClientMaxBodySize,
+  kErrorPage,
+  kReturn,
+  kAllowedMethods,
+  kAutoindex,
+  kCgi,
+  kCgiExtension,
+  kHttp,
+  kLocation,
+  kServer,
+  kString,
+  kEof
 };
 
 struct Token
@@ -69,14 +66,13 @@ struct Token
 class Lexer
 {
   public:
-    Lexer();
+    Lexer(std::string buffer);
     Lexer(const Lexer& other) = delete;
     Lexer(Lexer&& other) = delete;
     Lexer& operator=(const Lexer& other) = delete;
     Lexer& operator=(Lexer&& other) = delete;
     ~Lexer() = default;
 
-    void Lex(std::string buffer);
     void PrintTokenList() const;
     void PrintConfigsDebug() const;
     void PrintErrorIdxs() const;
@@ -112,14 +108,14 @@ class Lexer
     void PrintToken(const Token& token) const;
     void PrintTriviaAndLexeme(const Token& token) const;
 
-    std::string buffer_;
-    std::vector<Token> tokenList_;
     std::size_t line_;
     std::size_t col_;
     std::size_t posBuffer_;
     std::size_t idxCurrentToken_;
     bool madeEofToken_;
     bool error_;
+    std::string buffer_;
+    std::vector<Token> tokenList_;
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
 };

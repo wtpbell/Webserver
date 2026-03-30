@@ -3,10 +3,10 @@
 /*                                                         ::::::::           */
 /*   Lexer.cpp                                           :+:    :+:           */
 /*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.ccodam.nl>          +#+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
 /*   Created: 2025/12/02 10:36:50 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:36:51 by jstuhrin       ########   codam.nl        */
+/*   Updated: 2025/12/02 10:36:51 by jstuhrin       ########   codam.nl       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,19 +17,15 @@
 #include <sstream>
 #include <string>
 
-Lexer::Lexer()
+Lexer::Lexer(std::string buffer)
   : line_(1)
   , col_(1)
   , posBuffer_(0)
   , idxCurrentToken_(0)
   , madeEofToken_(false)
   , error_(false)
-{}
-
-//////////////////// PUBLIC ////////////////////
-void Lexer::Lex(std::string buffer)
+  , buffer_(std::move(buffer))
 {
-  buffer_ = std::move(buffer);
   while (!madeEofToken_)
   {
     MakeToken();
@@ -37,6 +33,8 @@ void Lexer::Lex(std::string buffer)
   }
   idxCurrentToken_ = 0;
 }
+
+//////////////////// PUBLIC ////////////////////
 
 void Lexer::PrintTokenList() const
 {
@@ -181,78 +179,68 @@ TokenKind Lexer::DetermineKind() const
   {
     case 1:
       if (Is('{'))
-        return TokenKind::LBrace;
+        return TokenKind::kLBrace;
       if (Is('}'))
-        return TokenKind::RBrace;
+        return TokenKind::kRBrace;
       if (Is(';'))
-        return TokenKind::Semicolon;
+        return TokenKind::kSemicolon;
       if (Is('\0'))
-        return TokenKind::Eof;
+        return TokenKind::kEof;
       break;
     case 3:
       if (Is("cgi"))
-        return TokenKind::Cgi;
+        return TokenKind::kCgi;
       break;
     case 4:
       if (Is("root"))
-        return TokenKind::Root;
+        return TokenKind::kRoot;
       if (Is("http"))
-        return TokenKind::Http;
+        return TokenKind::kHttp;
       break;
     case 5:
       if (Is("index"))
-        return TokenKind::Index;
+        return TokenKind::kIndex;
       if (Is("alias"))
-        return TokenKind::Alias;
+        return TokenKind::kAlias;
       break;
     case 6:
       if (Is("listen"))
-        return TokenKind::Listen;
+        return TokenKind::kListen;
       if (Is("return"))
-        return TokenKind::Return;
-      if (Is("events"))
-        return TokenKind::Events;
+        return TokenKind::kReturn;
       if (Is("server"))
-        return TokenKind::Server;
+        return TokenKind::kServer;
       break;
     case 8:
-      if (Is("cgi_root"))
-        return TokenKind::Cgi_root;
       if (Is("location"))
-        return TokenKind::Location;
+        return TokenKind::kLocation;
       break;
     case 9:
       if (Is("autoindex"))
-        return TokenKind::Autoindex;
-      if (Is("cgi_alias"))
-        return TokenKind::Cgi_alias;
+        return TokenKind::kAutoindex;
       break;
     case 10:
       if (Is("error_page"))
-        return TokenKind::Error_page;
+        return TokenKind::kErrorPage;
       break;
     case 11:
       if (Is("server_name"))
-        return TokenKind::Server_name;
+        return TokenKind::kServerName;
       break;
     case 13:
       if (Is("cgi_extension"))
-        return TokenKind::Cgi_extension;
+        return TokenKind::kCgiExtension;
       break;
     case 15:
       if (Is("allowed_methods"))
-        return TokenKind::Allowed_methods;
+        return TokenKind::kAllowedMethods;
       break;
     case 20:
       if (Is("client_max_body_size"))
-        return TokenKind::Client_max_body_size;
-      break;
-    case 21:
-      if (Is("client_body_temp_path"))
-        return TokenKind::Client_body_temp_path;
+        return TokenKind::kClientMaxBodySize;
       break;
   }
-  return TokenKind::String;
+  return TokenKind::kString;
 }
 
 std::string Lexer::ExtractLexeme() const
@@ -301,53 +289,45 @@ std::string Lexer::TokenKindToString(TokenKind kind) const
 {
   switch (kind)
   {
-    case TokenKind::LBrace:
+    case TokenKind::kLBrace:
       return "LBrace";
-    case TokenKind::RBrace:
+    case TokenKind::kRBrace:
       return "RBrace";
-    case TokenKind::Semicolon:
+    case TokenKind::kSemicolon:
       return "Semicolon";
-    case TokenKind::Listen:
+    case TokenKind::kListen:
       return "Listen";
-    case TokenKind::Server_name:
+    case TokenKind::kServerName:
       return "Server_name";
-    case TokenKind::Root:
+    case TokenKind::kRoot:
       return "Root";
-    case TokenKind::Index:
+    case TokenKind::kIndex:
       return "Index";
-    case TokenKind::Alias:
+    case TokenKind::kAlias:
       return "Alias";
-    case TokenKind::Client_max_body_size:
+    case TokenKind::kClientMaxBodySize:
       return "Client_max_body_size";
-    case TokenKind::Client_body_temp_path:
-      return "Client_body_temp_path";
-    case TokenKind::Error_page:
+    case TokenKind::kErrorPage:
       return "Error_page";
-    case TokenKind::Return:
+    case TokenKind::kReturn:
       return "Return";
-    case TokenKind::Allowed_methods:
+    case TokenKind::kAllowedMethods:
       return "Allowed_methods";
-    case TokenKind::Autoindex:
+    case TokenKind::kAutoindex:
       return "Autoindex";
-    case TokenKind::Cgi:
+    case TokenKind::kCgi:
       return "Cgi";
-    case TokenKind::Cgi_root:
-      return "Cgi_root";
-    case TokenKind::Cgi_alias:
-      return "Cgi_alias";
-    case TokenKind::Cgi_extension:
+    case TokenKind::kCgiExtension:
     	return "Cgi_extension";
-    case TokenKind::Http:
+    case TokenKind::kHttp:
       return "Http";
-    case TokenKind::Server:
+    case TokenKind::kServer:
       return "Server";
-    case TokenKind::Location:
+    case TokenKind::kLocation:
       return "Location";
-    case TokenKind::Events:
-      return "Events";
-    case TokenKind::String:
+    case TokenKind::kString:
       return "String";
-    case TokenKind::Eof:
+    case TokenKind::kEof:
       return "Eof";
   }
   assert(false && "passed invalid TokenKind");
@@ -380,11 +360,11 @@ void Lexer::MakeToken()
   std::string lexeme = ExtractLexeme();
 	Token token(kind, std::move(lexeme), std::move(leadingTrivia), line_, col_, idxCurrentToken_);
   Traverse(token.lexeme);
-  if (token.kind == TokenKind::String)
+  if (token.kind == TokenKind::kString)
   {
     ValidatePrintable(token);
   }
-  if (token.kind == TokenKind::Eof)
+  if (token.kind == TokenKind::kEof)
   {
     madeEofToken_ = true;
   }

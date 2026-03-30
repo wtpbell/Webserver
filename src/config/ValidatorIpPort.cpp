@@ -21,8 +21,6 @@
 #include "config/Parser.hpp"
 #include "config/ValidatorIpPort.hpp"
 
-ValidatorIpPort::ValidatorIpPort() {}
-
 std::optional<std::string> ValidatorIpPort::GetNormalizedIpv6(const std::string& ipv6) const
 {
   if (normalizedIpv6Adresses_.count(ipv6) != 0)
@@ -82,7 +80,7 @@ bool ValidatorIpPort::ValidateIpv4(const std::string& ipv4, std::string& errorMe
   return true;
 }
 
-bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string* errorMessage)
+bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string& errorMessage)
 {
   std::string::size_type posDoubleColon = ipv6.find("::");
   if (posDoubleColon == std::string::npos)
@@ -94,15 +92,12 @@ bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string* 
   {
     return true;
   }
-  if (errorMessage)
-  {
-    *errorMessage = "unexpected `::`";
-  }
+  errorMessage = "unexpected `::`";
   return false;
 }
 
 bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                               std::size_t& numQuartets, bool hasZeroCompression, std::string* errorMessage)
+                               std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage)
 {
   std::string::size_type start = 0;
   std::string::size_type end = ipv6.find("::");
@@ -117,10 +112,7 @@ bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::st
   }
   if (ipv6Left.front() == ':' || ipv6Left.back() == ':')
   {
-    if (errorMessage)
-    {
-      *errorMessage = "empty quartet in ipv6 address";
-    }
+    errorMessage = "empty quartet in ipv6 address";
     return false;
   }
   end = ipv6Left.find(':');
@@ -134,10 +126,7 @@ bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::st
     ++numQuartets;
     if (numQuartets > 8 || (hasZeroCompression && numQuartets > 7))
     {
-      if (errorMessage)
-      {
-        *errorMessage = "too many quartets in ipv6 address";
-      }
+      errorMessage = "too many quartets in ipv6 address";
       return false;
     }
     quartets[i] = ipv6Left.substr(start, end - start);
@@ -153,7 +142,7 @@ bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::st
 }
 
 bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                                std::size_t& numQuartets, bool hasZeroCompression, std::string* errorMessage)
+                                std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage)
 {
   if (ipv6.find("::") == std::string::npos)
   {
@@ -168,10 +157,7 @@ bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::s
   }
   if (ipv6Right.front() == ':' || ipv6Right.back() == ':')
   {
-    if (errorMessage)
-    {
-      *errorMessage = "empty quartet in ipv6 address";
-    }
+    errorMessage = "empty quartet in ipv6 address";
     return false;
   }
   std::string::size_type colon = ipv6Right.find_last_of(':');
@@ -187,10 +173,7 @@ bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::s
     ++numQuartets;
     if (numQuartets > 8 || (hasZeroCompression && numQuartets > 7))
     {
-      if (errorMessage)
-      {
-        *errorMessage = "too many quartets in ipv6 address";
-      }
+      errorMessage = "too many quartets in ipv6 address";
       return false;
     }
     quartets[i] = ipv6Right.substr(start, end - start);
@@ -206,15 +189,12 @@ bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::s
   return true;
 }
 
-bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets, std::string* errorMessage)
+bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets, std::string& errorMessage)
 {
   std::string::size_type end = ipv6.find(':');
   if (end == std::string::npos)
   {
-    if (errorMessage)
-    {
-      *errorMessage = "invalid ipv6 address";
-    }
+    errorMessage = "invalid ipv6 address";
     return false;
   }
   std::size_t numQuartets = 0;
@@ -226,35 +206,26 @@ bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string
   }
   if (!hasZeroCompression && numQuartets < 8)
   {
-    if (errorMessage)
-    {
-      *errorMessage = "too few quartets in ipv6 address";
-    }
+    errorMessage = "too few quartets in ipv6 address";
     return false;
   }
   return true;
 }
 
-bool ValidatorIpPort::ValidateQuartets(const std::array<std::string, 8>& quartets, std::string* errorMessage)
+bool ValidatorIpPort::ValidateQuartets(const std::array<std::string, 8>& quartets, std::string& errorMessage)
 {
   for (const std::string& q : quartets)
   {
     if (q.size() > 4)
     {
-      if (errorMessage)
-      {
-        *errorMessage = "ipv6 quartet too long";
-      }
+      errorMessage = "ipv6 quartet too long";
       return false;
     }
     for (const char c : q)
     {
       if (!std::isxdigit(static_cast<unsigned char>(c)))
       {
-        if (errorMessage)
-        {
-          *errorMessage = "illegal character in ipv6 quartet";
-        }
+        errorMessage = "illegal character in ipv6 quartet";
         return false;
       }
     }
@@ -373,14 +344,11 @@ const std::string ValidatorIpPort::NormalizeIpv6(std::array<std::string, 8>& qua
   return normalizedIpv6;
 }
 
-bool ValidatorIpPort::ValidateIpv6(const std::string& ipv6, std::string* errorMessage, std::string* normalizedIpv6)
+bool ValidatorIpPort::ValidateIpv6(const std::string& ipv6, std::string& errorMessage)
 {
   if (ipv6.empty())
   {
-    if (errorMessage)
-    {
-      *errorMessage = "empty ipv6 address";
-    }
+    errorMessage = "empty ipv6 address";
     return false;
   }
   if (!ValidateDoubleColon(ipv6, errorMessage))
@@ -400,14 +368,7 @@ bool ValidatorIpPort::ValidateIpv6(const std::string& ipv6, std::string* errorMe
   {
     return false;
   }
-  if (normalizedIpv6)
-  {
-    *normalizedIpv6 = NormalizeIpv6(quartets);
-  }
-  else
-  {
-    normalizedIpv6Adresses_.emplace(ipv6, NormalizeIpv6(quartets));
-  }
+  normalizedIpv6Adresses_.emplace(ipv6, NormalizeIpv6(quartets));
   return true;
 }
 

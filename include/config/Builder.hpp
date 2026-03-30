@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                         ::::::::           */
-/*   Validator.cpp                                       :+:    :+:           */
+/*   Builder.hpp                                         :+:    :+:           */
 /*                                                      +:+                   */
 /*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
@@ -21,115 +21,75 @@
 #include <vector>
 #include <utility>
 
+#include "Lexer.hpp"
 #include "Parser.hpp"
-
-struct RouteView
-{
-  enum class MethodMask : unsigned
-  {
-    None = 0,
-    Get = 1u << 0,
-    Post = 1u << 1,
-    Delete = 1u << 2,
-    All = Get | Post | Delete,
-  };
-
-  struct ReturnRule
-  {
-    std::uint16_t code;
-    std::string target;
-  };
-
-  std::string locationPrefix = "/";
-
-  std::filesystem::path root = "./www";
-  std::optional<std::filesystem::path> alias;
-  std::string index = "index.html";
-
-  bool autoindex = false;
-  std::size_t clientMaxBody = 1u << 20;
-  MethodMask allowedMask = MethodMask::Get;
-
-  std::optional<ReturnRule> returnRule;
-  std::map<std::uint16_t, std::string> errorPages;
-
-  bool cgi = false;
-  std::optional<std::map<std::string, std::filesystem::path>> cgiExePaths;
-};
-
-struct ServerView
-{
-  std::vector<std::string> hostNames;
-  std::vector<std::pair<std::string, std::uint16_t>> ipPortList;
-  std::vector<RouteView> routes;
-};
+#include "ValidatorIpPort.hpp"
+#include "ServerRegistry.hpp"
+#include "RouteView.hpp"
+#include "ServerView.hpp"
 
 class Builder
 {
   public:
-    Builder(Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpPort_);
+    Builder(Lexer& lexer, Parser& parser, const ValidatorIpPort& validatorIpPort_);
     Builder(const Builder& other) = delete;
     Builder(Builder&& other) = delete;
     Builder& operator=(const Builder& other) = delete;
     Builder& operator=(Builder&& other) = delete;
     ~Builder() = default;
 
-    void Build();
-    std::size_t GetServerCount() const;
-    const ServerView& GetServerView(std::size_t i) const;
-    const RouteView* GetRouteView(const std::string& hostname, const std::string& targetPath) const;
-    const RouteView* GetRouteView(const std::string& ip, const uint16_t port, const std::string& hostName, const std::string& targetPath) const;
     bool GetError() const;
+    ServerRegistry BuildServerRegistry();
 
   private:
-    std::size_t GetLenMatch(const std::string& locationPrefix, const std::string& locationPrefixRouteView) const;
     void PopulateRouteViewMap();
-    void PopulateRouteViewMapIp();
-    void Error(Node& dir, std::string_view errorType, std::string_view message);
-    void ValidateIpPortDuplicate(Node& dir, const std::string& ip, const std::uint16_t port, const ServerView& serverView);
+    void SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message, std::size_t tokenIndex);
+    void Error(Node& dir, std::string_view message);
+    bool ValidateIpPortDuplicate(Node& dir, const std::string& ip, const std::uint16_t port, const ServerView& serverView);
     void ExtractListen(Node& serverBlock, ServerView& serverView);
-    void ExtractServer_name(const Node& serverBlock, ServerView& serverView);
+    void ExtractServerName(const Node& serverBlock, ServerView& serverView);
     void ExtractCgi(const Node& httpBlock, RouteView& routeView);
-    void ExtractCgi_extension(const Node& httpBlock, RouteView& routeView);
+    void ExtractCgiExtension(const Node& httpBlock, RouteView& routeView);
     void ExtractIndex(const Node& node, RouteView& routeView);
     void ExtractAutoindex(const Node& node, RouteView& routeView);
     void ExtractClientMaxBodySize(const Node& node, RouteView& routeView);
-    void ExtractAllowed_methods(const Node& node, RouteView& routeView);
+    void ExtractAllowedMethods(const Node& node, RouteView& routeView);
     void ExtractReturn(const Node& node, RouteView& routeView);
     void ExtractRoot(const Node& node, RouteView& routeView);
     void ExtractAlias(const Node& node, RouteView& routeView);
-    void ExtractError_page(const Node& node, RouteView& routeView);
+    void ExtractErrorPage(const Node& node, RouteView& routeView);
     void ExtractLocationPrefix(const Node& location, RouteView& routeView);
     void ExtractHttpData();
-    void ExtractServerData(Node& http, const RouteView& routeView);
+    void ExtractServerDirectives(Node& server, ServerView& serverView, RouteView& routeView);
+    void ExtractServerData(Node& http, RouteView& routeView);
+    void ExtractLocationDirectives(const Node& location, RouteView& routeView);
     void ExtractLocationData(const Node& server, RouteView& routeView, std::size_t i);
-    void SetServerViewDefaults(ServerView& serverView);
+    void SetServerViewDefaults(Node& server, ServerView& serverView);
 
     Lexer& lexer_;
     Parser& parser_;
-    ValidatorIpPort& validatorIpPort_;
+    const ValidatorIpPort& validatorIpPort_;
     bool error_;
-    std::uint16_t defaultPort_;
-    std::string defaultIp_;
-    std::uint16_t defaultReturnCode_;
+    const std::uint16_t defaultPort_;
+    const std::string defaultIp_;
+    const std::uint16_t defaultReturnCode_;
     std::vector<ServerView> servers_;
-    std::map<std::string, std::map<std::string, RouteView*>> routeViewMap_;
-    std::map<std::pair<std::string, std::uint16_t>, std::map<std::string, std::map<std::string, RouteView*>>> routeViewMapIp_;
+    std::map<std::pair<std::string, std::uint16_t>, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
 
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
+
+#ifdef UNIT_TEST
+  public:
+    const ServerView* GetServersData() const
+    {
+      return servers_.data();
+    }
+    const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const std::pair<std::string, std::uint16_t>& key) const
+    {
+      return &RouteViewMap_.at(key);
+    }
+#endif
 };
-
-// The following two functions can be removed after all branches are merged
-
-constexpr RouteView::MethodMask operator|(RouteView::MethodMask a, RouteView::MethodMask b)
-{
-  return static_cast<RouteView::MethodMask>(static_cast<unsigned>(a) | static_cast<unsigned>(b));
-}
-
-constexpr bool Has(RouteView::MethodMask set, RouteView::MethodMask bit)
-{
-  return (static_cast<unsigned>(set) & static_cast<unsigned>(bit)) != 0;
-}
 
 #endif

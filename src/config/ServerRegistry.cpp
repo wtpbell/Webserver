@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                         ::::::::           */
-/*   ServerRegistry.hpp                                  :+:    :+:           */
+/*   ServerRegistry.cpp                                  :+:    :+:           */
 /*                                                      +:+                   */
 /*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
 /*                                                    +#+                     */
@@ -21,7 +21,7 @@
 #include "config/ServerRegistry.hpp"
 
 ServerRegistry::ServerRegistry(std::vector<ServerView> servers,
-  std::map<std::pair<std::string, std::uint16_t>, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap)
+  std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap)
   : servers_(std::move(servers))
   , RouteViewMap_(std::move(RouteViewMap))
 {}
@@ -39,9 +39,9 @@ const ServerView& ServerRegistry::GetServerView(std::size_t i) const
   return servers_[i];
 }
 
-const RouteView* ServerRegistry::GetRouteView(const std::string& ip, const std::uint16_t port, const std::string& hostName, const std::string& targetPath) const
+const RouteView* ServerRegistry::GetRouteView(const std::string& ip, const std::string& port, const std::string& hostName, const std::string& targetPath) const
 {
-  auto ipPortIt = RouteViewMap_.find({ip, port});
+  auto ipPortIt = RouteViewMap_.find(ServerView::IpPort{ip, port});
   if (ipPortIt == RouteViewMap_.end())
   {
     return nullptr;

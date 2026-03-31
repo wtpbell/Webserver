@@ -120,33 +120,33 @@ TEST_CASE("GetServerView()", "[ServerRegistry]")
 
   REQUIRE(serverView0.hostNames.size() == 1);
   REQUIRE(serverView0.hostNames.at(0) == "example0.com");
-  REQUIRE(serverView0.ipPortList.at(0).first == "::");
-  REQUIRE(serverView0.ipPortList.at(0).second == 8080);
+  REQUIRE(serverView0.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(0).port == "8080");
 
   REQUIRE(serverView1.hostNames.size() == 1);
   REQUIRE(serverView1.hostNames.at(0) == "example1.com");
-  REQUIRE(serverView1.ipPortList.at(0).first == "::");
-  REQUIRE(serverView1.ipPortList.at(0).second == 8081);
+  REQUIRE(serverView1.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView1.ipPortList.at(0).port == "8081");
   
   REQUIRE(serverView2.hostNames.size() == 1);
   REQUIRE(serverView2.hostNames.at(0) == "example2.com");
-  REQUIRE(serverView2.ipPortList.at(0).first == "::");
-  REQUIRE(serverView2.ipPortList.at(0).second == 8082);
+  REQUIRE(serverView2.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView2.ipPortList.at(0).port == "8082");
   
   REQUIRE(serverView3.hostNames.size() == 1);
   REQUIRE(serverView3.hostNames.at(0) == "example3.com");
-  REQUIRE(serverView3.ipPortList.at(0).first == "::");
-  REQUIRE(serverView3.ipPortList.at(0).second == 8083);
+  REQUIRE(serverView3.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView3.ipPortList.at(0).port == "8083");
   
   REQUIRE(serverView4.hostNames.size() == 1);
   REQUIRE(serverView4.hostNames.at(0) == "example4.com");
-  REQUIRE(serverView4.ipPortList.at(0).first == "::");
-  REQUIRE(serverView4.ipPortList.at(0).second == 8084);
+  REQUIRE(serverView4.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView4.ipPortList.at(0).port == "8084");
   
   REQUIRE(serverView5.hostNames.size() == 1);
   REQUIRE(serverView5.hostNames.at(0) == "example5.com");
-  REQUIRE(serverView5.ipPortList.at(0).first == "::");
-  REQUIRE(serverView5.ipPortList.at(0).second == 8085);
+  REQUIRE(serverView5.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView5.ipPortList.at(0).port == "8085");
 }
 
 TEST_CASE("GetRouteView(ip, port, hostName, targetPath)", "[ServerRegistry]")
@@ -245,116 +245,116 @@ TEST_CASE("GetRouteView(ip, port, hostName, targetPath)", "[ServerRegistry]")
   REQUIRE(serverRegistry.GetServerCount() == 6);
 
   // unknown host name: invalid
-  const RouteView* routeView = serverRegistry.GetRouteView("::", 8080, "ex.com", "/test");
+  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "ex.com", "/test");
   REQUIRE(routeView == nullptr);
 
   // no location prefix match: invalid
-  routeView = serverRegistry.GetRouteView("::", 8080, "ex0.com", "nope, not today");
+  routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "nope, not today");
   REQUIRE(routeView == nullptr);
 
   // location parameter /test is prefix of request URI /testtest, but location param is not path segment of URI: invalid
-  routeView = serverRegistry.GetRouteView("::", 8080, "ex0.com", "/testtest");
+  routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "/testtest");
   REQUIRE(routeView == nullptr);
 
   // request URI is prefix of location parameter, but not vice versa: invalid
-  routeView = serverRegistry.GetRouteView("::", 8080, "example.com", "/tes");
+  routeView = serverRegistry.GetRouteView("::", "8080", "example.com", "/tes");
   REQUIRE(routeView == nullptr);
 
   // request URI empty string: invalid
-  routeView = serverRegistry.GetRouteView("::", 8080, "example.com", "");
+  routeView = serverRegistry.GetRouteView("::", "8080", "example.com", "");
   REQUIRE(routeView == nullptr);
 
   // unknown ip: invalid
-  routeView = serverRegistry.GetRouteView("128.0.0.64", 8080, "example.com", "");
+  routeView = serverRegistry.GetRouteView("128.0.0.64", "8080", "example.com", "");
   REQUIRE(routeView == nullptr);
 
   // ip address invalid: invalid
-  routeView = serverRegistry.GetRouteView("", 8081, "example.com", "");
+  routeView = serverRegistry.GetRouteView("", "8081", "example.com", "");
   REQUIRE(routeView == nullptr);
 
   // ip address invalid: invalid
-  routeView = serverRegistry.GetRouteView("lkajsdfopiuaewrl;h", 8081, "example.com", "");
+  routeView = serverRegistry.GetRouteView("lkajsdfopiuaewrl;h", "8081", "example.com", "");
   REQUIRE(routeView == nullptr);
 
   // unknown port num: invalid
-  routeView = serverRegistry.GetRouteView("::", 8081, "example.com", "");
+  routeView = serverRegistry.GetRouteView("::", "8081", "example.com", "");
   REQUIRE(routeView == nullptr);
 
   // invalid port num: invalid
-  routeView = serverRegistry.GetRouteView("::", -8081, "example.com", "");
+  routeView = serverRegistry.GetRouteView("::", "-8081", "example.com", "");
   REQUIRE(routeView == nullptr);
   
   // location parameter and request URI identical: valid
-  routeView = serverRegistry.GetRouteView("::", 8080, "ex0.com", "/tessst/test/test");
+  routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "/tessst/test/test");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/tessst/test/test");
 
   // location parameter and request URI identical, both ending in '/': valid
-  routeView = serverRegistry.GetRouteView("::", 8080, "ex0.com", "/test/");
+  routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "/test/");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/test/");
 
   // location parameter and request URI identical, neither ending in '/': valid
-  routeView = serverRegistry.GetRouteView("::", 8080,"ex0.com", "/test");
+  routeView = serverRegistry.GetRouteView("::", "8080","ex0.com", "/test");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/test");
 
   // location parameter is prefix of request URI, location parameter ending in '/': valid
-  routeView = serverRegistry.GetRouteView("::", 8080, "ex0.com", "/test/test");
+  routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "/test/test");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/test/");
 
   // location parameter is prefix and path segment of request URI: valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", 8084, "example1.com", "/tessst1/test/test/test/test");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "example1.com", "/tessst1/test/test/test/test");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/tessst1/test/test");
 
   // minimal match location parameter and request URI (location param is one char): '/': valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", 8084, "ex1.com", "/abc");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "/abc");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/");
 
   // minimal match location parameter and request URI (both one char): '/': valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", 8084, "ex1.com", "/");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "/");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/");
 
   // minimal match location parameter and request URI (one char): 't': valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", 8084, "ex1.com", "t/test");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "t/test");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "t");
 
   // minimal match location parameter and request URI (both one char): 't': valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", 8084, "ex1.com", "t");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "t");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "t");
 
   // anonymous server, match in first anonymous server: valid
-  routeView = serverRegistry.GetRouteView("::", 8081, "", "/test2");
+  routeView = serverRegistry.GetRouteView("::", "8081", "", "/test2");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/test2");
 
   // anonymous server, match in second anonymous server: valid
-  routeView = serverRegistry.GetRouteView("::", 8083, "", "/test3");
+  routeView = serverRegistry.GetRouteView("::", "8083", "", "/test3");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/test3");
 
   // anonymous server, invalid target
-  routeView = serverRegistry.GetRouteView("::", 80, "", "/invalid");
+  routeView = serverRegistry.GetRouteView("::", "80", "", "/invalid");
   REQUIRE(routeView == nullptr);
 
   // no location block in server, target == default location prefix
-  routeView = serverRegistry.GetRouteView("::", 8082, "example2.com", "/");
+  routeView = serverRegistry.GetRouteView("::", "8082", "example2.com", "/");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/");
 
   // two homonymous servers, match in second server: valid
-  routeView = serverRegistry.GetRouteView("::", 8084, "example2.com", "/not-default");
+  routeView = serverRegistry.GetRouteView("::", "8084", "example2.com", "/not-default");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/not-default");
 
   // no location block in server, target != default location prefix: invalid
-  routeView = serverRegistry.GetRouteView("::", 80, "example2.com", "error");
+  routeView = serverRegistry.GetRouteView("::", "80", "example2.com", "error");
   REQUIRE(routeView == nullptr);
 }
 
@@ -398,12 +398,12 @@ TEST_CASE("GetRouteView(ip, port, hostName, targetPath) keeps listener scope", "
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  const RouteView* route8080 = serverRegistry.GetRouteView("127.0.0.1", 8080, "example.com", "/api/users");
+  const RouteView* route8080 = serverRegistry.GetRouteView("127.0.0.1", "8080", "example.com", "/api/users");
   REQUIRE(route8080 != nullptr);
   REQUIRE(route8080->locationPrefix == "/api");
   REQUIRE(route8080->root == std::filesystem::path("./www_a"));
 
-  const RouteView* route9090 = serverRegistry.GetRouteView("127.0.0.1", 9090, "example.com", "/api/users");
+  const RouteView* route9090 = serverRegistry.GetRouteView("127.0.0.1", "9090", "example.com", "/api/users");
   REQUIRE(route9090 != nullptr);
   REQUIRE(route9090->locationPrefix == "/api");
   REQUIRE(route9090->root == std::filesystem::path("./www_b"));
@@ -439,10 +439,10 @@ TEST_CASE("ServerRegistry move constructor", "[ServerRegistry]")
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   
   const void* addressServers = static_cast<const void*>(serverRegistry.GetServersData());
-  const void* addressValue = static_cast<const void*>(serverRegistry.GetAddressValue({"::", 8080}));
+  const void* addressValue = static_cast<const void*>(serverRegistry.GetAddressValue({"::", "8080"}));
   ServerRegistry serverRegistryMoveConstructed(std::move(serverRegistry));
   const void* addressServersMoveConstructed = static_cast<const void*>(serverRegistryMoveConstructed.GetServersData());
-  const void* addressValueMoveConstructed = static_cast<const void*>(serverRegistryMoveConstructed.GetAddressValue({"::", 8080}));
+  const void* addressValueMoveConstructed = static_cast<const void*>(serverRegistryMoveConstructed.GetAddressValue({"::", "8080"}));
 
   REQUIRE(addressServers == addressServersMoveConstructed);
   REQUIRE(addressValue == addressValueMoveConstructed);
@@ -458,7 +458,7 @@ TEST_CASE("listen", "[ServerRegistry]")
                     "http {\n"
                     "\n"
                     "  server {\n"
-                    "    listen 8080;\n"
+                    "    listen 8081;\n"
                     "    listen 9090;\n"
                     "    listen 120.0.0.64:8081;\n"
                     "    listen 120.0.0.64;\n"
@@ -494,20 +494,20 @@ TEST_CASE("listen", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.ipPortList.at(0).first == "::");
-  REQUIRE(serverView0.ipPortList.at(0).second == 8080);
-  REQUIRE(serverView0.ipPortList.at(1).first == "::");
-  REQUIRE(serverView0.ipPortList.at(1).second == 9090);
-  REQUIRE(serverView0.ipPortList.at(2).first == "120.0.0.64");
-  REQUIRE(serverView0.ipPortList.at(2).second == 8081);
-  REQUIRE(serverView0.ipPortList.at(3).first == "120.0.0.64");
-  REQUIRE(serverView0.ipPortList.at(3).second == 80);
-  REQUIRE(serverView0.ipPortList.at(4).first == "120::120");
-  REQUIRE(serverView0.ipPortList.at(4).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(5).first == "120::120");
-  REQUIRE(serverView0.ipPortList.at(5).second == 80);
-  REQUIRE(serverView1.ipPortList.at(0).first == "::");
-  REQUIRE(serverView1.ipPortList.at(0).second == 80);
+  REQUIRE(serverView0.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView0.ipPortList.at(1).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(1).port == "9090");
+  REQUIRE(serverView0.ipPortList.at(2).ip == "120.0.0.64");
+  REQUIRE(serverView0.ipPortList.at(2).port == "8081");
+  REQUIRE(serverView0.ipPortList.at(3).ip == "120.0.0.64");
+  REQUIRE(serverView0.ipPortList.at(3).port == "8080");
+  REQUIRE(serverView0.ipPortList.at(4).ip == "120::120");
+  REQUIRE(serverView0.ipPortList.at(4).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(5).ip == "120::120");
+  REQUIRE(serverView0.ipPortList.at(5).port == "8080");
+  REQUIRE(serverView1.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView1.ipPortList.at(0).port == "8080");
 }
 
 TEST_CASE("listen invalid 1 - duplicates within one server and different servers", "[ServerRegistry]")
@@ -553,20 +553,20 @@ TEST_CASE("listen invalid 1 - duplicates within one server and different servers
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
 
-  REQUIRE(serverView0.ipPortList.at(0).first == "120::abc");
-  REQUIRE(serverView0.ipPortList.at(0).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(1).first == "::");
-  REQUIRE(serverView0.ipPortList.at(1).second == 8080);
-  REQUIRE(serverView0.ipPortList.at(2).first == "::");
-  REQUIRE(serverView0.ipPortList.at(2).second == 9090);
-  REQUIRE(serverView0.ipPortList.at(3).first == "120.0.0.64");
-  REQUIRE(serverView0.ipPortList.at(3).second == 8081);
-  REQUIRE(serverView0.ipPortList.at(4).first == "120.0.0.64");
-  REQUIRE(serverView0.ipPortList.at(4).second == 80);
-  REQUIRE(serverView0.ipPortList.at(5).first == "120::1");
-  REQUIRE(serverView0.ipPortList.at(5).second == 80);
+  REQUIRE(serverView0.ipPortList.at(0).ip == "120::abc");
+  REQUIRE(serverView0.ipPortList.at(0).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(1).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(1).port == "8080");
+  REQUIRE(serverView0.ipPortList.at(2).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(2).port == "9090");
+  REQUIRE(serverView0.ipPortList.at(3).ip == "120.0.0.64");
+  REQUIRE(serverView0.ipPortList.at(3).port == "8081");
+  REQUIRE(serverView0.ipPortList.at(4).ip == "120.0.0.64");
+  REQUIRE(serverView0.ipPortList.at(4).port == "8080");
+  REQUIRE(serverView0.ipPortList.at(5).ip == "120::1");
+  REQUIRE(serverView0.ipPortList.at(5).port == "8080");
 
-  std::set<std::size_t> errorsIdx{20,32};
+  std::set<std::size_t> errorsIdx{20,32,37};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -662,26 +662,26 @@ TEST_CASE("listen invalid 2 - ipv6 normalization", "[ServerRegistry]")
   const ServerView& serverView8(serverRegistry.GetServerView(8));
   const ServerView& serverView9(serverRegistry.GetServerView(9));
 
-  REQUIRE(serverView0.ipPortList.at(0).first == "::");
-  REQUIRE(serverView0.ipPortList.at(0).second == 8081);
-  REQUIRE(serverView1.ipPortList.at(0).first == "::");
-  REQUIRE(serverView1.ipPortList.at(0).second == 8082);
-  REQUIRE(serverView2.ipPortList.at(0).first == "120:120:120:120::120");
-  REQUIRE(serverView2.ipPortList.at(0).second == 8081);
-  REQUIRE(serverView3.ipPortList.at(0).first == "120:120:120:120::120");
-  REQUIRE(serverView3.ipPortList.at(0).second == 8082);
-  REQUIRE(serverView4.ipPortList.at(0).first == "120:120:120:120:120:120:0:120");
-  REQUIRE(serverView4.ipPortList.at(0).second == 8081);
-  REQUIRE(serverView5.ipPortList.at(0).first == "120:120:120:120:120:120:0:120");
-  REQUIRE(serverView5.ipPortList.at(0).second == 8082);
-  REQUIRE(serverView6.ipPortList.at(0).first == "120:120:120:120:120:120::");
-  REQUIRE(serverView6.ipPortList.at(0).second == 8081);
-  REQUIRE(serverView7.ipPortList.at(0).first == "120:120:120:120:120:120::");
-  REQUIRE(serverView7.ipPortList.at(0).second == 8082);
-  REQUIRE(serverView8.ipPortList.at(0).first == "120:120:120:120:120:120:120:0");
-  REQUIRE(serverView8.ipPortList.at(0).second == 8081);
-  REQUIRE(serverView9.ipPortList.at(0).first == "0:120:120:120:120:120:120:120");
-  REQUIRE(serverView9.ipPortList.at(0).second == 8082);
+  REQUIRE(serverView0.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView1.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView1.ipPortList.at(0).port == "8082");
+  REQUIRE(serverView2.ipPortList.at(0).ip == "120:120:120:120::120");
+  REQUIRE(serverView2.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView3.ipPortList.at(0).ip == "120:120:120:120::120");
+  REQUIRE(serverView3.ipPortList.at(0).port == "8082");
+  REQUIRE(serverView4.ipPortList.at(0).ip == "120:120:120:120:120:120:0:120");
+  REQUIRE(serverView4.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView5.ipPortList.at(0).ip == "120:120:120:120:120:120:0:120");
+  REQUIRE(serverView5.ipPortList.at(0).port == "8082");
+  REQUIRE(serverView6.ipPortList.at(0).ip == "120:120:120:120:120:120::");
+  REQUIRE(serverView6.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView7.ipPortList.at(0).ip == "120:120:120:120:120:120::");
+  REQUIRE(serverView7.ipPortList.at(0).port == "8082");
+  REQUIRE(serverView8.ipPortList.at(0).ip == "120:120:120:120:120:120:120:0");
+  REQUIRE(serverView8.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView9.ipPortList.at(0).ip == "0:120:120:120:120:120:120:120");
+  REQUIRE(serverView9.ipPortList.at(0).port == "8082");
 
   std::set<std::size_t> errorsIdx{};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
@@ -758,30 +758,30 @@ TEST_CASE("listen invalid 3", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.ipPortList.at(0).first == "120.0.0.120");
-  REQUIRE(serverView0.ipPortList.at(0).second == 8081);
-  REQUIRE(serverView0.ipPortList.at(1).first == "120::120");
-  REQUIRE(serverView0.ipPortList.at(1).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(2).first == "120:120::120");
-  REQUIRE(serverView0.ipPortList.at(2).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(3).first == "::");
-  REQUIRE(serverView0.ipPortList.at(3).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(4).first == "0:0:0:120::");
-  REQUIRE(serverView0.ipPortList.at(4).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(5).first == "::120:0:0:0");
-  REQUIRE(serverView0.ipPortList.at(5).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(6).first == "::120");
-  REQUIRE(serverView0.ipPortList.at(6).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(7).first == "::");
-  REQUIRE(serverView0.ipPortList.at(7).second == 80);
-  REQUIRE(serverView0.ipPortList.at(8).first == "abc::");
-  REQUIRE(serverView0.ipPortList.at(8).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(9).first == "abc:deff:a:a000::");
-  REQUIRE(serverView0.ipPortList.at(9).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(10).first == "abc:0:0:a000::f");
-  REQUIRE(serverView0.ipPortList.at(10).second == 8082);
-  REQUIRE(serverView0.ipPortList.at(11).first == "abc::a000:0:0:f");
-  REQUIRE(serverView0.ipPortList.at(11).second == 8082);
+  REQUIRE(serverView0.ipPortList.at(0).ip == "120.0.0.120");
+  REQUIRE(serverView0.ipPortList.at(0).port == "8081");
+  REQUIRE(serverView0.ipPortList.at(1).ip == "120::120");
+  REQUIRE(serverView0.ipPortList.at(1).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(2).ip == "120:120::120");
+  REQUIRE(serverView0.ipPortList.at(2).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(3).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(3).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(4).ip == "0:0:0:120::");
+  REQUIRE(serverView0.ipPortList.at(4).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(5).ip == "::120:0:0:0");
+  REQUIRE(serverView0.ipPortList.at(5).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(6).ip == "::120");
+  REQUIRE(serverView0.ipPortList.at(6).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(7).ip == "::");
+  REQUIRE(serverView0.ipPortList.at(7).port == "8080");
+  REQUIRE(serverView0.ipPortList.at(8).ip == "abc::");
+  REQUIRE(serverView0.ipPortList.at(8).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(9).ip == "abc:deff:a:a000::");
+  REQUIRE(serverView0.ipPortList.at(9).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(10).ip == "abc:0:0:a000::f");
+  REQUIRE(serverView0.ipPortList.at(10).port == "8082");
+  REQUIRE(serverView0.ipPortList.at(11).ip == "abc::a000:0:0:f");
+  REQUIRE(serverView0.ipPortList.at(11).port == "8082");
 
   REQUIRE(serverView1.ipPortList.empty() == true);
 
@@ -1307,13 +1307,13 @@ TEST_CASE("allowed_methods", "[ServerRegistry]")
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
   REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
-  REQUIRE(serverView0.routes.at(0).allowedMask == RouteView::MethodMask::Post);
+  REQUIRE(serverView0.routes.at(0).allowedMask == RouteView::MethodMask::kPost);
   REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
-  REQUIRE(serverView0.routes.at(1).allowedMask == RouteView::MethodMask::Delete);
+  REQUIRE(serverView0.routes.at(1).allowedMask == RouteView::MethodMask::kDelete);
   REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
-  REQUIRE(serverView1.routes.at(0).allowedMask == (RouteView::MethodMask::Get | RouteView::MethodMask::Post | RouteView::MethodMask::Delete));
+  REQUIRE(serverView1.routes.at(0).allowedMask == (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
   REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
-  REQUIRE(serverView1.routes.at(1).allowedMask == RouteView::MethodMask::Get);
+  REQUIRE(serverView1.routes.at(1).allowedMask == RouteView::MethodMask::kGet);
 }
 
 TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
@@ -1614,8 +1614,8 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
 
   REQUIRE(serverView.hostNames[0] == "example.com");
   REQUIRE(serverView.ipPortList.size() == 1);
-  REQUIRE(serverView.ipPortList.at(0).first == "::");
-  REQUIRE(serverView.ipPortList.at(0).second == static_cast<std::uint16_t>(8080));
+  REQUIRE(serverView.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView.ipPortList.at(0).port == "8080");
   REQUIRE(serverView.routes.size() == 4);
 
   const RouteView& routeView0 = serverView.routes[0];
@@ -1625,7 +1625,7 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
   REQUIRE(routeView0.index == "indexLocation.html");
   REQUIRE(routeView0.autoindex == false);
   REQUIRE(routeView0.clientMaxBody == std::size_t(2 * 1024 * 1024));
-  REQUIRE(routeView0.allowedMask == RouteView::MethodMask::Get);
+  REQUIRE(routeView0.allowedMask == RouteView::MethodMask::kGet);
   REQUIRE(routeView0.returnRule.has_value() == false);
   REQUIRE(routeView0.errorPages.size() == 5);
   REQUIRE(routeView0.errorPages.at(400) == "/http");
@@ -1643,7 +1643,7 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
   REQUIRE(routeView1.index == "indexHttp.html");
   REQUIRE(routeView1.autoindex == true);
   REQUIRE(routeView1.clientMaxBody == std::size_t(10 * 1024 * 1024));
-  REQUIRE(routeView1.allowedMask == (RouteView::MethodMask::Post | RouteView::MethodMask::Delete));
+  REQUIRE(routeView1.allowedMask == (RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
   REQUIRE(routeView1.returnRule.has_value() == false);
   REQUIRE(routeView1.errorPages.size() == 4);
   REQUIRE(routeView1.errorPages.at(400) == "/location");
@@ -1660,7 +1660,7 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
   REQUIRE(routeView2.index == "indexHttp.html");
   REQUIRE(routeView2.autoindex == true);
   REQUIRE(routeView2.clientMaxBody == std::size_t(2 * 1024 * 1024));
-  REQUIRE(routeView2.allowedMask == (RouteView::MethodMask::Get));
+  REQUIRE(routeView2.allowedMask == (RouteView::MethodMask::kGet));
   REQUIRE(routeView2.returnRule.has_value() == true);
   REQUIRE(routeView2.returnRule->code == std::uint16_t(301));
   REQUIRE(routeView2.returnRule->target == "/new-page");
@@ -1679,7 +1679,7 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
   REQUIRE(routeView3.index == "indexHttp.html");
   REQUIRE(routeView3.autoindex == true);
   REQUIRE(routeView3.clientMaxBody == std::size_t(2 * 1024 * 1024));
-  REQUIRE(routeView3.allowedMask == (RouteView::MethodMask::Get | RouteView::MethodMask::Post));
+  REQUIRE(routeView3.allowedMask == (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost));
   REQUIRE(routeView3.returnRule.has_value() == false);
   REQUIRE(routeView3.errorPages.size() == 4);
   REQUIRE(routeView3.errorPages.at(400) == "/http");

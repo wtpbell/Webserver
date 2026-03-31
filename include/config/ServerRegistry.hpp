@@ -26,7 +26,7 @@ class ServerRegistry
 {
   public:
     ServerRegistry(std::vector<ServerView> servers,
-      std::map<std::pair<std::string, std::uint16_t>, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap);
+      std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap);
     ServerRegistry(const ServerRegistry& other) = delete;
     ServerRegistry(ServerRegistry&& other) = default;
     ServerRegistry& operator=(const ServerRegistry& other) = delete;
@@ -35,13 +35,13 @@ class ServerRegistry
 
     std::size_t GetServerCount() const;
     const ServerView& GetServerView(std::size_t i) const;
-    const RouteView* GetRouteView(const std::string& ip, const std::uint16_t port, const std::string& hostName, const std::string& targetPath) const;
+    const RouteView* GetRouteView(const std::string& ip, const std::string& port, const std::string& hostName, const std::string& targetPath) const;
 
   private:
     std::size_t GetLenMatch(const std::string& locationPrefix, const std::string& locationPrefixRouteView) const;
 
     std::vector<ServerView> servers_;
-    std::map<std::pair<std::string, std::uint16_t>, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
+    std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
 
 #ifdef UNIT_TEST
   public:
@@ -49,7 +49,7 @@ class ServerRegistry
     {
       return servers_.data();
     }
-    const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const std::pair<std::string, std::uint16_t>& key) const
+    const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const ServerView::IpPort& key) const
     {
       return &RouteViewMap_.at(key);
     }

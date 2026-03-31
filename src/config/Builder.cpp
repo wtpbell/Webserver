@@ -15,7 +15,6 @@
 #include <filesystem>
 #include <map>
 #include <vector>
-#include <utility>
 #include <cassert>
 #include <charconv>
 #include <cctype>
@@ -36,7 +35,7 @@ Builder::Builder(Lexer& lexer, Parser& parser, const ValidatorIpPort& validatorI
   , parser_(parser)
   , validatorIpPort_(validatorIpPort)
   , error_(false)
-  , defaultPort_(80)
+  , defaultPort_("8080")
   , defaultIp_("::")
   , defaultReturnCode_(302)
 {
@@ -62,13 +61,13 @@ void Builder::PopulateRouteViewMap()
 {
   for (ServerView& serverView : servers_)
   {
-    for (std::pair<std::string, std::uint16_t>& ipPort : serverView.ipPortList)
+    for (ServerView::IpPort& ipPort : serverView.ipPortList)
     {
       for (std::string& hostName : serverView.hostNames)
       {
         for (RouteView& routeView : serverView.routes)
         {
-          RouteViewMap_[ipPort][hostName].emplace(routeView.locationPrefix, &routeView);
+          RouteViewMap_[ServerView::IpPort(ipPort)][hostName].emplace(routeView.locationPrefix, &routeView);
         }
       }
     }
@@ -97,23 +96,23 @@ void Builder::Error(Node& node, std::string_view message)
   error_ = true;
 }
 
-bool Builder::ValidateIpPortDuplicate(Node& node, const std::string& ip, const std::uint16_t port, const ServerView& currentServerView)
+bool Builder::ValidateIpPortDuplicate(Node& node, const std::string& ip, const std::string& port, const ServerView& currentServerView)
 {
   bool valid = true;
-  for (const ServerView& serverView : servers_)
+  for (ServerView& serverView : servers_)
   {
-    for (const std::pair<std::string, std::uint16_t>& ipPort : serverView.ipPortList)
+    for (const ServerView::IpPort& ipPort : serverView.ipPortList)
     {
-      if (ipPort.first == ip && ipPort.second == port)
+      if (ipPort.ip == ip && ipPort.port == port)
       {
         Error(node, " duplicate IP-port pair in different servers");
         valid = false;
       }
     }
   }
-  for (const std::pair<std::string, std::uint16_t>& ipPort : currentServerView.ipPortList)
+  for (const ServerView::IpPort& ipPort : currentServerView.ipPortList)
   {
-    if (ipPort.first == ip && ipPort.second == port)
+    if (ipPort.ip == ip && ipPort.port == port)
     {
       Error(node, " duplicate IP-port pair in server");
       valid = false;
@@ -126,8 +125,7 @@ void Builder::ExtractListen(Node& dir, ServerView& serverView)
 {
   const std::string& lexeme = dir.params[0].lexeme;
   std::string ip;
-  std::string portNum;
-  std::uint16_t portInt;
+  std::string port;
 
   if (lexeme[0] == '[')
   {
@@ -136,14 +134,13 @@ void Builder::ExtractListen(Node& dir, ServerView& serverView)
     ip = validatorIpPort_.GetNormalizedIpv6(lexeme.substr(startIp, lenIp)).value();
     if (lexeme[lenIp + 2] == ':')
     {
-      std::size_t startPortNum = lenIp + 3;
-      std::size_t lenPortNum = lexeme.size() - startPortNum;
-      portNum = lexeme.substr(startPortNum, lenPortNum);
-      std::from_chars(portNum.data(), portNum.data() + portNum.size(), portInt);
+      std::size_t startPort = lenIp + 3;
+      std::size_t lenPort = lexeme.size() - startPort;
+      port = lexeme.substr(startPort, lenPort);
     }
     else
     {
-      portInt = defaultPort_;
+      port = defaultPort_;
     }
   }
   else if (lexeme.find('.') != std::string::npos)
@@ -151,28 +148,26 @@ void Builder::ExtractListen(Node& dir, ServerView& serverView)
     if (lexeme.find(':') == std::string::npos)
     {
       ip = lexeme.substr(0, lexeme.size());
-      portInt = defaultPort_;
+      port = defaultPort_;
     }
     else
     {
       std::size_t startIp = 0;
       std::size_t lenIp = lexeme.find(':');
-      std::size_t startPortNum = lenIp + 1;
-      std::size_t lenPortNum = lexeme.size() - startPortNum;
+      std::size_t startPort = lenIp + 1;
+      std::size_t lenPort = lexeme.size() - startPort;
       ip = lexeme.substr(startIp, lenIp);
-      portNum = lexeme.substr(startPortNum, lenPortNum);
-      std::from_chars(portNum.data(), portNum.data() + portNum.size(), portInt);
+      port = lexeme.substr(startPort, lenPort);
     }
   }
   else
   {
     ip = defaultIp_;
-    portNum = lexeme;
-    std::from_chars(portNum.data(), portNum.data() + portNum.size(), portInt);
+    port = lexeme;
   }
-  if (ValidateIpPortDuplicate(dir, ip, portInt, serverView))
+  if (ValidateIpPortDuplicate(dir, ip, port, serverView))
   {
-    serverView.ipPortList.emplace_back(ip, portInt);
+    serverView.ipPortList.emplace_back(ServerView::IpPort{ip, port});
   }
 }
 
@@ -231,20 +226,20 @@ void Builder::ExtractClientMaxBodySize(const Node& dir, RouteView& routeView)
 
 void Builder::ExtractAllowedMethods(const Node& dir, RouteView& routeView)
 {
-  routeView.allowedMask = RouteView::MethodMask::None;
+  routeView.allowedMask = RouteView::MethodMask::kNone;
   for (const Node& param : dir.params)
   {
     if (param.lexeme == "GET")
     {
-      routeView.allowedMask = routeView.allowedMask | RouteView::MethodMask::Get;
+      routeView.allowedMask = routeView.allowedMask | RouteView::MethodMask::kGet;
     }
     else if (param.lexeme == "POST")
     {
-      routeView.allowedMask = routeView.allowedMask | RouteView::MethodMask::Post;
+      routeView.allowedMask = routeView.allowedMask | RouteView::MethodMask::kPost;
     }
     else if (param.lexeme == "DELETE")
     {
-      routeView.allowedMask = routeView.allowedMask | RouteView::MethodMask::Delete;
+      routeView.allowedMask = routeView.allowedMask | RouteView::MethodMask::kDelete;
     }
   }
 }
@@ -469,7 +464,7 @@ void Builder::SetServerViewDefaults(Node& server, ServerView& serverView)
   {
     if (ValidateIpPortDuplicate(server, defaultIp_, defaultPort_, serverView))
     {
-      serverView.ipPortList.emplace_back(defaultIp_, defaultPort_);
+      serverView.ipPortList.emplace_back(ServerView::IpPort{defaultIp_, defaultPort_});
     }
   }
 }

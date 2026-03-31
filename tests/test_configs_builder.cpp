@@ -120,10 +120,10 @@ TEST_CASE("builder.BuildServerRegistry() moves data out of builder (no deep copy
   Builder builder(lexer, parser, validatorIpPort);
 
   const void* addressServersBeforeMove = static_cast<const void*>(builder.GetServersData());
-  const void* addressMapValueBeforeMove = static_cast<const void*>(builder.GetAddressValue({"::", 8080}));
+  const void* addressMapValueBeforeMove = static_cast<const void*>(builder.GetAddressValue({"::", "8080"}));
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   const void* addressServersAfterMove = static_cast<const void*>(serverRegistry.GetServersData());
-  const void* addressMapValueAfterMove = static_cast<const void*>(serverRegistry.GetAddressValue({"::", 8080}));
+  const void* addressMapValueAfterMove = static_cast<const void*>(serverRegistry.GetAddressValue({"::", "8080"}));
 
   REQUIRE(addressServersBeforeMove == addressServersAfterMove);
   REQUIRE(addressMapValueBeforeMove == addressMapValueAfterMove);

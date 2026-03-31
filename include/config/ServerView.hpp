@@ -15,7 +15,6 @@
 
 #include <string>
 #include <vector>
-#include <utility>
 #include <cstdint>
 #include <type_traits>
 
@@ -23,8 +22,21 @@
 
 struct ServerView
 {
+  struct IpPort
+  {
+    std::string ip;
+    std::string port;
+    bool operator<(const IpPort& other) const
+    {
+      if (ip != other.ip)
+      {
+        return ip < other.ip;
+      }
+      return port < other.port;
+    }
+  };
   std::vector<std::string> hostNames;
-  std::vector<std::pair<std::string, std::uint16_t>> ipPortList;
+  std::vector<IpPort> ipPortList;
   std::vector<RouteView> routes;
 };
 

@@ -45,7 +45,7 @@ class Builder
     void PopulateRouteViewMap();
     void SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message, std::size_t tokenIndex);
     void Error(Node& dir, std::string_view message);
-    bool ValidateIpPortDuplicate(Node& dir, const std::string& ip, const std::uint16_t port, const ServerView& serverView);
+    bool ValidateIpPortDuplicate(Node& dir, const std::string& ip, const std::string& port, const ServerView& serverView);
     void ExtractListen(Node& serverBlock, ServerView& serverView);
     void ExtractServerName(const Node& serverBlock, ServerView& serverView);
     void ExtractCgi(const Node& httpBlock, RouteView& routeView);
@@ -70,11 +70,11 @@ class Builder
     Parser& parser_;
     const ValidatorIpPort& validatorIpPort_;
     bool error_;
-    const std::uint16_t defaultPort_;
+    const std::string defaultPort_;
     const std::string defaultIp_;
     const std::uint16_t defaultReturnCode_;
     std::vector<ServerView> servers_;
-    std::map<std::pair<std::string, std::uint16_t>, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
+    std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
 
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
@@ -85,7 +85,7 @@ class Builder
     {
       return servers_.data();
     }
-    const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const std::pair<std::string, std::uint16_t>& key) const
+    const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const ServerView::IpPort& key) const
     {
       return &RouteViewMap_.at(key);
     }

@@ -24,11 +24,11 @@ struct RouteView
 {
   enum class MethodMask : unsigned
   {
-    None = 0,
-    Get = 1u << 0,
-    Post = 1u << 1,
-    Delete = 1u << 2,
-    All = Get | Post | Delete,
+    kNone = 0,
+    kGet = 1u << 0,
+    kPost = 1u << 1,
+    kDelete = 1u << 2,
+    kAll = kGet | kPost | kDelete,
   };
 
   struct ReturnRule
@@ -45,7 +45,7 @@ struct RouteView
 
   bool autoindex = false;
   std::size_t clientMaxBody = 1u << 20;
-  MethodMask allowedMask = MethodMask::Get;
+  MethodMask allowedMask = MethodMask::kGet;
 
   std::optional<ReturnRule> returnRule;
   std::map<std::uint16_t, std::string> errorPages;

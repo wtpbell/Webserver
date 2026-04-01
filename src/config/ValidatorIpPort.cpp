@@ -21,6 +21,8 @@
 #include "config/Parser.hpp"
 #include "config/ValidatorIpPort.hpp"
 
+//////////////////// PUBLIC ////////////////////
+
 std::optional<std::string> ValidatorIpPort::GetNormalizedIpv6(const std::string& ipv6) const
 {
   if (normalizedIpv6Adresses_.count(ipv6) != 0)
@@ -30,7 +32,7 @@ std::optional<std::string> ValidatorIpPort::GetNormalizedIpv6(const std::string&
   return {};
 }
 
-bool ValidatorIpPort::ValidateIpv4(const std::string& ipv4, std::string& errorMessage)
+bool ValidatorIpPort::ValidateIpv4(const std::string& ipv4, std::string& errorMessage) const
 {
   std::vector<std::string> octetts;
   std::string::size_type start = 0;
@@ -80,7 +82,7 @@ bool ValidatorIpPort::ValidateIpv4(const std::string& ipv4, std::string& errorMe
   return true;
 }
 
-bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string& errorMessage)
+bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string& errorMessage) const
 {
   std::string::size_type posDoubleColon = ipv6.find("::");
   if (posDoubleColon == std::string::npos)
@@ -97,7 +99,7 @@ bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string& 
 }
 
 bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                               std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage)
+                               std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const
 {
   std::string::size_type start = 0;
   std::string::size_type end = ipv6.find("::");
@@ -142,7 +144,7 @@ bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::st
 }
 
 bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                                std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage)
+                                std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const
 {
   if (ipv6.find("::") == std::string::npos)
   {
@@ -189,7 +191,7 @@ bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::s
   return true;
 }
 
-bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets, std::string& errorMessage)
+bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets, std::string& errorMessage) const
 {
   std::string::size_type end = ipv6.find(':');
   if (end == std::string::npos)
@@ -212,7 +214,10 @@ bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string
   return true;
 }
 
-bool ValidatorIpPort::ValidateQuartets(const std::array<std::string, 8>& quartets, std::string& errorMessage)
+//////////////////// PRIVATE ////////////////////
+//////////////////// validation ////////////////////
+
+bool ValidatorIpPort::ValidateQuartets(const std::array<std::string, 8>& quartets, std::string& errorMessage) const
 {
   for (const std::string& q : quartets)
   {
@@ -233,7 +238,132 @@ bool ValidatorIpPort::ValidateQuartets(const std::array<std::string, 8>& quartet
   return true;
 }
 
-bool ValidatorIpPort::IsZero(const std::string& quartet)
+bool ValidatorIpPort::ValidateIpv6(const std::string& ipv6, std::string& errorMessage)
+{
+  if (ipv6.empty())
+  {
+    errorMessage = "empty ipv6 address";
+    return false;
+  }
+  if (!ValidateDoubleColon(ipv6, errorMessage))
+  {
+    return false;
+  }
+  std::array<std::string, 8> quartets;
+  for (std::string& q : quartets)
+  {
+    q = "0";
+  }
+  if (!ExpandIpv6(ipv6, quartets, errorMessage))
+  {
+    return false;
+  }
+  if (!ValidateQuartets(quartets, errorMessage))
+  {
+    return false;
+  }
+  normalizedIpv6Adresses_.emplace(ipv6, NormalizeIpv6(quartets));
+  return true;
+}
+
+bool ValidatorIpPort::ValidatePortNum(const std::string& portNum, std::string& errorMessage) const
+{
+  if (portNum.size() > 1 && portNum[0] == '0')
+  {
+    errorMessage = "leading zero";
+    return false;
+  }
+  std::size_t num{};
+  auto [ptr, ec] = std::from_chars(portNum.data(), portNum.data() + portNum.size(), num);
+  if (ptr != portNum.data() + portNum.size())
+  {
+    errorMessage = "illegal character";
+    return false;
+  }
+  if (ec == std::errc::result_out_of_range)
+  {
+    errorMessage = "overflow";
+    return false;
+  }
+  if (num > 65535)
+  {
+    errorMessage = "port number out of range";
+    return false;
+  }
+  return true;
+}
+
+bool ValidatorIpPort::ExtractIpv4(const std::string& lexeme, std::string& ipv4) const
+{
+  if (lexeme.front() == '[' || lexeme.find('.') == std::string::npos)
+  {
+    return false;
+  }
+  std::string::size_type end = lexeme.find(':');
+  if (end == std::string::npos)
+  {
+    ipv4 = lexeme;
+    return true;
+  }
+  ipv4 = lexeme.substr(0, end);
+  return true;
+}
+
+bool ValidatorIpPort::ExtractIpv6(const std::string& lexeme, std::string& ipv6, std::string& errorMessage) const
+{
+  if (lexeme.front() != '[')
+  {
+    return false;
+  }
+  std::string::size_type end = lexeme.find(']');
+  if (end == std::string::npos)
+  {
+    errorMessage = "missing `]`";
+    return false;
+  }
+  ipv6 = lexeme.substr(1, end - 1);
+  return true;
+}
+
+bool ValidatorIpPort::ExtractPortNum(const std::string& lexeme, std::string& portNum, std::string& errorMessage) const
+{
+  if (lexeme.front() == '[')
+  {
+    std::string::size_type posRBrace = lexeme.find(']');
+    if (posRBrace == std::string::npos)
+    {
+      return false;
+    }
+    if (posRBrace + 1 != lexeme.size() && lexeme[posRBrace + 1] != ':')
+    {
+      errorMessage = "illegal character";
+      return false;
+    }
+    std::string::size_type start = lexeme.find(':', posRBrace);
+    if (start == std::string::npos)
+    {
+      return false;
+    }
+    portNum = lexeme.substr(start + 1);
+    return true;
+  }
+  if (lexeme.find('.') != std::string::npos)
+  {
+    std::string::size_type start = lexeme.find(':');
+    if (start == std::string::npos)
+    {
+      return false;
+    }
+    portNum = lexeme.substr(start + 1);
+    return true;
+  }
+  portNum = lexeme;
+  return true;
+}
+
+//////////////////// ipv6 normalization ////////////////////
+
+bool ValidatorIpPort::IsZero(const std::string& quartet) const
 {
   for (const char c : quartet)
   {
@@ -245,7 +375,7 @@ bool ValidatorIpPort::IsZero(const std::string& quartet)
   return true;
 }
 
-bool ValidatorIpPort::LongestConsecutiveZeros(const std::array<std::string, 8>& quartets, std::size_t& lenZeros, std::size_t& startZeros)
+bool ValidatorIpPort::LongestConsecutiveZeros(const std::array<std::string, 8>& quartets, std::size_t& lenZeros, std::size_t& startZeros) const
 {
   std::size_t currentLen = 0;
   std::size_t startCurrent = 0;
@@ -294,7 +424,7 @@ bool ValidatorIpPort::LongestConsecutiveZeros(const std::array<std::string, 8>& 
   return false;
 }
 
-void ValidatorIpPort::NormalizeQuartet(std::string& quartet)
+void ValidatorIpPort::NormalizeQuartet(std::string& quartet) const
 {
   std::string normalizedQuartet;
   std::size_t offset = 0;
@@ -309,7 +439,7 @@ void ValidatorIpPort::NormalizeQuartet(std::string& quartet)
   quartet = normalizedQuartet;
 }
 
-const std::string ValidatorIpPort::NormalizeIpv6(std::array<std::string, 8>& quartets)
+const std::string ValidatorIpPort::NormalizeIpv6(std::array<std::string, 8>& quartets) const
 {
   std::string normalizedIpv6;
   std::size_t lenZeros = 0;
@@ -342,127 +472,4 @@ const std::string ValidatorIpPort::NormalizeIpv6(std::array<std::string, 8>& qua
     }
   }
   return normalizedIpv6;
-}
-
-bool ValidatorIpPort::ValidateIpv6(const std::string& ipv6, std::string& errorMessage)
-{
-  if (ipv6.empty())
-  {
-    errorMessage = "empty ipv6 address";
-    return false;
-  }
-  if (!ValidateDoubleColon(ipv6, errorMessage))
-  {
-    return false;
-  }
-  std::array<std::string, 8> quartets;
-  for (std::string& q : quartets)
-  {
-    q = "0";
-  }
-  if (!ExpandIpv6(ipv6, quartets, errorMessage))
-  {
-    return false;
-  }
-  if (!ValidateQuartets(quartets, errorMessage))
-  {
-    return false;
-  }
-  normalizedIpv6Adresses_.emplace(ipv6, NormalizeIpv6(quartets));
-  return true;
-}
-
-bool ValidatorIpPort::ValidatePortNum(const std::string& portNum, std::string& errorMessage)
-{
-  if (portNum.size() > 1 && portNum[0] == '0')
-  {
-    errorMessage = "leading zero";
-    return false;
-  }
-  std::size_t num{};
-  auto [ptr, ec] = std::from_chars(portNum.data(), portNum.data() + portNum.size(), num);
-  if (ptr != portNum.data() + portNum.size())
-  {
-    errorMessage = "illegal character";
-    return false;
-  }
-  if (ec == std::errc::result_out_of_range)
-  {
-    errorMessage = "overflow";
-    return false;
-  }
-  if (num > 65535)
-  {
-    errorMessage = "port number out of range";
-    return false;
-  }
-  return true;
-}
-
-bool ValidatorIpPort::ExtractIpv4(const std::string& lexeme, std::string& ipv4)
-{
-  if (lexeme.front() == '[' || lexeme.find('.') == std::string::npos)
-  {
-    return false;
-  }
-  std::string::size_type end = lexeme.find(':');
-  if (end == std::string::npos)
-  {
-    ipv4 = lexeme;
-    return true;
-  }
-  ipv4 = lexeme.substr(0, end);
-  return true;
-}
-
-bool ValidatorIpPort::ExtractIpv6(const std::string& lexeme, std::string& ipv6, std::string& errorMessage)
-{
-  if (lexeme.front() != '[')
-  {
-    return false;
-  }
-  std::string::size_type end = lexeme.find(']');
-  if (end == std::string::npos)
-  {
-    errorMessage = "missing `]`";
-    return false;
-  }
-  ipv6 = lexeme.substr(1, end - 1);
-  return true;
-}
-
-bool ValidatorIpPort::ExtractPortNum(const std::string& lexeme, std::string& portNum, std::string& errorMessage)
-{
-  if (lexeme.front() == '[')
-  {
-    std::string::size_type posRBrace = lexeme.find(']');
-    if (posRBrace == std::string::npos)
-    {
-      return false;
-    }
-    if (posRBrace + 1 != lexeme.size() && lexeme[posRBrace + 1] != ':')
-    {
-      errorMessage = "illegal character";
-      return false;
-    }
-    std::string::size_type start = lexeme.find(':', posRBrace);
-    if (start == std::string::npos)
-    {
-      return false;
-    }
-    portNum = lexeme.substr(start + 1);
-    return true;
-  }
-  if (lexeme.find('.') != std::string::npos)
-  {
-    std::string::size_type start = lexeme.find(':');
-    if (start == std::string::npos)
-    {
-      return false;
-    }
-    portNum = lexeme.substr(start + 1);
-    return true;
-  }
-  portNum = lexeme;
-  return true;
 }

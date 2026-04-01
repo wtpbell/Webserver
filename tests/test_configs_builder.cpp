@@ -127,5 +127,5 @@ TEST_CASE("builder.BuildServerRegistry() moves data out of builder (no deep copy
 
   REQUIRE(addressServersBeforeMove == addressServersAfterMove);
   REQUIRE(addressMapValueBeforeMove == addressMapValueAfterMove);
-  REQUIRE(serverRegistry.GetServerCount() == 3);
+  REQUIRE(serverRegistry.GetServerViewCount() == 3);
 }

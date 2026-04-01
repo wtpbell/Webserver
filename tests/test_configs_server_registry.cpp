@@ -13,7 +13,7 @@
 
 // PUBLIC FUNCTIONS
 
-TEST_CASE("GetServerCount()", "[ServerRegistry]")
+TEST_CASE("GetServerViewCount()", "[ServerRegistry]")
 {
   std::string raw = "\n"
                     "http {\n"
@@ -52,7 +52,7 @@ TEST_CASE("GetServerCount()", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 3);
+  REQUIRE(serverRegistry.GetServerViewCount() == 3);
 }
 
 TEST_CASE("GetServerView()", "[ServerRegistry]")
@@ -109,7 +109,7 @@ TEST_CASE("GetServerView()", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 6);
+  REQUIRE(serverRegistry.GetServerViewCount() == 6);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -242,7 +242,7 @@ TEST_CASE("GetRouteView(ip, port, hostName, targetPath)", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 6);
+  REQUIRE(serverRegistry.GetServerViewCount() == 6);
 
   // unknown host name: invalid
   const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "ex.com", "/test");
@@ -446,8 +446,8 @@ TEST_CASE("ServerRegistry move constructor", "[ServerRegistry]")
 
   REQUIRE(addressServers == addressServersMoveConstructed);
   REQUIRE(addressValue == addressValueMoveConstructed);
-  REQUIRE(serverRegistry.GetServerCount() == 0);
-  REQUIRE(serverRegistryMoveConstructed.GetServerCount() == 3);
+  REQUIRE(serverRegistry.GetServerViewCount() == 0);
+  REQUIRE(serverRegistryMoveConstructed.GetServerViewCount() == 3);
 }
 
 // INDIVIDUAL DIRECTIVES
@@ -489,7 +489,7 @@ TEST_CASE("listen", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -549,7 +549,7 @@ TEST_CASE("listen invalid 1 - duplicates within one server and different servers
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == true);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
 
@@ -649,7 +649,7 @@ TEST_CASE("listen invalid 2 - ipv6 normalization", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 10);
+  REQUIRE(serverRegistry.GetServerViewCount() == 10);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -753,7 +753,7 @@ TEST_CASE("listen invalid 3", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == true);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -900,7 +900,7 @@ TEST_CASE("server_name", "[ServerRegistry]")
   REQUIRE(builder.GetError() == false);
 
 
-  REQUIRE(serverRegistry.GetServerCount() == 3);
+  REQUIRE(serverRegistry.GetServerViewCount() == 3);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -961,7 +961,7 @@ TEST_CASE("root", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1016,7 +1016,7 @@ TEST_CASE("index", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1063,7 +1063,7 @@ TEST_CASE("alias", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 1);
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
 
@@ -1115,7 +1115,7 @@ TEST_CASE("client_max_body_size", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1171,7 +1171,7 @@ TEST_CASE("error_page", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1235,7 +1235,7 @@ TEST_CASE("return", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1301,7 +1301,7 @@ TEST_CASE("allowed_methods", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1361,7 +1361,7 @@ TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1421,7 +1421,7 @@ TEST_CASE("autoindex http on", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1470,7 +1470,7 @@ TEST_CASE("cgi", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 1);
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
 
@@ -1526,7 +1526,7 @@ TEST_CASE("cgi_extension", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 2);
+  REQUIRE(serverRegistry.GetServerViewCount() == 2);
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
@@ -1608,7 +1608,7 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
 
-  REQUIRE(serverRegistry.GetServerCount() == 1);
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
 
   const ServerView& serverView = serverRegistry.GetServerView(0);
 

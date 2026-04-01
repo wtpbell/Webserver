@@ -73,7 +73,7 @@ class Builder
     const std::string defaultPort_;
     const std::string defaultIp_;
     const std::uint16_t defaultReturnCode_;
-    std::vector<ServerView> servers_;
+    std::vector<ServerView> serverViews_;
     std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
 
     static constexpr std::string_view kRed_ = "\033[31m";
@@ -83,7 +83,7 @@ class Builder
   public:
     const ServerView* GetServersData() const
     {
-      return servers_.data();
+      return serverViews_.data();
     }
     const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const ServerView::IpPort& key) const
     {

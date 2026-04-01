@@ -52,14 +52,14 @@ bool Builder::GetError() const
 
 ServerRegistry Builder::BuildServerRegistry()
 {
-  return ServerRegistry(std::move(servers_), std::move(RouteViewMap_));
+  return ServerRegistry(std::move(serverViews_), std::move(RouteViewMap_));
 }
 
 //////////////////// PRIVATE ////////////////////
 
 void Builder::PopulateRouteViewMap()
 {
-  for (ServerView& serverView : servers_)
+  for (ServerView& serverView : serverViews_)
   {
     for (ServerView::IpPort& ipPort : serverView.ipPortList)
     {
@@ -99,7 +99,7 @@ void Builder::Error(Node& node, std::string_view message)
 bool Builder::ValidateIpPortDuplicate(Node& node, const std::string& ip, const std::string& port, const ServerView& currentServerView)
 {
   bool valid = true;
-  for (ServerView& serverView : servers_)
+  for (ServerView& serverView : serverViews_)
   {
     for (const ServerView::IpPort& ipPort : serverView.ipPortList)
     {
@@ -369,7 +369,7 @@ void Builder::ExtractServerData(Node& http, RouteView& routeView)
     {
       ExtractServerDirectives(server, serverView, routeView);
       SetServerViewDefaults(server, serverView);
-      servers_.emplace_back(serverView);
+      serverViews_.emplace_back(serverView);
       ExtractLocationData(server, routeView, currentServerIdx++);
     }
     else
@@ -377,7 +377,7 @@ void Builder::ExtractServerData(Node& http, RouteView& routeView)
       RouteView routeViewCopy(routeView);
       ExtractServerDirectives(server, serverView, routeViewCopy);
       SetServerViewDefaults(server, serverView);
-      servers_.emplace_back(serverView);
+      serverViews_.emplace_back(serverView);
       ExtractLocationData(server, routeViewCopy, currentServerIdx++);
     }
   }
@@ -430,7 +430,7 @@ void Builder::ExtractLocationData(const Node& server, RouteView& routeView, std:
 {
   if (server.nestedBlocks.empty())
   {
-    servers_[currentServerIdx].routes.emplace_back(routeView);
+    serverViews_[currentServerIdx].routes.emplace_back(routeView);
     return;
   }
   std::size_t currentRouteIdx = 0;
@@ -441,14 +441,14 @@ void Builder::ExtractLocationData(const Node& server, RouteView& routeView, std:
     {
       ExtractLocationPrefix(location, routeView);
       ExtractLocationDirectives(location, routeView);
-      servers_[currentServerIdx].routes.emplace_back(routeView);
+      serverViews_[currentServerIdx].routes.emplace_back(routeView);
     }
     else
     {
       RouteView routeViewCopy(routeView);
       ExtractLocationPrefix(location, routeViewCopy);
       ExtractLocationDirectives(location, routeViewCopy);
-      servers_[currentServerIdx].routes.emplace_back(routeViewCopy);
+      serverViews_[currentServerIdx].routes.emplace_back(routeViewCopy);
     }
     ++currentRouteIdx;
   }

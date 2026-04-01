@@ -22,21 +22,21 @@
 
 ServerRegistry::ServerRegistry(std::vector<ServerView> servers,
   std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap)
-  : servers_(std::move(servers))
+  : serverViews_(std::move(servers))
   , RouteViewMap_(std::move(RouteViewMap))
 {}
 
 //////////////////// PUBLIC ////////////////////
 
-std::size_t ServerRegistry::GetServerCount() const
+std::size_t ServerRegistry::GetServerViewCount() const
 {
-  return servers_.size();
+  return serverViews_.size();
 }
 
 const ServerView& ServerRegistry::GetServerView(std::size_t i) const
 {
-  assert(i < servers_.size());
-  return servers_[i];
+  assert(i < serverViews_.size());
+  return serverViews_[i];
 }
 
 const RouteView* ServerRegistry::GetRouteView(const std::string& ip, const std::string& port, const std::string& hostName, const std::string& targetPath) const

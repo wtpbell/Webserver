@@ -33,21 +33,21 @@ class ServerRegistry
     ServerRegistry& operator=(ServerRegistry&& other) = delete;
     ~ServerRegistry() = default;
 
-    std::size_t GetServerCount() const;
+    std::size_t GetServerViewCount() const;
     const ServerView& GetServerView(std::size_t i) const;
     const RouteView* GetRouteView(const std::string& ip, const std::string& port, const std::string& hostName, const std::string& targetPath) const;
 
   private:
     std::size_t GetLenMatch(const std::string& locationPrefix, const std::string& locationPrefixRouteView) const;
 
-    std::vector<ServerView> servers_;
+    std::vector<ServerView> serverViews_;
     std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap_;
 
 #ifdef UNIT_TEST
   public:
     const ServerView* GetServersData() const
     {
-      return servers_.data();
+      return serverViews_.data();
     }
     const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const ServerView::IpPort& key) const
     {

@@ -1,6 +1,6 @@
 string 1234;{}#this is not a location token
- location http events server listen server_name  root   index    return #this is  not   an   alias    token      
+ location http server listen server_name  root   index    return #this is  not   an   alias    token      
       alias client_max_body_size
       error_page
-      allowed_methods client_body_temp_path autoindex
+      allowed_methods autoindex
       

@@ -27,17 +27,6 @@ http {
             }
 
           }
-          events {
-            listen ;
-            server_name name;
-            root path;
-            index ;
-            try_files ;
-            alias path;
-            client_max_body_size size;
-            error_page ;
-            allowed_methods ;
-          }
           http {
             listen ;
             server_name name;

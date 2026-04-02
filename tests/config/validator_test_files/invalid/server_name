@@ -4,6 +4,7 @@ http {
   server {
     # valid
     server_name www.example1.com www.example2.com www.example3.com;
+    server_name hostname:8080;
     server_name hostname;
     server_name our-server.com;
     server_name our-machine.our-host.our-domain;

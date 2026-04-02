@@ -1125,7 +1125,46 @@ TEST_CASE("errors root", "[Validator]")
 
 TEST_CASE("errors server_name", "[Validator]")
 {
-  std::string raw = "http {  server {    server_name www.example1.com www.example2.com www.example3.com;    server_name hostname;    server_name our-server.com;    server_name our-machine.our-host.our-domain;    server_name 63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.61chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;    server_name ;    server_name &/();    server_name test.test.test.test!!.test;    server_name 63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.62chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;    server_name 64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.test.test;    server_name test.test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.test.test;    server_name test.test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;    server_name -test;    server_name test-;    server_name -test.test;    server_name test-.test;    server_name test.-test;    server_name test.test-;    server_name .test;    server_name test.;    server_name .test.test;    server_name test..test;    server_name test.test.;    server_name test test. test..test;    server_name test- test-.test test;  }}";
+  std::string raw = "# start with comment\n"
+                    "\n"
+                    "http {\n"
+                    "  server {\n"
+                    "    # valid\n"
+                    "    server_name www.example1.com www.example2.com www.example3.com;\n"
+                    "    server_name hostname:8080;\n"
+                    "    server_name hostname;\n"
+                    "    server_name our-server.com;\n"
+                    "    server_name our-machine.our-host.our-domain;\n"
+                    "    server_name 63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.61chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
+                    "\n"
+                    "    # invalid\n"
+                    "    server_name ;\n"
+                    "    server_name &/();\n"
+                    "    server_name test.test.test.test!!.test;\n"
+                    "    server_name 63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.62chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
+                    "    server_name 64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.test.test;\n"
+                    "    server_name test.test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.test.test;\n"
+                    "    server_name test.test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
+                    "    server_name -test;\n"
+                    "    server_name test-;\n"
+                    "    server_name -test.test;\n"
+                    "    server_name test-.test;\n"
+                    "    server_name test.-test;\n"
+                    "    server_name test.test-;\n"
+                    "    server_name .test;\n"
+                    "    server_name test.;\n"
+                    "    server_name .test.test;\n"
+                    "    server_name test..test;\n"
+                    "    server_name test.test.;\n"
+                    "    server_name test test. test..test;\n"
+                    "    server_name test- test-.test test;\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "\n"
+                    "    server_name test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
+                    "  }\n"
+                    "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1141,7 +1180,7 @@ TEST_CASE("errors server_name", "[Validator]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{22,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72,76,77,80,81};
+  std::set<std::size_t> errorsIdx{25, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72, 75, 79, 80, 83, 84, 88};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)

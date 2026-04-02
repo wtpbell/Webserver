@@ -1692,3 +1692,195 @@ TEST_CASE("one server, four locations", "[ServerRegistry]")
   REQUIRE(routeView3.cgiExePaths->at("php") == std::filesystem::path("/usr/bin/php-cgi"));
   REQUIRE(routeView3.cgiExePaths->at("py") == std::filesystem::path("/usr/bin/python3"));
 }
+
+TEST_CASE("minimal valid config file", "[ServerRegistry]")
+{
+  std::string raw = "http{server{}}";
+
+  std::stringstream buffer;
+  auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
+  Lexer lexer(raw);
+  Parser parser(lexer);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  Builder builder(lexer, parser, validatorIpPort);
+  ServerRegistry serverRegistry(builder.BuildServerRegistry());
+  lexer.PrintErrorMessages();
+  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+
+  REQUIRE(output.empty());
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == false);
+  REQUIRE(builder.GetError() == false);
+
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
+
+  const ServerView& serverView = serverRegistry.GetServerView(0);
+
+  REQUIRE(serverView.hostNames[0] == "");
+  REQUIRE(serverView.ipPortList.size() == 1);
+  REQUIRE(serverView.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView.ipPortList.at(0).port == "8080");
+  REQUIRE(serverView.routes.size() == 1);
+
+  const RouteView& routeView0 = serverView.routes[0];
+  REQUIRE(routeView0.locationPrefix == "/");
+  REQUIRE(routeView0.root == std::filesystem::path("./www"));
+  REQUIRE(routeView0.alias.has_value() == false);
+  REQUIRE(routeView0.index == "index.html");
+  REQUIRE(routeView0.autoindex == false);
+  REQUIRE(routeView0.clientMaxBody == std::size_t(1 * 1024 * 1024));
+  REQUIRE(routeView0.allowedMask == RouteView::MethodMask::kGet);
+  REQUIRE(routeView0.returnRule.has_value() == false);
+  REQUIRE(routeView0.errorPages.size() == 0);
+  REQUIRE(routeView0.cgi == false);
+  REQUIRE(routeView0.cgiExePaths.has_value() == false);
+
+  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "", "/");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->locationPrefix == "/");
+  REQUIRE(routeView->root == std::filesystem::path("./www"));
+  REQUIRE(routeView->alias.has_value() == false);
+  REQUIRE(routeView->index == "index.html");
+  REQUIRE(routeView->autoindex == false);
+  REQUIRE(routeView->clientMaxBody == std::size_t(1 * 1024 * 1024));
+  REQUIRE(routeView->allowedMask == RouteView::MethodMask::kGet);
+  REQUIRE(routeView->returnRule.has_value() == false);
+  REQUIRE(routeView->errorPages.size() == 0);
+  REQUIRE(routeView->cgi == false);
+  REQUIRE(routeView->cgiExePaths.has_value() == false);
+}
+
+TEST_CASE("Bell's default.conf", "[ServerRegistry]")
+{
+  std::string raw = " http {"
+                    "   index index.html;"
+                    "   client_max_body_size 1m;"
+                    "   autoindex off;"
+                    "   server {"
+                    "     listen 8080;"
+                    "     server_name localhost;"
+                    "     root ./www;"
+                    "     index index.html;"
+                    "     allowed_methods GET POST DELETE;"
+                    "     error_page 404 /404.html;"
+                    "     error_page 500 /500.html;"
+                    "     # default location\n"
+                    "     location / {"
+                    "         root ./www;"
+                    "         autoindex on;"
+                    "     }"
+                    "     # upload / POST testing\n"
+                    "     location /upload {"
+                    "         root ./www;"
+                    "         allowed_methods POST;"
+                    "     }"
+                    "     # delete testing\n"
+                    "     location /delete {"
+                    "        root ./www;"
+                    "        allowed_methods DELETE;"
+                    "     }"
+                    "     # CGI (for later)\n"
+                    "     location /cgi-bin {"
+                    "         root ./www/cgi-bin;"
+                    "         cgi on;"
+                    "         cgi_extension .py /usr/bin/python3;"
+                    "         cgi_extension .sh /bin/bash;"
+                    "         allowed_methods GET POST;"
+                    "     }"
+                    "   }"
+                    " }";
+
+  std::stringstream buffer;
+  auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
+  Lexer lexer(raw);
+  Parser parser(lexer);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  Builder builder(lexer, parser, validatorIpPort);
+  ServerRegistry serverRegistry(builder.BuildServerRegistry());
+  lexer.PrintErrorMessages();
+  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+
+  lexer.PrintErrorMessages();
+
+  REQUIRE(output.empty());
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == false);
+  REQUIRE(builder.GetError() == false);
+
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
+
+  const ServerView& serverView = serverRegistry.GetServerView(0);
+  REQUIRE(serverView.hostNames.size() == 1);
+  REQUIRE(serverView.hostNames[0] == "localhost");
+  REQUIRE(serverView.ipPortList.size() == 1);
+  REQUIRE(serverView.ipPortList.at(0).ip == "::");
+  REQUIRE(serverView.ipPortList.at(0).port == "8080");
+  REQUIRE(serverView.routes.size() == 4);
+
+  const RouteView& routeView0 = serverView.routes[0];
+  REQUIRE(routeView0.locationPrefix == "/");
+  REQUIRE(routeView0.root == std::filesystem::path("./www"));
+  REQUIRE(routeView0.alias.has_value() == false);
+  REQUIRE(routeView0.index == "index.html");
+  REQUIRE(routeView0.autoindex == true);
+  REQUIRE(routeView0.clientMaxBody == std::size_t(1 * 1024 * 1024));
+  REQUIRE(routeView0.allowedMask == (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
+  REQUIRE(routeView0.returnRule.has_value() == false);
+  REQUIRE(routeView0.errorPages.size() == 2);
+  REQUIRE(routeView0.errorPages.at(404) == "/404.html");
+  REQUIRE(routeView0.errorPages.at(500) == "/500.html");
+  REQUIRE(routeView0.cgi == false);
+  REQUIRE(routeView0.cgiExePaths.has_value() == false);
+
+  const RouteView& routeView1 = serverView.routes[1];
+  REQUIRE(routeView1.locationPrefix == "/upload");
+  REQUIRE(routeView1.root == std::filesystem::path("./www"));
+  REQUIRE(routeView1.alias.has_value() == false);
+  REQUIRE(routeView1.index == "index.html");
+  REQUIRE(routeView1.autoindex == false);
+  REQUIRE(routeView1.clientMaxBody == std::size_t(1 * 1024 * 1024));
+  REQUIRE(routeView1.allowedMask == RouteView::MethodMask::kPost);
+  REQUIRE(routeView1.returnRule.has_value() == false);
+  REQUIRE(routeView1.errorPages.size() == 2);
+  REQUIRE(routeView1.errorPages.at(404) == "/404.html");
+  REQUIRE(routeView1.errorPages.at(500) == "/500.html");
+  REQUIRE(routeView1.cgi == false);
+  REQUIRE(routeView1.cgiExePaths.has_value() == false);
+
+  const RouteView& routeView2 = serverView.routes[2];
+  REQUIRE(routeView2.locationPrefix == "/delete");
+  REQUIRE(routeView2.root == std::filesystem::path("./www"));
+  REQUIRE(routeView2.alias.has_value() == false);
+  REQUIRE(routeView2.index == "index.html");
+  REQUIRE(routeView2.autoindex == false);
+  REQUIRE(routeView2.clientMaxBody == std::size_t(1 * 1024 * 1024));
+  REQUIRE(routeView2.allowedMask == RouteView::MethodMask::kDelete);
+  REQUIRE(routeView2.returnRule.has_value() == false);
+  REQUIRE(routeView2.errorPages.size() == 2);
+  REQUIRE(routeView2.errorPages.at(404) == "/404.html");
+  REQUIRE(routeView2.errorPages.at(500) == "/500.html");
+  REQUIRE(routeView2.cgi == false);
+  REQUIRE(routeView2.cgiExePaths.has_value() == false);
+
+  const RouteView& routeView3 = serverView.routes[3];
+  REQUIRE(routeView3.locationPrefix == "/cgi-bin");
+  REQUIRE(routeView3.root == std::filesystem::path("./www/cgi-bin"));
+  REQUIRE(routeView3.alias.has_value() == false);
+  REQUIRE(routeView3.index == "index.html");
+  REQUIRE(routeView3.autoindex == false);
+  REQUIRE(routeView3.clientMaxBody == std::size_t(1 * 1024 * 1024));
+  REQUIRE(routeView3.allowedMask == (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost));
+  REQUIRE(routeView3.returnRule.has_value() == false);
+  REQUIRE(routeView3.errorPages.size() == 2);
+  REQUIRE(routeView3.errorPages.at(404) == "/404.html");
+  REQUIRE(routeView3.errorPages.at(500) == "/500.html");
+  REQUIRE(routeView3.cgi == true);
+  REQUIRE(routeView3.cgiExePaths.has_value() == true);
+  REQUIRE(routeView3.cgiExePaths->size() == 2);
+  REQUIRE(routeView3.cgiExePaths->at(".sh") == std::filesystem::path("/bin/bash"));
+  REQUIRE(routeView3.cgiExePaths->at(".py") == std::filesystem::path("/usr/bin/python3"));
+}

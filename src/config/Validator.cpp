@@ -84,13 +84,16 @@ bool Validator::IsValidURL(Node& param)
 std::string Validator::BuildErrorMessage(std::string_view errorType, std::string_view message, std::size_t idx)
 {
   std::stringstream ss;
-
-  std::size_t line = lexer_.GetLine(idx);
-  std::size_t col = lexer_.GetCol(idx);
-  std::string_view lexeme = lexer_.GetLexeme(idx);
-
-  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " " << errorType << ": " << "`" << kRed_ << lexeme
-    << kReset_ << "`" << message << "\n";
+  ss << lexer_.GetLine(idx) << ":" << lexer_.GetCol(idx) << ": " << kRed_ << "error:" << kReset_ << " " << errorType << ": ";
+  if (lexer_.GetTokenKind(idx) == TokenKind::kEof)
+  {
+    ss << kRed_ << "EOF" << kReset_;
+  }
+  else
+  {
+    ss << "`" << kRed_ << lexer_.GetLexeme(idx) << kReset_ << "`"; 
+  }
+  ss << message << "\n";
   return ss.str();
 }
 
@@ -361,7 +364,10 @@ void Validator::ValidateName(Node& param)
   {
     for (char c : label)
     {
-      if (!islower(static_cast<unsigned char>(c)) && !std::isdigit(static_cast<unsigned char>(c)) && c != '-')
+      if (!islower(static_cast<unsigned char>(c)) &&
+          !std::isdigit(static_cast<unsigned char>(c)) &&
+          c != '-' &&
+          c != ':')
       {
         Error("name contains illegal character", "", param, param.idxTokenListStart);
         return;

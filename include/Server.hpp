@@ -15,19 +15,25 @@
 
 #include <netdb.h>
 
+#include <unordered_map>
+
 #include "Connection.hpp"
 #include "EpollManager.hpp"
+#include "config/ServerRegistry.hpp"
+#include "config/ServerView.hpp"
 #include "http/SessionManager.hpp"
 #include "io/Socket.hpp"
 
 class Server
 {
+    using IpPort = ServerView::IpPort;
+
   public:
-    Server(const char* service);
-    ~Server(void);
     Server(void) = delete;
+    Server(const IpPort& ipport, Socket::Type type, const ServerRegistry& serverRegistry);
+    ~Server(void);
     Server(const Server& other) = delete;
-    Server(Server&& other) noexcept = delete;
+    Server(Server&& other) noexcept = default;
     Server& operator=(const Server& rhs) = delete;
     Server& operator=(Server&& rhs) noexcept = delete;
 
@@ -42,8 +48,10 @@ class Server
     void HandleConnection(EpollManager& mananger, const struct epoll_event& event);
     void CloseConnection(EpollManager& manager, ConnectionIterator connection);
 
+    IpPort ipPort_;
     Socket socket_;
-    // TODO: routing_table
+    const ServerRegistry& serverRegistry_;
+    Router router_;
     SessionManager sessionManager_;
     std::unordered_map<int, Connection> connections_;
 };

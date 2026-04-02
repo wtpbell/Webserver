@@ -14,30 +14,29 @@
 #define SERVERVIEW_HPP
 
 #include <string>
-#include <vector>
-#include <cstdint>
 #include <type_traits>
+#include <vector>
 
 #include "RouteView.hpp"
 
 struct ServerView
 {
-  struct IpPort
-  {
-    std::string ip;
-    std::string port;
-    bool operator<(const IpPort& other) const
+    struct IpPort
     {
-      if (ip != other.ip)
-      {
-        return ip < other.ip;
-      }
-      return port < other.port;
-    }
-  };
-  std::vector<std::string> hostNames;
-  std::vector<IpPort> ipPortList;
-  std::vector<RouteView> routes;
+        std::string ip;
+        std::string port;
+        bool operator<(const IpPort& other) const
+        {
+          if (ip != other.ip)
+          {
+            return ip < other.ip;
+          }
+          return port < other.port;
+        }
+    };
+    std::vector<std::string> hostNames;
+    std::vector<IpPort> ipPortList;
+    std::vector<RouteView> routes;
 };
 
 static_assert(std::is_nothrow_move_constructible_v<ServerView>);

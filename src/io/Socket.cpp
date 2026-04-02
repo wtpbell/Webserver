@@ -18,11 +18,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <cerrno>
 #include <charconv>
 #include <cstring>
 #include <ostream>
 #include <string>
+#include <string_view>
+#include <utility>
 
 #include "exception/FileDescriptorException.hpp"
 #include "io/SharedFD.hpp"
@@ -60,13 +63,12 @@ Socket Socket::CreateSocket(int domain, int type, int protocol)
 }
 
 /**
- * @brief Create an IPv6 TCP socket for the specificed service (port)
+ * @brief Create an TCP socket (default IPv6) for the specificed host and service
  */
-Socket Socket::CreateSocket(const char* host, const char* service, int flags)
+Socket Socket::CreateSocket(const char* host, const char* service, int flags, Type type)
 {
   addrinfo_t hints{};
-
-  hints.ai_family = AF_INET6;
+  hints.ai_family = static_cast<int>(type);
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_flags = flags;
 

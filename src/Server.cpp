@@ -3,16 +3,17 @@
 /*                                                        ::::::::            */
 /*   Server.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/13 19:08:02 by bewong        #+#    #+#                 */
-/*   Updated: 2026/03/17 16:41:30 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/01 20:51:14 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
 
 #include <sys/epoll.h>
+#include <sys/socket.h>
 
 #include <cassert>
 #include <cstring>
@@ -21,20 +22,27 @@
 #include "Connection.hpp"
 #include "EpollManager.hpp"
 #include "Logger.hpp"
+#include "config/ServerRegistry.hpp"
 #include "exception/ServerException.hpp"
 #include "io/Socket.hpp"
 #include "string.hpp"
 
 /******************************************** Server Lifecycle ********************************************************/
 
-Server::Server(const char* service) : socket_(Socket::CreateSocket(nullptr, service, AI_PASSIVE))
+Server::Server(const IpPort& ipPort, Socket::Type type, const ServerRegistry& serverRegistry)
+    : ipPort_(ipPort),
+      socket_(Socket::CreateSocket(ipPort.ip.c_str(), ipPort.port.c_str(), AI_PASSIVE, type)),
+      serverRegistry_(serverRegistry)
 {
-  socket_.SetNonBlocking(true);
   const int yes{1};
-  socket_.SetSockOpt(SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-  // By default dual stack socket is enabled on linux systems, but on other systems you might need to enable it
   const int no{0};
-  socket_.SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
+
+  socket_.SetNonBlocking(true);
+  socket_.SetSockOpt(SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+  if (type == Socket::Type::kIPv6)
+  {
+    socket_.SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));  // enable dual stack socket
+  }
   socket_.Bind();
 
   Logger::Log(LogLevel::INFO, "Server succesfully created and is bound to the socket <{}>", socket_);
@@ -87,7 +95,7 @@ void Server::Accept(EpollManager& manager, const struct epoll_event& event)
         HandleConnection(manager, event);
       };
 
-      manager.AddFd(client.GetFD(), EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN | EPOLLOUT, callback);
+      manager.AddFd(client.GetFD(), EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN, callback);
       Logger::Log(LogLevel::INFO, "Server <{}> accepted client connection <{}>", socket_, client);
     }
     catch (const std::exception& ex)
@@ -111,22 +119,35 @@ void Server::HandleConnection(EpollManager& manager, const struct epoll_event& e
   }
 
   auto& [fd, connection] = *it;
-  if (event.events & EPOLLHUP)
+  if (event.events & (EPOLLHUP | EPOLLRDHUP))
   {
-    Logger::Log(LogLevel::INFO, "Server <{}>: Client <{}> closed the connection", socket_, connection.GetSocket());
-    CloseConnection(manager, it);
-    return;
+    connection.SetPeerClosed(true);
+    if (!connection.HasPendingOutput() && !(event.events & (EPOLLIN | EPOLLOUT)))
+    {
+      Logger::Log(LogLevel::INFO, "Server <{}>: Closing connection with <{}>", socket_, connection.GetSocket());
+      CloseConnection(manager, it);
+      return;
+    }
   }
 
   Connection::State connection_state =
       (event.events & EPOLLERR) == 0 ? Connection::State::kKeepAlive : Connection::State::kError;
   if (event.events & EPOLLIN && connection_state == Connection::State::kKeepAlive)
   {
-    connection_state = connection.HandleRequest(sessionManager_);
+    connection_state = connection.HandleRequest(ipPort_, router_, serverRegistry_, sessionManager_);
   }
   if (event.events & EPOLLOUT && connection_state == Connection::State::kKeepAlive)
   {
     connection_state = connection.HandleResponse();
+  }
+
+  if (connection.HasPendingOutput())
+  {
+    manager.ModifyFd(fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN | EPOLLOUT);
+  }
+  else
+  {
+    manager.ModifyFd(fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN);
   }
 
   if (connection_state == Connection::State::kError)

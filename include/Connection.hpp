@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:33:36 by jboon         #+#    #+#                 */
-/*   Updated: 2026/03/17 15:40:05 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/01 20:54:54 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,15 +14,25 @@
 #define CONNECTION_H_
 
 #include <deque>
+#include <string>
 
+#include "config/ServerRegistry.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPResponse.hpp"
+#include "http/HTTPValidator.hpp"
 #include "http/SessionManager.hpp"
 #include "io/Socket.hpp"
 
+// TODO: replace with actual Router
+class Router
+{
+};
+
 class Connection
 {
+    using IpPort = ServerView::IpPort;
+
   public:
     Connection(const Socket& s) : socket_(s) {}
     Connection(void) = delete;
@@ -41,15 +51,16 @@ class Connection
 
     const Socket& GetSocket(void) const;
     void SetPeerClosed(bool close);
+    bool HasPendingOutput(void) const;
     void Clear(void);
-    State HandleRequest(SessionManager& session_manager);
+    State HandleRequest(const IpPort& ipport, const Router& router, const ServerRegistry& serverRegistry,
+                        SessionManager& session_manager);
     State HandleResponse(void);
 
   private:
     enum class ReadResult
     {
       kOk,
-      kEmpty,
       kClosed,
       kFatal
     };

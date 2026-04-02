@@ -14,20 +14,20 @@
 #include <iostream>
 #include <sstream>
 
+#include "config/Builder.hpp"
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
+#include "config/ServerRegistry.hpp"
 #include "config/Validator.hpp"
 #include "config/ValidatorIpPort.hpp"
-#include "config/Builder.hpp"
-#include "config/ServerRegistry.hpp"
 
 namespace
 {
   struct Options
   {
-    bool printTokenList = false;
-    bool printAST = false;
-    bool printConfigsDebug = false;
+      bool printTokenList = false;
+      bool printAST = false;
+      bool printConfigsDebug = false;
   };
 
   std::optional<std::string> ReadFile(const std::string& filename)
@@ -66,7 +66,7 @@ namespace
         std::cerr << "Error: unknown parameter: " << flag << "\n";
         valid = false;
       }
-    } 
+    }
     return valid;
   }
 
@@ -95,7 +95,7 @@ namespace
     Validator validator(lexer, parser, validatorIpPort);
     if (lexer.GetError() || parser.GetError() || validator.GetError())
     {
-    Print(lexer, parser, options);
+      Print(lexer, parser, options);
       return std::nullopt;
     }
     Builder builder(lexer, parser, validatorIpPort);
@@ -107,15 +107,10 @@ namespace
     Print(lexer, parser, options);
     return builder.BuildServerRegistry();
   }
-}
+}  // namespace
 
 std::optional<ServerRegistry> LoadConfigs(const int argc, char* argv[])
 {
-  if (argc < 2)
-  {
-    std::cerr << "Please provide path to config file. Valid input: ./webserv file [--option]" << "\n";
-    return std::nullopt;
-  }
   Options options;
   if (!ParseOptions(argc, argv, options))
   {

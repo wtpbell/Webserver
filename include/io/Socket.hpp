@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 14:37:22 by jboon         #+#    #+#                 */
-/*   Updated: 2026/01/08 19:57:14 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/01 20:55:48 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@
 #include <sys/types.h>
 
 #include <ostream>
+#include <string>
 #include <string_view>
 
 #include "SharedFD.hpp"
@@ -34,6 +35,13 @@ class Socket : public SharedFD
       kShutRdWr = SHUT_RDWR
     };
 
+    enum class Type
+    {
+      kNone = AF_UNSPEC,
+      kIPv4 = AF_INET,
+      kIPv6 = AF_INET6
+    };
+
     Socket(void) = default;
     Socket(const Socket& other) = default;
     Socket(Socket&& other) noexcept = default;
@@ -42,11 +50,12 @@ class Socket : public SharedFD
     ~Socket(void) = default;
 
     static Socket CreateSocket(int domain, int type, int protocol);
-    static Socket CreateSocket(const char* host, const char* service, int flags = 0);
+    static Socket CreateSocket(const char* host, const char* service, int flags = 0, Type type = Type::kIPv6);
     static std::pair<Socket, Socket> SocketPair(int domain, int type, int protocol);
     static addrinfo_t* GetAddrInfo(addrinfo_t& hints, const char* host, const char* service);
 
     void Bind(void);
+
     void Listen(int backlog = SOMAXCONN);
     void Connect(void);
     Socket Accept4(int flags = 0);

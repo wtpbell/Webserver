@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:34:04 by jboon         #+#    #+#                 */
-/*   Updated: 2026/03/17 16:41:39 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/01 20:51:29 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,11 +14,16 @@
 
 #include <sys/epoll.h>
 
+#include <string>
+#include <string_view>
+
 #include "Logger.hpp"
+#include "config/ServerRegistry.hpp"
 #include "http/HTTPCookie.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPResponse.hpp"
 #include "http/HTTPUtils.hpp"
+#include "http/HTTPValidator.hpp"
 #include "http/SessionManager.hpp"
 #include "string.hpp"
 
@@ -30,6 +35,11 @@ void Connection::SetPeerClosed(bool close)
 const Socket& Connection::GetSocket(void) const
 {
   return socket_;
+}
+
+bool Connection::HasPendingOutput(void) const
+{
+  return !outputQueue_.empty();
 }
 
 void Connection::Clear(void)
@@ -71,11 +81,16 @@ HTTPResponse Connection::DispatchRequest(const HTTPRequest& req)
   return r;
 }
 
-Connection::State Connection::HandleRequest(SessionManager& session_manager)
+Connection::State Connection::HandleRequest(const IpPort& ipport, const Router& router,
+                                            const ServerRegistry& serverRegistry, SessionManager& session_manager)
 {
+  // TODO: Make use of these members
+  (void)ipport;
+  (void)router;
+  (void)serverRegistry;
+
   std::string msg;
   const ReadResult rr = ReadOnce(msg);
-
   if (rr == ReadResult::kClosed)
   {
     peerClosed_ = true;
@@ -88,10 +103,6 @@ Connection::State Connection::HandleRequest(SessionManager& session_manager)
   else if (rr == ReadResult::kFatal)
   {
     return State::kError;
-  }
-  else if (rr == ReadResult::kEmpty)
-  {
-    return State::kKeepAlive;
   }
 
   std::string_view in = msg;

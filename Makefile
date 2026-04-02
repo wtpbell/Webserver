@@ -25,7 +25,7 @@ DEPS		:= $(BIN)main.d $(SRCS:%.cpp=$(BIN)%.d)
 TEST_DIR		:= tests/
 TEST_DIRS		:= $(BIN)$(TEST_DIR) $(BIN)$(TEST_DIR)cgi/
 TEST_NAME		:= $(BIN)$(TEST_DIR)run_tests
-TEST_SRCS		:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_server.cpp test_epollmanager.cpp test_logger.cpp\
+TEST_SRCS		:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_epollmanager.cpp test_logger.cpp\
 					test_configs_lexer.cpp test_configs_parser.cpp test_configs_validator.cpp test_configs_builder.cpp test_configs_server_registry.cpp test_http_paths.cpp test_http_parser.cpp test_http_validator.cpp\
 					test_integrate_parser_validator.cpp test_http_response.cpp test_TimerFD.cpp test_http_session_manager.cpp
 TEST_SRCS_CGI	:= $(addprefix cgi/, test_CGI.cpp test_CGIRequest.cpp test_CGIResponse.cpp test_CGIParser.cpp)

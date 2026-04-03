@@ -44,8 +44,8 @@ Server::Server(const IpPort& ipPort, Socket::Type type, const ServerRegistry& se
     socket_.SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));  // enable dual stack socket
   }
   socket_.Bind();
-
-  Logger::Log(LogLevel::INFO, "Server succesfully created and is bound to the socket <{}>", socket_);
+  socket_.Listen(SOMAXCONN);
+  Logger::Log(LogLevel::INFO, "Server <{}> bound and is listening...", socket_);
 }
 
 Server::~Server(void)
@@ -53,15 +53,14 @@ Server::~Server(void)
   Logger::Log(LogLevel::INFO, "Server <{}> shutting down with {} active connections", socket_, connections_.size());
 }
 
-void Server::ListenAndRegister(EpollManager& manager2, int max_connections)
+void Server::RegisterFD(EpollManager& manager)
 {
-  socket_.Listen(max_connections);
-  manager2.AddFd(static_cast<int>(socket_), EPOLLIN | EPOLLERR,
-                 [this](EpollManager& manager, const struct epoll_event& event)
-                 {
-                   this->Accept(manager, event);
-                 });
-  Logger::Log(LogLevel::INFO, "Server is now listening on socket <{}>", socket_);
+  manager.AddFd(static_cast<int>(socket_), EPOLLIN | EPOLLERR,
+                [this](EpollManager& manager2, const struct epoll_event& event)
+                {
+                  this->Accept(manager2, event);
+                });
+  Logger::Log(LogLevel::INFO, "Server <{}> registered...", socket_);
 }
 
 void Server::Accept(EpollManager& manager, const struct epoll_event& event)

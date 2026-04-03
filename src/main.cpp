@@ -19,6 +19,7 @@
 #include "Server.hpp"
 #include "config/ServerRegistry.hpp"
 #include "config/ServerView.hpp"
+#include "exception/FileDescriptorException.hpp"
 #include "io/Socket.hpp"
 #include "webserv.hpp"
 
@@ -35,17 +36,27 @@ static void ConstructServers(std::vector<Server>& servers, const ServerRegistry&
     for (const auto& ipPortPair : serverView.ipPortList)
     {
       assert(ipPortPair.ip.empty() == false && ipPortPair.port.empty() == false);
-      if (ipPortPair.ip.find_first_of(':') != std::string::npos)
+      try
       {
-        servers.emplace_back(ipPortPair, Socket::Type::kIPv6, serverRegistry);
+        if (ipPortPair.ip.find_first_of(':') != std::string::npos)
+        {
+          servers.emplace_back(ipPortPair, Socket::Type::kIPv6, serverRegistry);
+        }
+        else if (ipPortPair.ip.find_first_of('.') != std::string::npos)
+        {
+          servers.emplace_back(ipPortPair, Socket::Type::kIPv4, serverRegistry);
+        }
+        else
+        {
+          Logger::Log(LogLevel::WARNING,
+                      "(ﾉ☉ヮ⚆)ﾉ ⌒*:･ﾟ✧ Skipped server <{}:{}>/{}: Unknown configurations for constructing the server.",
+                      ipPortPair.ip, ipPortPair.port, *serverView.hostNames.begin());
+        }
       }
-      else if (ipPortPair.ip.find_first_of('.') != std::string::npos)
+      catch (const FileDescriptorException& ex)
       {
-        servers.emplace_back(ipPortPair, Socket::Type::kIPv4, serverRegistry);
-      }
-      else
-      {
-        Logger::Log(LogLevel::WARNING, "Unknown configurations for constructing a server.");
+        Logger::Log(LogLevel::ERROR, "(҂◡_◡) ᕤ Failure to construct the server <{}:{}>/{}: {}", ipPortPair.ip,
+                    ipPortPair.port, *serverView.hostNames.begin(), ex.what());
       }
     }
   }
@@ -55,7 +66,7 @@ int main(int argc, char* argv[])
 {
   if (argc < 2)
   {
-    std::cerr << "Please provide path to config file. Valid input: ./webserv file [--option]"
+    std::cerr << "Please provide path to config file. Valid input: `./webserv file.conf [--option]`"
               << "\n";
     return EXIT_FAILURE;
   }
@@ -63,8 +74,6 @@ int main(int argc, char* argv[])
   std::optional<ServerRegistry> serverRegistry = LoadConfigs(argc, argv);
   if (serverRegistry == std::nullopt)
   {
-    std::cerr << "Failed to construct the server registry! Exiting..."
-              << "\n";
     return (EXIT_FAILURE);
   }
 
@@ -81,7 +90,7 @@ int main(int argc, char* argv[])
     Logger::Log(LogLevel::INFO, "Listening on the sockets and adding them to the poll manager...");
     EpollManager manager;
     for (auto& server : servers)
-      server.ListenAndRegister(manager);
+      server.RegisterFD(manager);
 
     Logger::Log(LogLevel::INFO, "(⌒ω⌒)ﾉ Webserv is now running!");
     manager.EventLoop();

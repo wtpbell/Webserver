@@ -37,7 +37,7 @@ class Server
     Server& operator=(const Server& rhs) = delete;
     Server& operator=(Server&& rhs) noexcept = delete;
 
-    void ListenAndRegister(EpollManager& manager, int max_connections = SOMAXCONN);
+    void RegisterFD(EpollManager& manager);
 
   private:
     using addrinfo_t = struct addrinfo;

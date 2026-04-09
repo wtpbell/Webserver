@@ -36,6 +36,7 @@ enum class Identifier
   kAutoindex,
   kCgi,
   kCgiExtension,
+  kDefaultServer,
   kParam
 };
 

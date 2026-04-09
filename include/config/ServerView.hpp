@@ -35,7 +35,7 @@ struct ServerView
         }
     };
     std::vector<std::string> hostNames;
-    std::vector<IpPort> ipPortList;
+    IpPort ipPort;
     std::vector<RouteView> routes;
 };
 

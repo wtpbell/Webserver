@@ -25,39 +25,28 @@
 
 static void ConstructServers(std::vector<Server>& servers, const ServerRegistry& serverRegistry)
 {
-  assert(serverRegistry.GetServerViewCount() > 0);
-
-  servers.reserve(serverRegistry.GetServerViewCount());
-  for (std::size_t i = 0; i < serverRegistry.GetServerViewCount(); ++i)
+  assert(serverRegistry.GetServerCount() > 0);
+  servers.reserve(serverRegistry.GetServerCount());
+  for (const auto& serverData : serverRegistry.GetServerViewMap())
   {
-    assert(serverRegistry.GetServerView(i).ipPortList.size() > 0);
-
-    const ServerView& serverView = serverRegistry.GetServerView(i);
-    for (const auto& ipPortPair : serverView.ipPortList)
+    assert(serverData.first.ip.empty() == false);
+    assert(serverData.first.port.empty() == false);
+    assert(serverData.second.size() > 0);
+    try
     {
-      assert(ipPortPair.ip.empty() == false && ipPortPair.port.empty() == false);
-      try
+      if (serverData.first.ip.find_first_of(':') != std::string::npos)
       {
-        if (ipPortPair.ip.find_first_of(':') != std::string::npos)
-        {
-          servers.emplace_back(ipPortPair, Socket::Type::kIPv6, serverRegistry);
-        }
-        else if (ipPortPair.ip.find_first_of('.') != std::string::npos)
-        {
-          servers.emplace_back(ipPortPair, Socket::Type::kIPv4, serverRegistry);
-        }
-        else
-        {
-          Logger::Log(LogLevel::WARNING,
-                      "(ﾉ☉ヮ⚆)ﾉ ⌒*:･ﾟ✧ Skipped server <{}:{}>/{}: Unknown configurations for constructing the server.",
-                      ipPortPair.ip, ipPortPair.port, *serverView.hostNames.begin());
-        }
+        servers.emplace_back(serverData.first, Socket::Type::kIPv6, serverRegistry);
       }
-      catch (const FileDescriptorException& ex)
+      else
       {
-        Logger::Log(LogLevel::ERROR, "(҂◡_◡) ᕤ Failure to construct the server <{}:{}>/{}: {}", ipPortPair.ip,
-                    ipPortPair.port, *serverView.hostNames.begin(), ex.what());
+        servers.emplace_back(serverData.first, Socket::Type::kIPv4, serverRegistry);
       }
+    }
+    catch (const FileDescriptorException& ex)
+    {
+      Logger::Log(LogLevel::ERROR, "(҂◡_◡) ᕤ Failure to construct the server <{}:{}>: {}", serverData.first.ip,
+        serverData.first.port, ex.what());
     }
   }
 }

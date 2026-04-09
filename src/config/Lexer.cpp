@@ -231,6 +231,10 @@ TokenKind Lexer::DetermineKind() const
       if (Is("cgi_extension"))
         return TokenKind::kCgiExtension;
       break;
+    case 14:
+      if (Is("default_server"))
+        return TokenKind::kDefaultServer;
+      break;
     case 15:
       if (Is("allowed_methods"))
         return TokenKind::kAllowedMethods;
@@ -319,6 +323,8 @@ std::string Lexer::TokenKindToString(TokenKind kind) const
       return "Cgi";
     case TokenKind::kCgiExtension:
     	return "Cgi_extension";
+    case TokenKind::kDefaultServer:
+      return "Default_server";
     case TokenKind::kHttp:
       return "Http";
     case TokenKind::kServer:

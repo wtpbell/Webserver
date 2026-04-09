@@ -111,6 +111,8 @@ std::string Parser::IdentifierToString(Identifier identifier) const
       return "cgi";
     case Identifier::kCgiExtension:
     	return "cgi_extension";
+    case Identifier::kDefaultServer:
+      return "default_server";
     case Identifier::kHttp:
       return "http";
     case Identifier::kServer:
@@ -186,7 +188,8 @@ bool Parser::IsSemicolon() const
 
 bool Parser::IsParam() const
 {
-  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kString;
+  return lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kString ||
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kDefaultServer;
 }
 
 Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
@@ -223,6 +226,10 @@ Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
       return Identifier::kCgi;
     case TokenKind::kCgiExtension:
     	return Identifier::kCgiExtension;
+    case TokenKind::kDefaultServer:
+      return Identifier::kDefaultServer;
+    case TokenKind::kString:
+      return Identifier::kParam;
     default:
       assert(false && "Invalid TokenKind passed to TokenKindToIdentifier");
       __builtin_unreachable();
@@ -276,7 +283,7 @@ Node Parser::ParseDirective(Identifier context)
     }
     else
     {
-      directive.params.emplace_back(Node(Identifier::kParam, directive.name, lexer_, currentTokenIdx_));
+      directive.params.emplace_back(Node(TokenKindToIdentifier(lexer_.GetTokenKind(currentTokenIdx_)), directive.name, lexer_, currentTokenIdx_));
       Next();
     }
   }

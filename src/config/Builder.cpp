@@ -20,6 +20,10 @@
 #include <cctype>
 #include <string_view>
 #include <sstream>
+#include <set>
+#include <array>
+
+#include <iostream>
 
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
@@ -40,7 +44,18 @@ Builder::Builder(Lexer& lexer, Parser& parser, const ValidatorIpPort& validatorI
   , defaultReturnCode_(302)
 {
   ExtractHttpData();
-  PopulateRouteViewMap();
+  assert(ipPortNodes_.size() == hasDefaultServerFlagVector_.size());
+  assert(ipPortNodes_.size() == serverViews_.size());
+  if (error_ == false)
+  {
+    ValidateIpPortHostName();
+  }
+  if (error_ == false)
+  {
+    PopulateServerViewMap();
+    PopulateRouteViewMap();
+    PopulateDefaultServerRouteViewMap();
+  }
 }
 
 //////////////////// PUBLIC ////////////////////
@@ -52,81 +67,49 @@ bool Builder::GetError() const
 
 ServerRegistry Builder::BuildServerRegistry()
 {
-  return ServerRegistry(std::move(serverViews_), std::move(RouteViewMap_));
+  return ServerRegistry(std::move(serverViews_),
+    std::move(serverViewMap_),
+    std::move(routeViewMap_),
+    std::move(defaultServerRouteViewMap_));
 }
 
 //////////////////// PRIVATE ////////////////////
 
-void Builder::PopulateRouteViewMap()
-{
-  for (ServerView& serverView : serverViews_)
-  {
-    for (ServerView::IpPort& ipPort : serverView.ipPortList)
-    {
-      for (std::string& hostName : serverView.hostNames)
-      {
-        for (RouteView& routeView : serverView.routes)
-        {
-          RouteViewMap_[ServerView::IpPort(ipPort)][hostName].emplace(routeView.locationPrefix, &routeView);
-        }
-      }
-    }
-  }
-}
-
 void Builder::SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message, std::size_t tokenIndex)
 {
   std::stringstream ss;
-  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme << kReset_ << "`" << message << "\n";
+  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme << kReset_ << "` " << message << "\n";
   lexer_.SetTokenErrorMessage(tokenIndex, ss.str());
   lexer_.SetTokenErrorTrue(tokenIndex);
 }
 
 void Builder::Error(Node& node, std::string_view message)
 {
-  if (node.name == Identifier::kListen)
+  switch (node.name)
   {
-    SetErrorMessage(lexer_.GetLine(node.params[0].idxTokenListStart), lexer_.GetCol(node.params[0].idxTokenListStart), node.params[0].lexeme, message, node.params[0].idxTokenListStart);
-  }
-  else if (node.name == Identifier::kServer)
-  {
-    SetErrorMessage(lexer_.GetLine(node.idxTokenListEnd), lexer_.GetCol(node.idxTokenListEnd), lexer_.GetLexeme(node.idxTokenListEnd), message, node.idxTokenListEnd);
+    case Identifier::kListen:
+      SetErrorMessage(lexer_.GetLine(node.params[0].idxTokenListStart), lexer_.GetCol(node.params[0].idxTokenListStart), node.params[0].lexeme, message, node.params[0].idxTokenListStart);
+      break;
+    case Identifier::kServer:
+      SetErrorMessage(lexer_.GetLine(node.idxTokenListEnd), lexer_.GetCol(node.idxTokenListEnd), lexer_.GetLexeme(node.idxTokenListEnd), message, node.idxTokenListEnd);
+      break;
+    case Identifier::kParam:
+    case Identifier::kDefaultServer:
+      SetErrorMessage(lexer_.GetLine(node.idxTokenListStart), lexer_.GetCol(node.idxTokenListStart), lexer_.GetLexeme(node.idxTokenListStart), message, node.idxTokenListStart);
+      break;
+    default:
+      assert(false && "invalid Node type in Builder::Error()");
+      __builtin_unreachable();
   }
   node.error = true;
   error_ = true;
 }
 
-bool Builder::ValidateIpPortDuplicate(Node& node, const std::string& ip, const std::string& port, const ServerView& currentServerView)
-{
-  bool valid = true;
-  for (ServerView& serverView : serverViews_)
-  {
-    for (const ServerView::IpPort& ipPort : serverView.ipPortList)
-    {
-      if (ipPort.ip == ip && ipPort.port == port)
-      {
-        Error(node, " duplicate IP-port pair in different servers");
-        valid = false;
-      }
-    }
-  }
-  for (const ServerView::IpPort& ipPort : currentServerView.ipPortList)
-  {
-    if (ipPort.ip == ip && ipPort.port == port)
-    {
-      Error(node, " duplicate IP-port pair in server");
-      valid = false;
-    }
-  }
-  return valid;
-}
-
-void Builder::ExtractListen(Node& dir, ServerView& serverView)
+void Builder::ValidateAndExtractListen(Node& dir, ServerView& serverView)
 {
   const std::string& lexeme = dir.params[0].lexeme;
   std::string ip;
   std::string port;
-
   if (lexeme[0] == '[')
   {
     std::size_t startIp = 1;
@@ -165,17 +148,21 @@ void Builder::ExtractListen(Node& dir, ServerView& serverView)
     ip = defaultIp_;
     port = lexeme;
   }
-  if (ValidateIpPortDuplicate(dir, ip, port, serverView))
+  serverView.ipPort.ip = ip;
+  serverView.ipPort.port = port;
+  ipPortNodes_.emplace_back(&dir.params[0]);
+  if (dir.params.size() == 2)
   {
-    serverView.ipPortList.emplace_back(ServerView::IpPort{ip, port});
+    hasDefaultServerFlagVector_.push_back(true);
+    auto result = hasDefaultServerFlagSet_.insert({ip, port});
+    if (result.second == false)
+    {
+      Error(dir.params[1], "expected `;` - repeat use of `default_server`");
+    }
   }
-}
-
-void Builder::ExtractServerName(const Node& dir, ServerView& serverView)
-{
-  for (const Node& param : dir.params)
+  else
   {
-    serverView.hostNames.emplace_back(param.lexeme);
+    hasDefaultServerFlagVector_.push_back(false);
   }
 }
 
@@ -282,9 +269,15 @@ void Builder::ExtractErrorPage(const Node& dir, RouteView& routeView)
   }
 }
 
-void Builder::ExtractLocationPrefix(const Node& location, RouteView& routeView)
+void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView, std::set<std::string>& locationPrefixSet)
 {
-  routeView.locationPrefix = location.params[0].lexeme;
+  const std::string& locationPrefix = location.params[0].lexeme;
+  auto result = locationPrefixSet.insert(locationPrefix);
+  if (result.second == false)
+  {
+    Error(location.params[0], "duplicate location prefix in server");
+  }
+  routeView.locationPrefix = locationPrefix;
 }
 
 void Builder::ExtractHttpData()
@@ -312,20 +305,18 @@ void Builder::ExtractHttpData()
         __builtin_unreachable();
     }
   }
-  ExtractServerData(http, routeView);
+  ExtractServerBlockData(http, routeView);
 }
 
-void Builder::ExtractServerDirectives(Node& server, ServerView& serverView, RouteView& routeView)
+void Builder::ExtractServerBlockDirectivesRouteView(const Node& serverBlock, RouteView& routeView)
 {
-  for (Node& dir : server.directives)
+  for (const Node& dir : serverBlock.directives)
   {
     switch (dir.name)
     {
       case Identifier::kListen:
-        ExtractListen(dir, serverView);
         break;
       case Identifier::kServerName:
-        ExtractServerName(dir, serverView);
         break;
       case Identifier::kAllowedMethods:
         ExtractAllowedMethods(dir, routeView);
@@ -358,28 +349,97 @@ void Builder::ExtractServerDirectives(Node& server, ServerView& serverView, Rout
   }
 }
 
-void Builder::ExtractServerData(Node& http, RouteView& routeView)
+std::size_t Builder::GetNumListenDirectives(const Node& serverBlock)
 {
-  std::size_t currentServerIdx = 0;
-  std::size_t lastServerIdx = http.nestedBlocks.size() - 1;
-  for (Node& server : http.nestedBlocks)
+  std::size_t numListenDirectives = 0;
+  for (const Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kListen)
+    {
+      ++numListenDirectives;
+    }
+  }
+  return numListenDirectives;
+}
+
+void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView)
+{
+  std::set<std::string> serverNamesSet;
+  for (Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kServerName)
+    {
+      for (Node& param : dir.params)
+      {
+        auto result = serverNamesSet.insert(param.lexeme);
+        if (result.second == false)
+        {
+          Error(param, "- duplicate hostname in server");
+        }   
+        serverView.hostNames.emplace_back(param.lexeme);
+        serverNameNodes_.emplace_back(&param);
+      }
+    }
+  }
+}
+
+void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView)
+{
+  std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
+  if (numListenDirectives == 0)
+  {
+    ValidateAndExtractServerNames(serverBlock,serverView);
+    SetServerViewDefaults(serverBlock, serverView);
+    serverViews_.emplace_back(serverView);
+    return;
+  }
+  std::size_t currentListenDirective = 1;
+  for (Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kListen)
+    {
+      if (currentListenDirective == numListenDirectives)
+      {
+        ValidateAndExtractServerNames(serverBlock, serverView);
+        ValidateAndExtractListen(dir, serverView);
+        SetServerViewDefaults(serverBlock, serverView);
+        serverViews_.emplace_back(serverView);
+        break;
+      }
+      else
+      {
+        ServerView serverViewCopy(serverView);
+        ValidateAndExtractServerNames(serverBlock, serverViewCopy);
+        ValidateAndExtractListen(dir, serverViewCopy);
+        SetServerViewDefaults(serverBlock, serverViewCopy);
+        serverViews_.emplace_back(serverViewCopy);
+      }
+      ++currentListenDirective;
+    }
+  }
+}
+
+void Builder::ExtractServerBlockData(Node& http, RouteView& routeView)
+{
+  std::size_t currentServerBlockIdx = 0;
+  std::size_t lastServerBlockIdx = http.nestedBlocks.size() - 1;
+  for (Node& serverBlock : http.nestedBlocks)
   {
     ServerView serverView;
-    if (currentServerIdx == lastServerIdx)
+    std::set<std::string> locationPrefixSet;
+    if (currentServerBlockIdx == lastServerBlockIdx)
     {
-      ExtractServerDirectives(server, serverView, routeView);
-      SetServerViewDefaults(server, serverView);
-      serverViews_.emplace_back(serverView);
-      ExtractLocationData(server, routeView, currentServerIdx++);
+      ExtractServerBlockDirectivesRouteView(serverBlock, routeView);
+      ExtractLocationData(serverBlock, serverView, routeView, locationPrefixSet);
     }
     else
     {
       RouteView routeViewCopy(routeView);
-      ExtractServerDirectives(server, serverView, routeViewCopy);
-      SetServerViewDefaults(server, serverView);
-      serverViews_.emplace_back(serverView);
-      ExtractLocationData(server, routeViewCopy, currentServerIdx++);
+      ExtractServerBlockDirectivesRouteView(serverBlock, routeViewCopy);
+      ExtractLocationData(serverBlock, serverView, routeViewCopy, locationPrefixSet);
     }
+    ExtractServerBlockDirectivesServerView(serverBlock, serverView);
+    ++currentServerBlockIdx;
   }
 }
 
@@ -426,45 +486,124 @@ void Builder::ExtractLocationDirectives(const Node& location, RouteView& routeVi
   }
 }
 
-void Builder::ExtractLocationData(const Node& server, RouteView& routeView, std::size_t currentServerIdx)
+void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView, std::set<std::string>& locationPrefixSet)
 {
-  if (server.nestedBlocks.empty())
+  if (serverBlock.nestedBlocks.empty())
   {
-    serverViews_[currentServerIdx].routes.emplace_back(routeView);
+    serverView.routes.emplace_back(routeView);
     return;
   }
   std::size_t currentRouteIdx = 0;
-  std::size_t lastRouteIdx = server.nestedBlocks.size() - 1;
-  for (const Node& location : server.nestedBlocks)
+  std::size_t lastRouteIdx = serverBlock.nestedBlocks.size() - 1;
+  for (Node& location : serverBlock.nestedBlocks)
   {
     if (currentRouteIdx == lastRouteIdx)
     {
-      ExtractLocationPrefix(location, routeView);
+      ValidateAndExtractLocationPrefix(location, routeView, locationPrefixSet);
       ExtractLocationDirectives(location, routeView);
-      serverViews_[currentServerIdx].routes.emplace_back(routeView);
+      serverView.routes.emplace_back(routeView);
     }
     else
     {
       RouteView routeViewCopy(routeView);
-      ExtractLocationPrefix(location, routeViewCopy);
+      ValidateAndExtractLocationPrefix(location, routeViewCopy, locationPrefixSet);
       ExtractLocationDirectives(location, routeViewCopy);
-      serverViews_[currentServerIdx].routes.emplace_back(routeViewCopy);
+      serverView.routes.emplace_back(routeViewCopy);
     }
     ++currentRouteIdx;
   }
 }
 
-void Builder::SetServerViewDefaults(Node& server, ServerView& serverView)
+void Builder::SetServerViewDefaults(Node& serverBlock, ServerView& serverView)
 {
   if (serverView.hostNames.empty())
   {
     serverView.hostNames.emplace_back("");
+    serverNameNodes_.emplace_back(&serverBlock);
   }
-  if (serverView.ipPortList.empty())
+  if (serverView.ipPort.ip.empty())
   {
-    if (ValidateIpPortDuplicate(server, defaultIp_, defaultPort_, serverView))
+    serverView.ipPort.ip = defaultIp_;
+    serverView.ipPort.port = defaultPort_;
+    ipPortNodes_.emplace_back(&serverBlock);
+    hasDefaultServerFlagVector_.push_back(false);
+  }
+}
+
+void Builder::ValidateIpPortHostName()
+{
+  std::size_t serverNameNodesIdx = 0;
+  std::size_t ipPortNodesIdx = 0;
+  std::set<std::array<std::string, 3>> ipPortHostNamesSet;
+  for (const ServerView& serverView : serverViews_)
+  {
+    for (const std::string& hostName : serverView.hostNames)
     {
-      serverView.ipPortList.emplace_back(ServerView::IpPort{defaultIp_, defaultPort_});
+      auto result = ipPortHostNamesSet.insert({serverView.ipPort.ip, serverView.ipPort.port, hostName});
+      if (result.second == false)
+      {
+        if (serverNameNodes_[serverNameNodesIdx]->name == Identifier::kServer)
+        {
+          Error(*serverNameNodes_[serverNameNodesIdx], "expected: `server_name` - duplicate hostname IP:port combination");
+        }
+        else
+        {
+          Error(*serverNameNodes_[serverNameNodesIdx], "- duplicate hostname IP:port combination");
+        }
+        if (ipPortNodes_[ipPortNodesIdx]->name == Identifier::kServer)
+        {
+          Error(*ipPortNodes_[ipPortNodesIdx], "expected: `listen` - duplicate hostname IP:port combination");
+        }
+        else
+        {
+          Error(*ipPortNodes_[ipPortNodesIdx], "- duplicate hostname IP:port combination");
+        }
+      }
+      ++serverNameNodesIdx;
     }
+    ++ipPortNodesIdx;
+  }
+}
+
+void Builder::PopulateServerViewMap()
+{
+  for (ServerView& serverView : serverViews_)
+  {
+    serverViewMap_[serverView.ipPort].emplace_back(&serverView);
+  }
+}
+
+void Builder::PopulateRouteViewMap()
+{
+  for (ServerView& serverView : serverViews_)
+  {
+    ServerView::IpPort& ipPort = serverView.ipPort;
+    for (const std::string& hostName : serverView.hostNames)
+    {
+      std::map<std::string, RouteView*>& routes = routeViewMap_[ipPort][hostName];
+      for (RouteView& routeView : serverView.routes)
+      {
+        routes.emplace(routeView.locationPrefix, &routeView);
+      }
+    }
+  }
+}
+
+void Builder::PopulateDefaultServerRouteViewMap()
+{
+  std::size_t idx = 0;
+  for (ServerView& serverView : serverViews_)
+  {
+    ServerView::IpPort& ipPort = serverView.ipPort;
+    if (defaultServerRouteViewMap_.count(ipPort) == 0 || hasDefaultServerFlagVector_[idx] == true)
+    {
+      defaultServerRouteViewMap_.erase(ipPort);
+      std::map<std::string, RouteView*>& routes = defaultServerRouteViewMap_[ipPort]; 
+      for (RouteView& routeView : serverView.routes)
+      {        
+        routes.emplace(routeView.locationPrefix, &routeView);
+      }
+    }
+    ++idx;
   }
 }

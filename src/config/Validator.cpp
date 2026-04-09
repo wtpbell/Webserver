@@ -335,7 +335,11 @@ void Validator::ValidateListen(Node& dir)
     HandleIpv6(dir);
   }
   HandlePortNum(dir);
-  for (std::size_t i = 1; i < dir.params.size(); ++i)
+  if (dir.params.size() > 1 && dir.params[1].name != Identifier::kDefaultServer)
+  {
+    Error("unexpected token", " expected: `default_server` or `;`", dir.params[1], dir.params[1].idxTokenListStart);
+  }
+  for (std::size_t i = 2; i < dir.params.size(); ++i)
   {
     Error("unexpected token", " expected: `;`", dir.params[i], dir.params[i].idxTokenListStart);
   }

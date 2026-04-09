@@ -292,5 +292,19 @@ http {
     listen [::]:65536;
     listen [::],65535;
     listen 1:1:1:1:1:1:1:1:8080;
+
+    # default_server
+    # valid
+
+    listen 1.1.1.1:1 default_server;
+    listen [::1]:65535 default_server;
+
+    # invalid
+
+    listen 1.1.1.1:1 default_server default_server;
+    listen default_server [::1]:65535;
+    listen default_server;
+    listen 1.1.1.1:1 default_server error;
+    listen [::1]:65535 error default_server;
   }
 }

@@ -34,6 +34,7 @@ enum class TokenKind
   kAutoindex,
   kCgi,
   kCgiExtension,
+  kDefaultServer,
   kHttp,
   kLocation,
   kServer,

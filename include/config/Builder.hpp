@@ -49,7 +49,8 @@ class Builder
                          std::size_t tokenIndex);
     void Error(Node& dir, std::string_view message);
     void ValidateAndExtractListen(Node& serverBlock, ServerView& serverView);
-    void ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView);
+    void ValidateServerNames(Node& serverBlock);
+    void ExtractServerNames(Node& serverBlock, ServerView& serverView);
     void ExtractCgi(const Node& httpBlock, RouteView& routeView);
     void ExtractCgiExtension(const Node& httpBlock, RouteView& routeView);
     void ExtractIndex(const Node& node, RouteView& routeView);

@@ -366,7 +366,7 @@ std::size_t Builder::GetNumListenDirectives(const Node& serverBlock)
   return numListenDirectives;
 }
 
-void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView)
+void Builder::ValidateServerNames(Node& serverBlock)
 {
   std::set<std::string> serverNamesSet;
   for (Node& dir : serverBlock.directives)
@@ -379,7 +379,21 @@ void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serve
         if (result.second == false)
         {
           Error(param, "- duplicate hostname in server");
-        }
+        }   
+      }
+    }
+  }
+}
+
+void Builder::ExtractServerNames(Node& serverBlock, ServerView& serverView)
+{
+  std::set<std::string> serverNamesSet;
+  for (Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kServerName)
+    {
+      for (Node& param : dir.params)
+      {  
         serverView.hostNames.emplace_back(param.lexeme);
         serverNameNodes_.emplace_back(&param);
       }
@@ -389,10 +403,11 @@ void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serve
 
 void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView)
 {
+  ValidateServerNames(serverBlock);
   std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
   if (numListenDirectives == 0)
   {
-    ValidateAndExtractServerNames(serverBlock, serverView);
+    ExtractServerNames(serverBlock, serverView);
     SetServerViewDefaults(serverBlock, serverView);
     serverViews_.emplace_back(serverView);
     return;
@@ -404,7 +419,7 @@ void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerVi
     {
       if (currentListenDirective == numListenDirectives)
       {
-        ValidateAndExtractServerNames(serverBlock, serverView);
+        ExtractServerNames(serverBlock, serverView);
         ValidateAndExtractListen(dir, serverView);
         SetServerViewDefaults(serverBlock, serverView);
         serverViews_.emplace_back(serverView);
@@ -413,7 +428,7 @@ void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerVi
       else
       {
         ServerView serverViewCopy(serverView);
-        ValidateAndExtractServerNames(serverBlock, serverViewCopy);
+        ExtractServerNames(serverBlock, serverViewCopy);
         ValidateAndExtractListen(dir, serverViewCopy);
         SetServerViewDefaults(serverBlock, serverViewCopy);
         serverViews_.emplace_back(serverViewCopy);

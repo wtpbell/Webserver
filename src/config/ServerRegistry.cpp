@@ -1,34 +1,35 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   ServerRegistry.cpp                                  :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2026/03/24 15:04:18 by jstuhrin       #+#    #+#                */
-/*   Updated: 2026/03/24 15:04:23 by jstuhrin       ########   codam.nl       */
+/*                                                        ::::::::            */
+/*   ServerRegistry.cpp                                 :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/03/24 15:04:18 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/10 09:49:06 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <vector>
-#include <map>
-#include <cstdint>
-#include <string>
-#include <cassert>
-
-#include "config/RouteView.hpp"
-#include "config/ServerView.hpp"
 #include "config/ServerRegistry.hpp"
 
-ServerRegistry::ServerRegistry(std::vector<ServerView> serverViews,
-  std::map<ServerView::IpPort, std::vector<ServerView*>> serverViewMap,
-  std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap,
-  std::map<ServerView::IpPort, std::map<std::string, RouteView*>> defaultServerRouteViewMap)
-  : serverViews_(std::move(serverViews))
-  , serverViewMap_(std::move(serverViewMap))
-  , routeViewMap_(std::move(RouteViewMap))
-  , defaultServerRouteViewMap_(std::move(defaultServerRouteViewMap))
-{}
+#include <cassert>
+#include <string>
+#include <vector>
+
+#include "Logger.hpp"
+#include "config/RouteView.hpp"
+#include "config/ServerView.hpp"
+
+ServerRegistry::ServerRegistry(
+    std::vector<ServerView> serverViews, std::map<ServerView::IpPort, std::vector<ServerView*>> serverViewMap,
+    std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> RouteViewMap,
+    std::map<ServerView::IpPort, std::map<std::string, RouteView*>> defaultServerRouteViewMap)
+    : serverViews_(std::move(serverViews)),
+      serverViewMap_(std::move(serverViewMap)),
+      routeViewMap_(std::move(RouteViewMap)),
+      defaultServerRouteViewMap_(std::move(defaultServerRouteViewMap))
+{
+}
 
 //////////////////// PUBLIC ////////////////////
 
@@ -53,14 +54,17 @@ const std::map<ServerView::IpPort, std::vector<ServerView*>>& ServerRegistry::Ge
   return serverViewMap_;
 }
 
-const RouteView* ServerRegistry::GetRouteView(const std::string& ip, const std::string& port, const std::string& hostName, const std::string& targetPath) const
+const RouteView* ServerRegistry::GetRouteView(const std::string& ip, const std::string& port,
+                                              const std::string& hostName, const std::string& targetPath) const
 {
   auto ipPortIt = routeViewMap_.find(ServerView::IpPort{ip, port});
   if (ipPortIt == routeViewMap_.end())
   {
     return nullptr;
   }
+
   auto hostIt = ipPortIt->second.find(hostName);
+
   if (hostIt == ipPortIt->second.end())
   {
     return GetDefaultServerRouteView(ip, port, targetPath);
@@ -76,6 +80,7 @@ const RouteView* ServerRegistry::GetRouteView(const std::string& ip, const std::
       longestMatch = currentMatch;
     }
   }
+
   return routeView;
 }
 
@@ -102,7 +107,8 @@ std::size_t ServerRegistry::GetLenMatch(const std::string& targetPath, const std
   return locationPrefix.size();
 }
 
-const RouteView* ServerRegistry::GetDefaultServerRouteView(const std::string& ip, const std::string& port, const std::string& targetPath) const
+const RouteView* ServerRegistry::GetDefaultServerRouteView(const std::string& ip, const std::string& port,
+                                                           const std::string& targetPath) const
 {
   auto ipPortIt = defaultServerRouteViewMap_.find(ServerView::IpPort{ip, port});
   std::size_t longestMatch = 0;

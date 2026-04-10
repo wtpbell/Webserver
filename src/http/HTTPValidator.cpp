@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   HTTPValidator.cpp                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/01/13 19:07:39 by bewong            #+#    #+#             */
-/*   Updated: 2026/02/25 13:26:12 by bewong           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   HTTPValidator.cpp                                  :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/01/13 19:07:39 by bewong        #+#    #+#                 */
+/*   Updated: 2026/04/02 11:53:26 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,6 @@
 
 #include "http/HTTPCookie.hpp"
 #include "http/HTTPTypes.hpp"
-#include "http/HTTPUtils.hpp"
 #include "string.hpp"
 
 namespace
@@ -74,7 +73,7 @@ namespace HTTP::validate
     if (method == "OPTIONS" && target == "*")
       return true;
 
-    if (String::starts_with(target, "http://") || String::starts_with(target, "https://"))
+    if (String::StartsWith(target, "http://") || String::StartsWith(target, "https://"))
       return false;
 
     return IsValidPath(target);
@@ -127,32 +126,32 @@ namespace HTTP::validate
 
 }  // namespace HTTP::validate
 
-ValidationResult ValidateStartLine(const HTTPRequest& req)
+ValidationResult ValidateStartLine(const HTTPRequest& request)
 {
-  if (!HTTP::validate::IsValidVersion(req.GetVersion()))
-    return ValidationResult::VersionNotSupported;
-  if (!HTTP::validate::IsValidMethod(req.GetMethodString()))
-    return ValidationResult::NotImplemented;
-  if (!HTTP::validate::IsValidTarget(req.GetMethodString(), req.GetTarget()))
-    return ValidationResult::BadRequest;
-  return ValidationResult::OK;
+  if (!HTTP::validate::IsValidVersion(request.GetVersion()))
+    return ValidationResult::kVersionNotSupported;
+  if (!HTTP::validate::IsValidMethod(request.GetMethodString()))
+    return ValidationResult::kNotImplemented;
+  if (!HTTP::validate::IsValidTarget(request.GetMethodString(), request.GetTarget()))
+    return ValidationResult::kBadRequest;
+  return ValidationResult::kOk;
 }
 
-ValidationResult ValidateHeader(const HTTPRequest& req)
+ValidationResult ValidateHeader(const HTTPRequest& request)
 {
-  if (req.GetHeaderValueCountOf("host") != 1)
-    return ValidationResult::BadRequest;
-  for (const auto& [name, values] : req.GetHeaders())
+  if (request.GetHeaderValueCountOf("host") != 1)
+    return ValidationResult::kBadRequest;
+  for (const auto& [name, values] : request.GetHeaders())
   {
     if (!HTTP::validate::IsValidHeaderName(name))
-      return ValidationResult::BadRequest;
+      return ValidationResult::kBadRequest;
     for (const auto& v : values)
     {
       if (!HTTP::validate::IsValidHeaderValue(v))
-        return ValidationResult::BadRequest;
+        return ValidationResult::kBadRequest;
     }
   }
-  return ValidationResult::OK;
+  return ValidationResult::kOk;
 }
 
 /*
@@ -161,16 +160,16 @@ ValidationResult ValidateHeader(const HTTPRequest& req)
     cookie-pair   = cookie-name "=" cookie-value
     e.g Cookie: SID=31d4d96e407aad42; lang=en-US
 */
-ValidationResult ValidateCookies(const HTTPRequest& req)
+ValidationResult ValidateCookies(const HTTPRequest& request)
 {
-  const auto* vals = req.GetHeaderValuesOf("cookie");
+  const auto* vals = request.GetHeaderValuesOf("cookie");
   if (!vals || vals->empty())
-    return ValidationResult::OK;
+    return ValidationResult::kOk;
   if (vals->size() != 1)
-    return ValidationResult::BadRequest;
+    return ValidationResult::kBadRequest;
   if (!HTTP::validate::IsValidCookieHeader((*vals)[0]))
-    return ValidationResult::BadRequest;
-  return ValidationResult::OK;
+    return ValidationResult::kBadRequest;
+  return ValidationResult::kOk;
 }
 
 /*
@@ -178,54 +177,54 @@ ValidationResult ValidateCookies(const HTTPRequest& req)
     Handles comma-separated values
     Rejects unsupported encodings
 */
-ValidationResult ValidateTransferEncoding(const HTTPRequest& req)
+ValidationResult ValidateTransferEncoding(const HTTPRequest& request)
 {
-  const auto* vals = req.GetHeaderValuesOf("transfer-encoding");
+  const auto* vals = request.GetHeaderValuesOf("transfer-encoding");
   if (!vals || vals->empty())
-    return ValidationResult::OK;
+    return ValidationResult::kOk;
   std::vector<std::string> tokens;
   for (const auto& v : *vals)
   {
     if (!SplitCommaTokens(v, tokens))
-      return ValidationResult::BadRequest;
+      return ValidationResult::kBadRequest;
   }
   if (tokens.size() != 1)
-    return ValidationResult::BadRequest;
-  return (tokens[0] == "chunked") ? ValidationResult::OK : ValidationResult::NotImplemented;
+    return ValidationResult::kBadRequest;
+  return (tokens[0] == "chunked") ? ValidationResult::kOk : ValidationResult::kNotImplemented;
 }
 
 // may appear multiple times, but only if all values are identical
-ValidationResult ValidateContentLength(const HTTPRequest& req)
+ValidationResult ValidateContentLength(const HTTPRequest& request)
 {
-  const auto* te = req.GetHeaderValuesOf("transfer-encoding");
-  const auto* cl = req.GetHeaderValuesOf("content-length");
+  const auto* te = request.GetHeaderValuesOf("transfer-encoding");
+  const auto* cl = request.GetHeaderValuesOf("content-length");
 
   const bool has_te = te && !te->empty();
   const bool has_cl = cl && !cl->empty();
 
   if (has_te && has_cl)
-    return ValidationResult::BadRequest;
+    return ValidationResult::kBadRequest;
   if (!has_cl)
-    return ValidationResult::OK;
-  auto len = req.GetContentLength();
+    return ValidationResult::kOk;
+  auto len = request.GetContentLength();
   if (!len)
-    return ValidationResult::BadRequest;
+    return ValidationResult::kBadRequest;
   if (*len > HTTP::kMaxBodySize)
-    return ValidationResult::PayloadTooLarge;
-  return ValidationResult::OK;
+    return ValidationResult::kPayloadTooLarge;
+  return ValidationResult::kOk;
 }
 
-ValidationResult ValidateRequest(const HTTPRequest& req)
+ValidationResult ValidateRequest(const HTTPRequest& request)
 {
-  if (auto r = ValidateStartLine(req); r != ValidationResult::OK)
+  if (auto r = ValidateStartLine(request); r != ValidationResult::kOk)
     return r;
-  if (auto r = ValidateHeader(req); r != ValidationResult::OK)
+  if (auto r = ValidateHeader(request); r != ValidationResult::kOk)
     return r;
-  if (auto r = ValidateCookies(req); r != ValidationResult::OK)
+  if (auto r = ValidateCookies(request); r != ValidationResult::kOk)
     return r;
-  if (auto r = ValidateTransferEncoding(req); r != ValidationResult::OK)
+  if (auto r = ValidateTransferEncoding(request); r != ValidationResult::kOk)
     return r;
-  if (auto r = ValidateContentLength(req); r != ValidationResult::OK)
+  if (auto r = ValidateContentLength(request); r != ValidationResult::kOk)
     return r;
-  return ValidationResult::OK;
+  return ValidationResult::kOk;
 }

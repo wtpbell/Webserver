@@ -4115,7 +4115,7 @@ namespace Catch {
   #define INFO( msg )          (void)(0)
   #define UNSCOPED_INFO( msg ) (void)(0)
   #define WARN( msg )          (void)(0)
-  #define CAPTURE( ... )       (void)(0)
+  #define CAPTURE( ... )       (void)(0)CAPTURE
 
 #endif // end of user facing macro declarations
 

@@ -1,23 +1,23 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   ValidatorIpPort.cpp                                 :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2026/03/17 11:49:00 by jstuhrin       #+#    #+#                */
-/*   Updated: 2026/03/17 11:49:10 by jstuhrin       ########   odam.nl        */
+/*                                                        ::::::::            */
+/*   ValidatorIpPort.hpp                                :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/03/17 11:49:00 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/02 11:16:43 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <map>
-#include <string>
-#include <optional>
-
-#include "Parser.hpp"
-
 #ifndef VALIDATORIPPORT_HPP
 #define VALIDATORIPPORT_HPP
+
+#include <array>
+#include <map>
+#include <optional>
+#include <string>
+#include <string_view>
 
 class ValidatorIpPort
 {
@@ -40,13 +40,14 @@ class ValidatorIpPort
   private:
     bool ValidateQuartets(const std::array<std::string, 8>& quartets, std::string& errorMessage) const;
     bool ValidateDoubleColon(const std::string& ipv6, std::string& errorMessage) const;
-    bool ExpandIpv6Left(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                        std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const;
-    bool ExpandIpv6Right(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                         std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const;
+    bool ExpandIpv6Left(const std::string& ipv6, std::array<std::string, 8>& quartets, std::size_t& numQuartets,
+                        bool hasZeroCompression, std::string& errorMessage) const;
+    bool ExpandIpv6Right(const std::string& ipv6, std::array<std::string, 8>& quartets, std::size_t& numQuartets,
+                         bool hasZeroCompression, std::string& errorMessage) const;
     bool ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets, std::string& errorMessage) const;
-        bool IsZero(const std::string& quartet) const;
-    bool LongestConsecutiveZeros(const std::array<std::string, 8>& quartets, std::size_t& lenZeros, std::size_t& startZeros) const;
+    bool IsZero(const std::string& quartet) const;
+    bool LongestConsecutiveZeros(const std::array<std::string, 8>& quartets, std::size_t& lenZeros,
+                                 std::size_t& startZeros) const;
     void NormalizeQuartet(std::string& quartet) const;
     const std::string NormalizeIpv6(std::array<std::string, 8>& quartets) const;
 

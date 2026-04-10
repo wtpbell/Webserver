@@ -97,7 +97,7 @@ std::optional<HTTPRequest> CreateHTTPRequest(std::string_view message)
   HTTPParser parser;
 
   auto result = parser.Parse(message);
-  if (result == HTTPParser::ParseResult::Error || result == HTTPParser::ParseResult::NeedMoreData)
+  if (result == HTTPParser::ParseResult::kError || result == HTTPParser::ParseResult::kNeedMoreData)
     return std::nullopt;
 
   const HTTPRequest& request = parser.GetRequest();

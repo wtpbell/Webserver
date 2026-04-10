@@ -1,4 +1,4 @@
-/* ************************************************************************** */
+/* *4************************************************************************* */
 /*                                                                            */
 /*                                                        ::::::::            */
 /*   Server.hpp                                         :+:    :+:            */
@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/06 14:04:06 by bewong        #+#    #+#                 */
-/*   Updated: 2026/03/17 14:34:13 by jboon         ########   odam.nl         */
+/*   Updated: 2026/03/31 10:30:14 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include <netdb.h>
 
+#include <string>
 #include <unordered_map>
 
 #include "Connection.hpp"
@@ -23,6 +24,7 @@
 #include "config/ServerView.hpp"
 #include "http/SessionManager.hpp"
 #include "io/Socket.hpp"
+#include "router/Router.hpp"
 
 class Server
 {
@@ -44,6 +46,7 @@ class Server
     using sockaddr_storage_t = struct sockaddr_storage;
     using ConnectionIterator = std::unordered_map<int, Connection>::iterator;
 
+    std::string ExtractHostName(const HTTPRequest& request) const;
     void Accept(EpollManager& manager, const struct epoll_event& event);
     void HandleConnection(EpollManager& mananger, const struct epoll_event& event);
     void CloseConnection(EpollManager& manager, ConnectionIterator connection);
@@ -55,5 +58,4 @@ class Server
     SessionManager sessionManager_;
     std::unordered_map<int, Connection> connections_;
 };
-
 #endif  // SERVER_H_

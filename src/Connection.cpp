@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Connection.cpp                                     :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:34:04 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/01 20:51:29 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/07 09:53:24 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,32 +14,121 @@
 
 #include <sys/epoll.h>
 
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 
 #include "Logger.hpp"
+#include "config/RouteView.hpp"
 #include "config/ServerRegistry.hpp"
 #include "http/HTTPCookie.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPResponse.hpp"
 #include "http/HTTPUtils.hpp"
 #include "http/HTTPValidator.hpp"
+#include "http/ResponseFactory.hpp"
 #include "http/SessionManager.hpp"
+#include "router/Router.hpp"
 #include "string.hpp"
+
+namespace fs = std::filesystem;
+
+namespace
+{
+
+  fs::path MakeUploadTempPath(int client_fd)
+  {
+    static std::uint64_t counter = 0;
+    fs::path dir = "./www/.upload_tmp";
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    return dir / ("up_" + std::to_string(client_fd) + "_" + std::to_string(++counter) + ".tmp");
+  }
+
+}  // namespace
+
+Connection::State Connection::FailRequest(ValidationResult error)
+{
+  QueueError(error);
+  closeAfterSend_ = true;
+  matchedRoute_ = nullptr;
+  matchedHost_.clear();
+  return State::kKeepAlive;
+}
+
+Connection::State Connection::ProcessInput(std::string_view in, const Router& router,
+                                           const ServerRegistry& serverRegistry, SessionManager& sessionManager)
+{
+  while (true)
+  {
+    HTTPParser::ParseResult result = parser_.Parse(in);
+    in = {};
+
+    if (result == HTTPParser::ParseResult::kNeedMoreData)
+      return State::kKeepAlive;
+
+    if (result == HTTPParser::ParseResult::kError)
+      return FailRequest(parser_.GetError());
+
+    if (result == HTTPParser::ParseResult::kHeadersDone)
+    {
+      std::optional<ValidationResult> headerError = HandleHeadersDone(serverRegistry);
+      if (headerError)
+      {
+        parser_.ResetNextRequest();
+        return FailRequest(*headerError);
+      }
+      continue;
+    }
+
+    HTTPRequest request = parser_.TakeRequest();
+    parser_.ResetNextRequest();
+
+    const RouteView* route = matchedRoute_;
+    const std::string hostName = matchedHost_;
+    matchedRoute_ = nullptr;
+    matchedHost_.clear();
+
+    HTTPResponse response;
+    if (route == nullptr)
+      response = HTTP::response::MakeError(HTTP::Status::kNotFound);
+    else
+      response = router.Dispatch(request, *route, serverRegistry, ipport_, hostName);
+
+    sessionManager.UseOrCreateSession(request, response);
+
+    const bool closeAfter = CheckConnectionClose(request, response);
+    if (closeAfter)
+      response.SetHeader("Connection", "close");
+
+    QueueResponse(response, closeAfter);
+
+    if (closeAfter)
+      return State::kKeepAlive;
+  }
+}
+
+Connection::Connection(Socket socket)
+    : socket_(std::move(socket)), matchedRoute_(nullptr), remaining_(0), closeAfterSend_(false), peerClosed_(false)
+{
+}
 
 void Connection::SetPeerClosed(bool close)
 {
   peerClosed_ = close;
 }
 
-const Socket& Connection::GetSocket(void) const
-{
-  return socket_;
-}
-
 bool Connection::HasPendingOutput(void) const
 {
   return !outputQueue_.empty();
+}
+
+const Socket& Connection::GetSocket(void) const
+{
+  return socket_;
 }
 
 void Connection::Clear(void)
@@ -48,6 +137,9 @@ void Connection::Clear(void)
   remaining_ = 0;
   closeAfterSend_ = false;
   peerClosed_ = false;
+  matchedRoute_ = nullptr;
+  matchedHost_.clear();
+  ipport_ = {};
 
   socket_.Reset();
   parser_.Reset();
@@ -55,96 +147,21 @@ void Connection::Clear(void)
 
 /********************************************* Event Handlers *********************************************************/
 
-HTTPResponse Connection::DispatchRequest(const HTTPRequest& req)
-{
-  HTTPResponse r;
-
-  switch (req.GetMethod())
-  {
-    case HTTP::Method::GET:
-      r.SetStatus(HTTP::Status::OK);
-      r.SetHeader("Content-Type", "text/plain");
-      r.SetBody("Success\n");
-      return r;
-
-    case HTTP::Method::POST:
-      r.SetStatus(HTTP::Status::NO_CONTENT);
-      return r;
-
-    case HTTP::Method::DELETE:
-    case HTTP::Method::UNSUPPORTED:
-      break;
-  }
-  r.SetStatus(HTTP::Status::NOT_IMPLEMENTED);
-  r.SetHeader("Content-Type", "text/plain");
-  r.SetBody("Method Not Implemented\n");
-  return r;
-}
-
 Connection::State Connection::HandleRequest(const IpPort& ipport, const Router& router,
-                                            const ServerRegistry& serverRegistry, SessionManager& session_manager)
+                                            const ServerRegistry& serverRegistry, SessionManager& sessionManager)
 {
-  // TODO: Make use of these members
-  (void)ipport;
-  (void)router;
-  (void)serverRegistry;
+  ipport_ = ipport;
 
   std::string msg;
-  const ReadResult rr = ReadOnce(msg);
-  if (rr == ReadResult::kClosed)
+  const ReadResult result = ReadOnce(msg);
+  if (result == ReadResult::kClosed)
   {
     peerClosed_ = true;
-    if (outputQueue_.empty())
-    {
-      return State::kClose;
-    }
-    return State::kKeepAlive;
+    return outputQueue_.empty() ? State::kClose : State::kKeepAlive;
   }
-  else if (rr == ReadResult::kFatal)
-  {
+  if (result == ReadResult::kFatal)
     return State::kError;
-  }
-
-  std::string_view in = msg;
-  while (true)
-  {
-    HTTPParser::ParseResult result = parser_.Parse(in);
-    in = {};
-
-    if (result == HTTPParser::ParseResult::NeedMoreData)
-    {
-      break;
-    }
-    if (result == HTTPParser::ParseResult::Error)
-    {
-      Logger::Log(LogLevel::ERROR, "Connection: Bad request from client {} - Parser error", socket_);
-      QueueError(parser_.GetError());
-      closeAfterSend_ = true;  // parser error: close
-      return State::kKeepAlive;
-    }
-    if (result == HTTPParser::ParseResult::HeadersDone)
-    {
-      HandleHeadersDone();
-      continue;
-    }
-
-    HTTPRequest req = parser_.TakeRequest();
-    parser_.ResetNextRequest();
-    HTTPResponse resp = DispatchRequest(req);
-    session_manager.UseOrCreateSession(req, resp);
-    const bool closeAfter = CheckConnectionClose(&req, resp);
-
-    if (closeAfter)
-    {
-      resp.SetHeader("Connection", "close");
-    }
-    QueueResponse(resp, closeAfter);
-    if (closeAfter)
-    {
-      return State::kKeepAlive;  // stop processing further pipelined requests on this connection
-    }
-  }
-  return State::kKeepAlive;
+  return ProcessInput(msg, router, serverRegistry, sessionManager);
 }
 
 Connection::State Connection::HandleResponse(void)
@@ -179,12 +196,16 @@ Connection::State Connection::HandleResponse(void)
 
 /********************************************* Queue Response *********************************************************/
 
-void Connection::QueueResponse(const HTTPResponse& resp, bool closeAfter)
+void Connection::QueueResponse(const HTTPResponse& response, bool closeAfter)
 {
-  outputQueue_.push_back(HTTP::wire::SerializeResponse(resp));
+  std::string wire = HTTP::wire::SerializeResponse(response);
+
+  if (!outputQueue_.empty())
+    wire.insert(0, "\r\n");
+
+  outputQueue_.push_back(std::move(wire));
   closeAfterSend_ = closeAfterSend_ || closeAfter;
 
-  // If we just queued the first item, reset send offset
   if (outputQueue_.size() == 1)
     remaining_ = 0;
 }
@@ -201,48 +222,104 @@ void Connection::QueueError(ValidationResult result)
 
 /*************************************** Parsing / Validation / Body **************************************************/
 
-// After ValidateRequest(req) == OK:
+// After ValidateRequest(request) == kOk:
 // - transfer-encoding is either absent or exactly "chunked"
 // - transfer-encoding and content-length are not both present
 // - content-length (if present) is valid and within limits
-void Connection::InitBodyParser(HTTPParser& parser, const HTTPRequest& req)
+void Connection::InitBodyParser(HTTPParser& parser, const HTTPRequest& request)
 {
-  if (req.HasHeader("transfer-encoding"))
+  if (request.IsChunked())
     return parser.SetChunked();
 
-  if (auto len = req.GetContentLength())
+  std::optional<std::size_t> len = request.GetContentLength();
+  if (len)
     return parser.SetContentLength(*len);
 
   parser.SetNoBody();
 }
 
-void Connection::HandleHeadersDone(void)
+std::optional<ValidationResult> Connection::ValidatePartialRequest(HTTPRequest& request)
 {
-  HTTPRequest& partial = parser_.GetRequestMutable();
-  const ValidationResult vr = ValidateRequest(partial);
+  const ValidationResult validationResult = ValidateRequest(request);
+  if (validationResult == ValidationResult::kOk)
+    return std::nullopt;
 
-  if (vr != ValidationResult::OK)
-  {
-    Logger::Log(LogLevel::ERROR, "Connection: Validation error ({}) on req [{} {}] from client {}",
-                static_cast<int>(vr), partial.GetMethodString(), partial.GetTarget(), socket_.GetFD());
-    QueueError(vr);
-    closeAfterSend_ = true;
-    parser_.ResetNextRequest();
-    return;
-  }
-  if (!HTTP::cookie::AttachCookies(partial))
-  {
-    QueueError(ValidationResult::BadRequest);
-    closeAfterSend_ = true;
-    parser_.ResetNextRequest();
-    return;
-  }
-  InitBodyParser(parser_, partial);
+  Logger::Log(LogLevel::ERROR, "Connection: Validation error ({}) on request [{} {}] from client {}",
+              static_cast<int>(validationResult), request.GetMethodString(), request.GetTarget(), socket_.GetFD());
+
+  return validationResult;
 }
 
-bool Connection::CheckConnectionClose(const HTTPRequest* request, const HTTPResponse& response) const
+void Connection::MatchRouteAndApplyLimits(const ServerRegistry& serverRegistry, const HTTPRequest& request)
 {
-  return String::IsCloseToken(request->GetFirstHeaderValueOf("connection")) ||
+  matchedHost_ = std::string(request.GetHost());
+  const std::string targetPath(request.GetPath());
+
+  Logger::Log(LogLevel::INFO, "lookup ip='{}' port='{}' host='{}' path='{}'", ipport_.ip, ipport_.port, matchedHost_,
+              targetPath);
+
+  matchedRoute_ = serverRegistry.GetRouteView(ipport_.ip, ipport_.port, matchedHost_, targetPath);
+
+  if (matchedRoute_ != nullptr)
+    parser_.SetMaxBody(matchedRoute_->clientMaxBody);
+  else
+    parser_.SetMaxBody(HTTP::kMaxBodySize);
+}
+
+std::optional<ValidationResult> Connection::ConfigureBodyStorage(HTTPRequest& request)
+{
+  const bool isChunked = request.IsChunked();
+  const std::optional<std::size_t> contentLength = request.GetContentLength();
+
+  if (isChunked || (contentLength && *contentLength >= HTTP::kMemoryThreshold))
+  {
+    const fs::path tempPath = MakeUploadTempPath(socket_.GetFD());
+    request.SetBodyFilePath(tempPath);
+
+    std::unique_ptr<FileSink> sink = std::make_unique<FileSink>(tempPath);
+    if (!sink->IsOpen())
+      return ValidationResult::kInternalServerError;
+
+    parser_.SetBodySink(std::move(sink));
+  }
+  else
+  {
+    parser_.SetBodySink(std::make_unique<MemorySink>(request));
+  }
+
+  return std::nullopt;
+}
+
+std::optional<ValidationResult> Connection::AttachRequestCookies(HTTPRequest& request)
+{
+  if (HTTP::cookie::AttachCookies(request))
+    return std::nullopt;
+
+  return ValidationResult::kBadRequest;
+}
+
+std::optional<ValidationResult> Connection::HandleHeadersDone(const ServerRegistry& serverRegistry)
+{
+  HTTPRequest& request = parser_.GetRequestMutable();
+
+  if (std::optional<ValidationResult> validationError = ValidatePartialRequest(request))
+    return validationError;
+
+  MatchRouteAndApplyLimits(serverRegistry, request);
+
+  if (std::optional<ValidationResult> storageError = ConfigureBodyStorage(request))
+    return storageError;
+
+  if (std::optional<ValidationResult> cookieError = AttachRequestCookies(request))
+    return cookieError;
+
+  InitBodyParser(parser_, request);
+  return std::nullopt;
+}
+
+bool Connection::CheckConnectionClose(const HTTPRequest& request, const HTTPResponse& response) const
+{
+  return String::IsCloseToken(request.GetFirstHeaderValueOf("connection")) ||
          String::IsCloseToken(response.GetFirstHeaderValueOf("connection"));
 }
 

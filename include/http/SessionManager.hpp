@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   SessionManager.hpp                                 :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/02/25 11:01:25 by bewong            #+#    #+#             */
-/*   Updated: 2026/02/25 11:01:25 by bewong           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   SessionManager.hpp                                 :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/04/02 09:57:12 by bewong        #+#    #+#                 */
+/*   Updated: 2026/04/02 09:57:12 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,8 +31,8 @@ class SessionManager
     SessionManager& operator=(SessionManager&& other) noexcept = default;
     ~SessionManager(void) = default;
 
-    void UseOrCreateSession(HTTPRequest& req, HTTPResponse& res);
-    void UseOrCreateSessionAt(HTTPRequest& req, HTTPResponse& res, std::time_t now);
+    void UseOrCreateSession(HTTPRequest& request, HTTPResponse& res);
+    void UseOrCreateSessionAt(HTTPRequest& request, HTTPResponse& res, std::time_t now);
 
 #ifdef UNIT_TEST
 

@@ -22,26 +22,30 @@ namespace HTTP
 {
   enum class Status : std::uint16_t
   {
-    OK = 200,
-    CREATED = 201,
-    NO_CONTENT = 204,
+    kOk = 200,
+    kCreated = 201,
+    kAccepted = 202,
+    kNoContent = 204,
 
-    BAD_REQUEST = 400,
-    UNAUTHORIZED = 401,
-    FORBIDDEN = 403,
-    NOT_FOUND = 404,
-    METHOD_NOT_ALLOWED = 405,
-    PAYLOAD_TOO_LARGE = 413,
-    URI_TOO_LONG = 414,
-    UNSUPPORTED_MEDIA_TYPE = 415,
-    RANGE_NOT_SATISFIABLE = 416,
+    kMovedPermanently = 301,
+    kFound = 302,
 
-    INTERNAL_SERVER_ERROR = 500,
-    NOT_IMPLEMENTED = 501,
-    BAD_GATEWAY = 502,
-    SERVICE_UNAVAILABLE = 503,
-    GATEWAY_TIMEOUT = 504,
-    HTTP_VERSION_NOT_SUPPORTED = 505
+    kBadRequest = 400,
+    kUnauthorized = 401,
+    kForbidden = 403,
+    kNotFound = 404,
+    kMethodNotAllowed = 405,
+    kPayloadTooLarge = 413,
+    kURITooLong = 414,
+    kUnsupportedMediaType = 415,
+    kRangeNotSatisfiable = 416,
+
+    kInternalServerError = 500,
+    kNotImplemented = 501,
+    kBadGateway = 502,
+    kServiceUnavailable = 503,
+    kGatewayTimeout = 504,
+    kVersionNotSupported = 505
   };
 
   Status ToHTTPStatus(ValidationResult vr);

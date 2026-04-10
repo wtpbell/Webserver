@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 17:14:02 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:46:11 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/02 15:48:04 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <string_view>
 
 #include "Logger.hpp"
+#include "http/BodySink.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPTypes.hpp"
 #include "string.hpp"
@@ -53,18 +54,18 @@ namespace
 
 bool HTTPParser::IsComplete(void) const
 {
-  return state_ == ParserState::Done;
+  return state_ == ParserState::kDone;
 }
 
 bool HTTPParser::HasError(void) const
 {
-  return state_ == ParserState::Error;
+  return state_ == ParserState::kError;
 }
 
 void HTTPParser::Fail(ValidationResult vr)
 {
   error_ = vr;
-  state_ = ParserState::Error;
+  state_ = ParserState::kError;
 }
 
 /************************************************** Getter ***********************************************************/
@@ -87,57 +88,73 @@ HTTPRequest& HTTPParser::GetRequestMutable(void)
 void HTTPParser::Reset(void)
 {
   req_ = HTTPRequest();
-  state_ = ParserState::StartLine;
+  state_ = ParserState::kStartLine;
   buffer_.clear();
   pos_ = 0;
   contentLength_ = 0;
   bodyRead_ = 0;
   chunk_ = ChunkState{};
-  error_ = ValidationResult::OK;
+  error_ = ValidationResult::kOk;
   headerStart_ = 0;
+
+  bodySink_.reset();
+  maxBody_ = 0;
+  bodyBytes_ = 0;
 }
 
 HTTPRequest HTTPParser::TakeRequest(void)
 {
-  HTTPRequest req = std::move(req_);
-  state_ = ParserState::Done;
-  // clear parser only after request destroyed
-  return req;
+  HTTPRequest request = std::move(req_);
+  state_ = ParserState::kDone;
+  return request;
 }
 
 /************************************************** Setter ***********************************************************/
 
 bool HTTPParser::NeedsBodyDecision(void) const
 {
-  return state_ == ParserState::AwaitBodyDecision;
+  return state_ == ParserState::kAwaitBodyDecision;
 }
 
 void HTTPParser::SetNoBody(void)
 {
   // only valid after headers end
-  if (state_ != ParserState::AwaitBodyDecision)
-    return (Fail(), void());
+  if (state_ != ParserState::kAwaitBodyDecision)
+    return (Fail(ValidationResult::kBadRequest), void());
 
-  state_ = ParserState::Done;
+  state_ = ParserState::kDone;
 }
 
 void HTTPParser::SetContentLength(std::size_t n)
 {
-  if (state_ != ParserState::AwaitBodyDecision)
-    return (Fail(), void());
+  if (state_ != ParserState::kAwaitBodyDecision)
+    return (Fail(ValidationResult::kBadRequest), void());
+
+  if (maxBody_ > 0 && n > maxBody_)
+    return (Fail(ValidationResult::kPayloadTooLarge), void());
 
   contentLength_ = n;
   bodyRead_ = 0;
-  state_ = (contentLength_ > 0) ? ParserState::Body : ParserState::Done;
+  state_ = (contentLength_ > 0) ? ParserState::kBody : ParserState::kDone;
 }
 
 void HTTPParser::SetChunked(void)
 {
-  if (state_ != ParserState::AwaitBodyDecision)
-    return (Fail(), void());
+  if (state_ != ParserState::kAwaitBodyDecision)
+    return (Fail(ValidationResult::kBadRequest), void());
 
   chunk_ = ChunkState{};
-  state_ = ParserState::Chunked;
+  state_ = ParserState::kChunked;
+}
+
+void HTTPParser::SetMaxBody(std::size_t n)
+{
+  maxBody_ = n;
+}
+
+void HTTPParser::SetBodySink(std::unique_ptr<IBodySink> sink)
+{
+  bodySink_ = std::move(sink);
 }
 
 /************************************************ Parse lines *********************************************************/
@@ -214,7 +231,6 @@ am\r\n
 \r\n trailer section
 we get Codam at the end
 */
-// TODO: check the kMAxBodySize -> return 413
 bool HTTPParser::ParseChunkSize(void)
 {
   std::size_t lineEnd;
@@ -236,7 +252,7 @@ bool HTTPParser::ParseChunkSize(void)
     return (Fail(), false);  // invalid chunk size
 
   chunk_.remaining = size;
-  chunk_.phase = (size == 0) ? ChunkState::Phase::Trailer : ChunkState::Phase::Data;
+  chunk_.phase = (size == 0) ? ChunkState::Phase::kTrailer : ChunkState::Phase::kData;
 
   return true;
 }
@@ -245,10 +261,13 @@ bool HTTPParser::ParseChunkData(void)
 {
   if (buffer_.size() - pos_ < chunk_.remaining)
     return false;
-  req_.AppendBody(std::string_view(buffer_.data() + pos_, chunk_.remaining));
+
+  if (!WriteBodyChunk(std::string_view(buffer_.data() + pos_, chunk_.remaining)))
+    return false;
+
   pos_ += chunk_.remaining;
   chunk_.remaining = 0;
-  chunk_.phase = ChunkState::Phase::DataCRLF;
+  chunk_.phase = ChunkState::Phase::kDataCRLF;
   return true;
 }
 
@@ -257,7 +276,7 @@ bool HTTPParser::ParseChunkCRLF(void)
   if (buffer_.size() - pos_ < 2)
     return false;
   if (buffer_[pos_] != '\r' || buffer_[pos_ + 1] != '\n')
-    return (Fail(), false);
+    return (Fail(ValidationResult::kBadRequest), false);
 
   pos_ += 2;
   return true;
@@ -267,7 +286,6 @@ bool HTTPParser::ParseChunkTrailer(void)
 {
   // We are at the start of trailer section after "0\r\n".
   // Trailer section ends with an empty line "\r\n".
-  // For now, reject any non-empty trailer lines.
 
   while (true)
   {
@@ -280,12 +298,11 @@ bool HTTPParser::ParseChunkTrailer(void)
     if (lineEnd == lineStart)
     {
       // empty line => end of trailers
-      chunk_.phase = ChunkState::Phase::Done;
+      chunk_.phase = ChunkState::Phase::kDone;
       return true;
     }
 
-    // Non-empty trailer line present: reject (not supported yet)
-    return (Fail(), false);
+    return (Fail(ValidationResult::kBadRequest), false);
   }
 }
 
@@ -293,8 +310,8 @@ bool HTTPParser::ParseChunkTrailer(void)
 
 /*
     @brief Parses the start line of the HTTP request
-    @return ParseProgress::NeedMoreData if need more data,
-    ParseProgress::Advance if made progress or terminal state(Done / Error)
+    @return ParseProgress::kNeedMoreData if need more data,
+    ParseProgress::Advance if made progress or terminal state(kDone / Error)
     @note It is RECOMMENDED that all HTTP senders and recipients support, at a minimum, request-line lengths of 8000
    octets.
     @note nginx default is ~8k–16k depending on build
@@ -311,7 +328,7 @@ bool HTTPParser::ParseStartLine(void)
     {
       if (buffer_.size() - lineStart > HTTP::kMaxRequestLine)  // if the request line is too long
       {
-        Fail(ValidationResult::URITooLong);
+        Fail(ValidationResult::kURITooLong);
         return false;
       }
       return false;  // is incomplete, need more data
@@ -321,7 +338,7 @@ bool HTTPParser::ParseStartLine(void)
       continue;
     if (!ParseRequestLine(lineStart, lineEnd))
       return false;
-    state_ = ParserState::Headers;  // move to next state
+    state_ = ParserState::kHeaders;  // move to next state
     headerStart_ = pos_;
     return true;
   }
@@ -330,7 +347,7 @@ bool HTTPParser::ParseStartLine(void)
 /*
     @brief Parses the headers of the HTTP request
     @return ParseProgress::NeedMoreData if need more data,
-    ParseProgress::Advance if made progress or terminal state(Done / Error)
+    ParseProgress::Advance if made progress or terminal state(kDone / Error)
     @note A server MUST reject any received request message that contains
     whitespace between a header field-name and colon with a response code of 400 (Bad Request).
 */
@@ -344,17 +361,17 @@ bool HTTPParser::ParseHeaders(void)
     if (!ConsumeLine(buffer_, pos_, lineEnd))
     {
       if (buffer_.size() - headerStart_ > HTTP::kMaxHeaderSize)
-        Fail(ValidationResult::PayloadTooLarge);
+        Fail(ValidationResult::kPayloadTooLarge);
       return false;
     }
     if (lineEnd - headerStart_ > HTTP::kMaxHeaderSize)
     {
-      Fail(ValidationResult::PayloadTooLarge);
+      Fail(ValidationResult::kPayloadTooLarge);
       return false;
     }
     if (lineEnd == lineStart)
     {
-      state_ = ParserState::AwaitBodyDecision;
+      state_ = ParserState::kAwaitBodyDecision;
       return true;
     }
 
@@ -363,10 +380,27 @@ bool HTTPParser::ParseHeaders(void)
   }
 }
 
+bool HTTPParser::WriteBodyChunk(std::string_view chunk)
+{
+  if (maxBody_ > 0 && bodyBytes_ + chunk.size() > maxBody_)
+    return (Fail(ValidationResult::kPayloadTooLarge), false);
+
+  if (bodySink_)
+  {
+    if (!bodySink_->Write(chunk))
+    {
+      state_ = ParserState::kError;
+      return false;
+    }
+  }
+  else
+    req_.AppendBody(chunk);
+
+  bodyBytes_ += chunk.size();
+  return true;
+}
+
 // read exactly contentLength bytes from the stream
-// TODO(VALIDATE): max body size -> 413
-// TODO(VALIDATE): reject Content-Length for GET/HEAD?
-// TODO(VALIDATE): handle multiple Content-Length
 bool HTTPParser::ParseBody(void)
 {
   const std::size_t available = buffer_.size() - pos_;
@@ -374,18 +408,21 @@ bool HTTPParser::ParseBody(void)
 
   if (remaining == 0)
   {
-    state_ = ParserState::Done;
+    state_ = ParserState::kDone;
     return true;
   }
-
   if (available == 0)
     return false;
-  std::size_t take = std::min(available, remaining);
-  req_.AppendBody(std::string_view(buffer_.data() + pos_, take));
+
+  const std::size_t take = std::min(available, remaining);
+  if (!WriteBodyChunk(std::string_view(buffer_.data() + pos_, take)))
+    return false;
+
   pos_ += take;
   bodyRead_ += take;
+
   if (bodyRead_ == contentLength_)
-    state_ = ParserState::Done;
+    state_ = ParserState::kDone;
 
   return true;
 }
@@ -396,29 +433,29 @@ bool HTTPParser::ParseChunked(void)
   {
     switch (chunk_.phase)
     {
-      case ChunkState::Phase::SizeLine:
+      case ChunkState::Phase::kSizeLine:
         if (!ParseChunkSize())
           return false;
         break;
 
-      case ChunkState::Phase::Data:
+      case ChunkState::Phase::kData:
         if (!ParseChunkData())
           return false;
         break;
 
-      case ChunkState::Phase::DataCRLF:
+      case ChunkState::Phase::kDataCRLF:
         if (!ParseChunkCRLF())
           return false;
-        chunk_.phase = ChunkState::Phase::SizeLine;
+        chunk_.phase = ChunkState::Phase::kSizeLine;
         break;
 
-      case ChunkState::Phase::Trailer:
+      case ChunkState::Phase::kTrailer:
         if (!ParseChunkTrailer())
           return false;
         break;
 
-      case ChunkState::Phase::Done:
-        state_ = ParserState::Done;
+      case ChunkState::Phase::kDone:
+        state_ = ParserState::kDone;
         return true;
     }
   }
@@ -426,16 +463,16 @@ bool HTTPParser::ParseChunked(void)
 
 HTTPParser::ParseResult HTTPParser::ExitResult(void)
 {
-  if (state_ == ParserState::Done)
+  if (state_ == ParserState::kDone)
   {
     req_.SetComplete(true);
-    return ParseResult::Done;
+    return ParseResult::kDone;
   }
-  if (state_ == ParserState::Error)
-    return ParseResult::Error;
-  if (state_ == ParserState::AwaitBodyDecision)
-    return ParseResult::HeadersDone;
-  return ParseResult::NeedMoreData;
+  if (state_ == ParserState::kError)
+    return ParseResult::kError;
+  if (state_ == ParserState::kAwaitBodyDecision)
+    return ParseResult::kHeadersDone;
+  return ParseResult::kNeedMoreData;
 }
 
 /*
@@ -453,18 +490,18 @@ HTTPParser::ParseResult HTTPParser::ExitResult(void)
 */
 HTTPParser::ParseResult HTTPParser::Parse(std::string_view input)
 {
-  if (state_ == ParserState::Done || state_ == ParserState::Error)
+  if (state_ == ParserState::kDone || state_ == ParserState::kError)
     return ExitResult();
   buffer_.append(input);
-  if (state_ == ParserState::StartLine && !ParseStartLine())
+  if (state_ == ParserState::kStartLine && !ParseStartLine())
     return ExitResult();
-  if (state_ == ParserState::Headers && !ParseHeaders())
+  if (state_ == ParserState::kHeaders && !ParseHeaders())
     return ExitResult();
-  if (state_ == ParserState::AwaitBodyDecision)
+  if (state_ == ParserState::kAwaitBodyDecision)
     return ExitResult();
-  if (state_ == ParserState::Body && !ParseBody())
+  if (state_ == ParserState::kBody && !ParseBody())
     return ExitResult();
-  if (state_ == ParserState::Chunked && !ParseChunked())
+  if (state_ == ParserState::kChunked && !ParseChunked())
     return ExitResult();
   return ExitResult();
 }
@@ -474,11 +511,17 @@ void HTTPParser::ResetNextRequest(void)
   if (pos_ > 0)
     buffer_.erase(0, pos_);
   pos_ = 0;
+
   req_.HTTPRequest::Clear();
-  state_ = ParserState::StartLine;
+
+  state_ = ParserState::kStartLine;
   contentLength_ = 0;
   bodyRead_ = 0;
   chunk_ = ChunkState{};
-  error_ = ValidationResult::OK;
+  error_ = ValidationResult::kOk;
   headerStart_ = 0;
+
+  bodySink_.reset();
+  maxBody_ = 0;
+  bodyBytes_ = 0;
 }

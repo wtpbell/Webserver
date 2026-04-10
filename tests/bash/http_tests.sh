@@ -96,7 +96,7 @@ run "POST with Content-Length 0" \
 #
 
 run "missing Host header" \
-"Parse OK, Validate FAIL (BadRequest)" \
+"Parse OK, Validate FAIL (kBadRequest)" \
 "close" \
 "GET / HTTP/1.1\r\n\r\n"
 
@@ -111,7 +111,7 @@ run "unsupported method" \
 "BREW /coffee HTTP/1.1\r\nHost: localhost\r\n\r\n"
 
 run "absolute URI (proxy style)" \
-"Parse OK, Validate FAIL (BadRequest – origin-form only)" \
+"Parse OK, Validate FAIL (kBadRequest – origin-form only)" \
 "close" \
 "GET http://example.com/ HTTP/1.1\r\nHost: example.com\r\n\r\n"
 
@@ -120,7 +120,7 @@ run "absolute URI (proxy style)" \
 #
 
 run "directory traversal above root" \
-"Parse OK, NormalizePath FAIL (BadRequest or Forbidden)" \
+"Parse OK, NormalizePath FAIL (kBadRequest or Forbidden)" \
 "close" \
 "GET /../../etc/passwd HTTP/1.1\r\nHost: localhost\r\n\r\n"
 
@@ -143,7 +143,7 @@ run "invalid header name (space)" \
 #
 
 run "Content-Length + chunked" \
-"Parse OK, Validate FAIL (BadRequest – CL + chunked)" \
+"Parse OK, Validate FAIL (kBadRequest – CL + chunked)" \
 "close" \
 "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\nTransfer-Encoding: chunked\r\n\r\n"
 

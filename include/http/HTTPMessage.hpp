@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/15 16:20:44 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 16:55:32 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/02 11:17:26 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "http/HTTPTypes.hpp"
 
@@ -37,7 +38,7 @@ class HTTPMessage
     const std::string& GetBody(void) const;
 
     void SetVersion(std::string ver);
-    void SetBody(const std::string& body);
+    void SetBody(std::string&& body);
     void SetHeader(std::string_view name, std::string_view value);
 
     void AddHeader(std::string_view name, std::string_view value);

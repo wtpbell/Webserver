@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:22:46 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/10 17:47:11 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/07 10:25:55 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 #include <charconv>
 #include <chrono>
 #include <cstring>
+#include <ctime>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -109,7 +111,7 @@ namespace String
     result += hex[c & 0x0F];
   }
 
-  bool starts_with(std::string_view s, std::string_view prefix)
+  bool StartsWith(std::string_view s, std::string_view prefix)
   {
     return s.size() >= prefix.size() && s.compare(0, prefix.size(), prefix) == 0;
   }
@@ -178,5 +180,28 @@ namespace String
     if (std::strftime(stime, n, "%a, %d %b %Y %H:%M:%S GMT", &tm) > 0)
       return stime;
     return std::strncpy(stime, "Fri, 13 Dec 1901 20:45:52 GMT", n);
+  }
+
+  const char* GMTCstringFromTime(std::time_t time, char* stime, std::size_t n)
+  {
+    std::tm tm{};
+    gmtime_r(&time, &tm);
+
+    if (std::strftime(stime, n, "%a, %d %b %Y %H:%M:%S GMT", &tm) > 0)
+      return stime;
+
+    if (n > 0)
+      stime[0] = '\0';
+    return stime;
+  }
+
+  std::time_t FileTimeToTimeT(const std::filesystem::file_time_type& ft)
+  {
+    using namespace std::chrono;
+
+    const auto sctp = time_point_cast<system_clock::duration>(ft - std::filesystem::file_time_type::clock::now() +
+                                                              system_clock::now());
+
+    return system_clock::to_time_t(sctp);
   }
 }  // namespace String

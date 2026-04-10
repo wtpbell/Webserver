@@ -15,13 +15,13 @@ python3 - <<'PY' | send_raw
 # Use 9000 > 8192.
 big = "a" * 9000
 
-req = (
+request = (
   "GET / HTTP/1.1\r\n"
   "Host: localhost\r\n"
   f"X-Big: {big}\r\n"
   "\r\n"
 )
-print(req, end="")
+print(request, end="")
 PY
 )"
 

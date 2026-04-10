@@ -23,18 +23,20 @@ namespace HTTP
   {
     switch (vr)
     {
-      case ValidationResult::OK:
-        return Status::OK;
-      case ValidationResult::BadRequest:
-        return Status::BAD_REQUEST;
-      case ValidationResult::URITooLong:
-        return Status::URI_TOO_LONG;
-      case ValidationResult::PayloadTooLarge:
-        return Status::PAYLOAD_TOO_LARGE;
-      case ValidationResult::NotImplemented:
-        return Status::NOT_IMPLEMENTED;
-      case ValidationResult::VersionNotSupported:
-        return Status::HTTP_VERSION_NOT_SUPPORTED;
+      case ValidationResult::kOk:
+        return Status::kOk;
+      case ValidationResult::kBadRequest:
+        return Status::kBadRequest;
+      case ValidationResult::kURITooLong:
+        return Status::kURITooLong;
+      case ValidationResult::kPayloadTooLarge:
+        return Status::kPayloadTooLarge;
+      case ValidationResult::kNotImplemented:
+        return Status::kNotImplemented;
+      case ValidationResult::kVersionNotSupported:
+        return Status::kVersionNotSupported;
+      case ValidationResult::kInternalServerError:
+        return Status::kInternalServerError;
     }
     assert(false && "Invalid validation result");
     __builtin_unreachable();
@@ -44,43 +46,49 @@ namespace HTTP
   {
     switch (status)
     {
-      case Status::OK:
+      case Status::kOk:
         return "OK";
-      case Status::CREATED:
+      case Status::kCreated:
         return "Created";
-      case Status::NO_CONTENT:
+      case Status::kAccepted:
+        return "Accepted";
+      case Status::kNoContent:
         return "No Content";
+      case Status::kMovedPermanently:
+        return "Moved Permanently";
+      case Status::kFound:
+        return "Found";
 
-      case Status::BAD_REQUEST:
+      case Status::kBadRequest:
         return "Bad Request";
-      case Status::UNAUTHORIZED:
+      case Status::kUnauthorized:
         return "Unauthorized";
-      case Status::FORBIDDEN:
+      case Status::kForbidden:
         return "Forbidden";
-      case Status::NOT_FOUND:
+      case Status::kNotFound:
         return "Not Found";
-      case Status::METHOD_NOT_ALLOWED:
+      case Status::kMethodNotAllowed:
         return "Method Not Allowed";
-      case Status::PAYLOAD_TOO_LARGE:
+      case Status::kPayloadTooLarge:
         return "Payload Too Large";
-      case Status::URI_TOO_LONG:
+      case Status::kURITooLong:
         return "URI Too Long";
-      case Status::UNSUPPORTED_MEDIA_TYPE:
+      case Status::kUnsupportedMediaType:
         return "Unsupported Media Type";
-      case Status::RANGE_NOT_SATISFIABLE:
+      case Status::kRangeNotSatisfiable:
         return "Range Not Satisfiable";
 
-      case Status::INTERNAL_SERVER_ERROR:
+      case Status::kInternalServerError:
         return "Internal Server Error";
-      case Status::NOT_IMPLEMENTED:
+      case Status::kNotImplemented:
         return "Not Implemented";
-      case Status::BAD_GATEWAY:
+      case Status::kBadGateway:
         return "Bad Gateway";
-      case Status::SERVICE_UNAVAILABLE:
+      case Status::kServiceUnavailable:
         return "Service Unavailable";
-      case Status::GATEWAY_TIMEOUT:
+      case Status::kGatewayTimeout:
         return "Gateway Timeout";
-      case Status::HTTP_VERSION_NOT_SUPPORTED:
+      case Status::kVersionNotSupported:
         return "HTTP Version Not Supported";
     }
     assert(false && "Invalid status");

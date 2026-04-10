@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 17:28:14 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:24:18 by bewong        ########   odam.nl         */
+/*   Updated: 2026/03/17 10:03:22 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,9 +73,9 @@ void HTTPMessage::SetVersion(std::string ver)
 {
   version_ = std::move(ver);
 }
-void HTTPMessage::SetBody(const std::string& body)
+void HTTPMessage::SetBody(std::string&& body)
 {
-  body_ = body;
+  body_ = std::move(body);
 }
 void HTTPMessage::SetHeader(std::string_view name, std::string_view value)
 {
@@ -111,6 +111,11 @@ bool HTTPMessage::HasHeader(std::string_view name) const
   return headers_.find(String::ToLower(name)) != headers_.end();
 }
 
+/*
+    RFC 7230: If a message is received that has multiple Content-Length header fields with field-values consisting of the same decimal
+    value, then the recipient MUST either reject the message as invalid or replace the duplicated field-values with a single
+    valid Content-Length field containing that decimal value.
+*/
 std::optional<std::size_t> HTTPMessage::GetContentLength(void) const
 {
   auto vals = GetHeaderValuesOf("content-length");

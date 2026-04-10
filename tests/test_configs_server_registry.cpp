@@ -1,39 +1,40 @@
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <fstream>
 
 #include "catch_amalgamated.hpp"
+#include "config/Builder.hpp"
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
+#include "config/ServerRegistry.hpp"
 #include "config/Validator.hpp"
 #include "config/ValidatorIpPort.hpp"
-#include "config/Builder.hpp"
-#include "config/ServerRegistry.hpp"
 
 // PUBLIC FUNCTIONS
 
 TEST_CASE("GetServerViewCount()", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example0.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name example1.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example2.com;\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example0.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name example1.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example2.com;\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -44,7 +45,8 @@ TEST_CASE("GetServerViewCount()", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -57,25 +59,26 @@ TEST_CASE("GetServerViewCount()", "[ServerRegistry]")
 
 TEST_CASE("GetServerCount()", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example0.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example1.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example2.com;\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example0.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example1.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example2.com;\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -86,7 +89,8 @@ TEST_CASE("GetServerCount()", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -99,40 +103,41 @@ TEST_CASE("GetServerCount()", "[ServerRegistry]")
 
 TEST_CASE("GetServerView()", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example0.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name example1.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example2.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example3.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name example4.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example5.com;\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example0.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name example1.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example2.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example3.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name example4.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example5.com;\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -143,7 +148,8 @@ TEST_CASE("GetServerView()", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -169,22 +175,22 @@ TEST_CASE("GetServerView()", "[ServerRegistry]")
   REQUIRE(serverView1.hostNames.at(0) == "example1.com");
   REQUIRE(serverView1.ipPort.ip == "::");
   REQUIRE(serverView1.ipPort.port == "8081");
-  
+
   REQUIRE(serverView2.hostNames.size() == 1);
   REQUIRE(serverView2.hostNames.at(0) == "example2.com");
   REQUIRE(serverView2.ipPort.ip == "::");
   REQUIRE(serverView2.ipPort.port == "8082");
-  
+
   REQUIRE(serverView3.hostNames.size() == 1);
   REQUIRE(serverView3.hostNames.at(0) == "example3.com");
   REQUIRE(serverView3.ipPort.ip == "::");
   REQUIRE(serverView3.ipPort.port == "8080");
-  
+
   REQUIRE(serverView4.hostNames.size() == 1);
   REQUIRE(serverView4.hostNames.at(0) == "example4.com");
   REQUIRE(serverView4.ipPort.ip == "::");
   REQUIRE(serverView4.ipPort.port == "8081");
-  
+
   REQUIRE(serverView5.hostNames.size() == 1);
   REQUIRE(serverView5.hostNames.at(0) == "example5.com");
   REQUIRE(serverView5.ipPort.ip == "::");
@@ -193,40 +199,41 @@ TEST_CASE("GetServerView()", "[ServerRegistry]")
 
 TEST_CASE("GetServerViewMap()", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example0.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name example1.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example2.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example3.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name example4.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example5.com;\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example0.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name example1.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example2.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example3.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name example4.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example5.com;\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -237,7 +244,8 @@ TEST_CASE("GetServerViewMap()", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -299,80 +307,81 @@ TEST_CASE("GetServerViewMap()", "[ServerRegistry]")
 
 TEST_CASE("GetRouteView()", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example0.com ex0.com;\n"
-                    "\n"
-                    "    client_max_body_size 2m;\n"
-                    "\n"
-                    "    location /test {\n"
-                    "      root /test;\n"
-                    "\n"
-                    "    }\n"
-                    "    location /test/ {\n"
-                    "      root /test/;\n"
-                    "    }\n"
-                    "\n"
-                    "    location /teeest/test {\n"
-                    "\n"
-                    "    }\n"
-                    "\n"
-                    "    location /tessst/test/test {\n"
-                    "\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 127.0.0.35:8084;\n"
-                    "    server_name example1.com ex1.com;\n"
-                    "\n"
-                    "    client_max_body_size 2m;\n"
-                    "\n"
-                    "    location / {\n"
-                    "      root ./www;\n"
-                    "      index index.html;\n"
-                    "      autoindex off;\n"
-                    "    }\n"
-                    "    location t {\n"
-                    "\n"
-                    "    }\n"
-                    "\n"
-                    "    location /test1 {\n"
-                    "\n"
-                    "    }\n"
-                    "\n"
-                    "    location /teeest1/test {\n"
-                    "\n"
-                    "    }\n"
-                    "\n"
-                    "    location /tessst1/test/test {\n"
-                    "\n"
-                    "    }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    location /test2{\n"
-                    "    }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example2.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8083;\n"
-                    "    location /test3{\n"
-                    "    }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8084;\n"
-                    "    server_name example2.com;\n"
-                    "    location /not-default {\n"
-                    "    }\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example0.com ex0.com;\n"
+      "\n"
+      "    client_max_body_size 2m;\n"
+      "\n"
+      "    location /test {\n"
+      "      root /test;\n"
+      "\n"
+      "    }\n"
+      "    location /test/ {\n"
+      "      root /test/;\n"
+      "    }\n"
+      "\n"
+      "    location /teeest/test {\n"
+      "\n"
+      "    }\n"
+      "\n"
+      "    location /tessst/test/test {\n"
+      "\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "  server {\n"
+      "    listen 127.0.0.35:8084;\n"
+      "    server_name example1.com ex1.com;\n"
+      "\n"
+      "    client_max_body_size 2m;\n"
+      "\n"
+      "    location / {\n"
+      "      root ./www;\n"
+      "      index index.html;\n"
+      "      autoindex off;\n"
+      "    }\n"
+      "    location t {\n"
+      "\n"
+      "    }\n"
+      "\n"
+      "    location /test1 {\n"
+      "\n"
+      "    }\n"
+      "\n"
+      "    location /teeest1/test {\n"
+      "\n"
+      "    }\n"
+      "\n"
+      "    location /tessst1/test/test {\n"
+      "\n"
+      "    }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    location /test2{\n"
+      "    }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example2.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8083;\n"
+      "    location /test3{\n"
+      "    }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8084;\n"
+      "    server_name example2.com;\n"
+      "    location /not-default {\n"
+      "    }\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -383,7 +392,8 @@ TEST_CASE("GetRouteView()", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -422,7 +432,6 @@ TEST_CASE("GetRouteView()", "[ServerRegistry]")
   routeView = serverRegistry.GetRouteView("::", "8082", "example2.com", "noMatch");
   REQUIRE(routeView == nullptr);
 
-
   // valid
   // location parameter and request URI identical: valid
   routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "/tessst/test/test");
@@ -436,7 +445,7 @@ TEST_CASE("GetRouteView()", "[ServerRegistry]")
   REQUIRE(routeView->root == "/test/");
 
   // location parameter and request URI identical, neither ending in '/': valid
-  routeView = serverRegistry.GetRouteView("::", "8080","ex0.com", "/test");
+  routeView = serverRegistry.GetRouteView("::", "8080", "ex0.com", "/test");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->locationPrefix == "/test");
   REQUIRE(routeView->root == "/test");
@@ -496,23 +505,24 @@ TEST_CASE("GetRouteView()", "[ServerRegistry]")
 
 TEST_CASE("GetRouteView() keeps listener scope", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "  server {\n"
-                    "    listen 127.0.0.1:8080;\n"
-                    "    server_name example.com;\n"
-                    "    location /api {\n"
-                    "      root ./www_a;\n"
-                    "    }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 127.0.0.1:9090;\n"
-                    "    server_name example.com;\n"
-                    "    location /api {\n"
-                    "      root ./www_b;\n"
-                    "    }\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "  server {\n"
+      "    listen 127.0.0.1:8080;\n"
+      "    server_name example.com;\n"
+      "    location /api {\n"
+      "      root ./www_a;\n"
+      "    }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 127.0.0.1:9090;\n"
+      "    server_name example.com;\n"
+      "    location /api {\n"
+      "      root ./www_b;\n"
+      "    }\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -545,43 +555,44 @@ TEST_CASE("GetRouteView() keeps listener scope", "[ServerRegistry]")
 
 TEST_CASE("GetRouteView() implicit default server", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080 default_server;\n"
-                    "    server_name server0;\n"
-                    "    location /server0path0 {\n"
-                    "      root server0root0;\n"
-                    "    }\n"
-                    "    location /server0path1 {\n"
-                    "      root server0root1;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server1;\n"
-                    "    location /server1path0 {\n"
-                    "      root server1root0;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server2;\n"
-                    "      location /server2path0{\n"
-                    "        root server2root0;\n"
-                    "      }\n"
-                    "      location /server2path1{\n"
-                    "        root server2root1;\n"
-                    "      }\n"
-                    "      location /server2path2{\n"
-                    "        root server2root2;\n"
-                    "      }\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080 default_server;\n"
+      "    server_name server0;\n"
+      "    location /server0path0 {\n"
+      "      root server0root0;\n"
+      "    }\n"
+      "    location /server0path1 {\n"
+      "      root server0root1;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server1;\n"
+      "    location /server1path0 {\n"
+      "      root server1root0;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server2;\n"
+      "      location /server2path0{\n"
+      "        root server2root0;\n"
+      "      }\n"
+      "      location /server2path1{\n"
+      "        root server2root1;\n"
+      "      }\n"
+      "      location /server2path2{\n"
+      "        root server2root2;\n"
+      "      }\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   Lexer lexer(raw);
   Parser parser(lexer);
@@ -589,7 +600,7 @@ TEST_CASE("GetRouteView() implicit default server", "[ServerRegistry]")
   Validator validator(lexer, parser, validatorIpPort);
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
-  
+
   REQUIRE(serverRegistry.GetServerViewCount() == 3);
   REQUIRE(serverRegistry.GetServerCount() == 1);
 
@@ -620,7 +631,6 @@ TEST_CASE("GetRouteView() implicit default server", "[ServerRegistry]")
 
   routeView = serverRegistry.GetRouteView("::", "8080", "server2", "noMatch");
   REQUIRE(routeView == nullptr);
-
 
   // name does not match
   routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/server0path0");
@@ -649,43 +659,44 @@ TEST_CASE("GetRouteView() implicit default server", "[ServerRegistry]")
 
 TEST_CASE("GetRouteView() explicit default server 1", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080 default_server;\n"
-                    "    server_name server0;\n"
-                    "    location /server0path0 {\n"
-                    "      root server0root0;\n"
-                    "    }\n"
-                    "    location /server0path1 {\n"
-                    "      root server0root1;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server1;\n"
-                    "    location /server1path0 {\n"
-                    "      root server1root0;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server2;\n"
-                    "      location /server2path0{\n"
-                    "        root server2root0;\n"
-                    "      }\n"
-                    "      location /server2path1{\n"
-                    "        root server2root1;\n"
-                    "      }\n"
-                    "      location /server2path2{\n"
-                    "        root server2root2;\n"
-                    "      }\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080 default_server;\n"
+      "    server_name server0;\n"
+      "    location /server0path0 {\n"
+      "      root server0root0;\n"
+      "    }\n"
+      "    location /server0path1 {\n"
+      "      root server0root1;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server1;\n"
+      "    location /server1path0 {\n"
+      "      root server1root0;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server2;\n"
+      "      location /server2path0{\n"
+      "        root server2root0;\n"
+      "      }\n"
+      "      location /server2path1{\n"
+      "        root server2root1;\n"
+      "      }\n"
+      "      location /server2path2{\n"
+      "        root server2root2;\n"
+      "      }\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   Lexer lexer(raw);
   Parser parser(lexer);
@@ -693,7 +704,7 @@ TEST_CASE("GetRouteView() explicit default server 1", "[ServerRegistry]")
   Validator validator(lexer, parser, validatorIpPort);
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
-  
+
   REQUIRE(serverRegistry.GetServerViewCount() == 3);
   REQUIRE(serverRegistry.GetServerCount() == 1);
 
@@ -724,7 +735,6 @@ TEST_CASE("GetRouteView() explicit default server 1", "[ServerRegistry]")
 
   routeView = serverRegistry.GetRouteView("::", "8080", "server2", "noMatch");
   REQUIRE(routeView == nullptr);
-
 
   // name does not match
   routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/server0path0");
@@ -753,43 +763,44 @@ TEST_CASE("GetRouteView() explicit default server 1", "[ServerRegistry]")
 
 TEST_CASE("GetRouteView() explicit default server 2", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server0;\n"
-                    "    location /server0path0 {\n"
-                    "      root server0root0;\n"
-                    "    }\n"
-                    "    location /server0path1 {\n"
-                    "      root server0root1;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080 default_server;\n"
-                    "    server_name server1;\n"
-                    "    location /server1path0 {\n"
-                    "      root server1root0;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server2;\n"
-                    "      location /server2path0{\n"
-                    "        root server2root0;\n"
-                    "      }\n"
-                    "      location /server2path1{\n"
-                    "        root server2root1;\n"
-                    "      }\n"
-                    "      location /server2path2{\n"
-                    "        root server2root2;\n"
-                    "      }\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server0;\n"
+      "    location /server0path0 {\n"
+      "      root server0root0;\n"
+      "    }\n"
+      "    location /server0path1 {\n"
+      "      root server0root1;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080 default_server;\n"
+      "    server_name server1;\n"
+      "    location /server1path0 {\n"
+      "      root server1root0;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server2;\n"
+      "      location /server2path0{\n"
+      "        root server2root0;\n"
+      "      }\n"
+      "      location /server2path1{\n"
+      "        root server2root1;\n"
+      "      }\n"
+      "      location /server2path2{\n"
+      "        root server2root2;\n"
+      "      }\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   Lexer lexer(raw);
   Parser parser(lexer);
@@ -797,7 +808,7 @@ TEST_CASE("GetRouteView() explicit default server 2", "[ServerRegistry]")
   Validator validator(lexer, parser, validatorIpPort);
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
-  
+
   REQUIRE(serverRegistry.GetServerViewCount() == 3);
   REQUIRE(serverRegistry.GetServerCount() == 1);
 
@@ -828,7 +839,6 @@ TEST_CASE("GetRouteView() explicit default server 2", "[ServerRegistry]")
 
   routeView = serverRegistry.GetRouteView("::", "8080", "server2", "noMatch");
   REQUIRE(routeView == nullptr);
-
 
   // name does not match
   routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/server0path0");
@@ -856,43 +866,44 @@ TEST_CASE("GetRouteView() explicit default server 2", "[ServerRegistry]")
 
 TEST_CASE("GetRouteView() explicit default server 3", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server0;\n"
-                    "    location /server0path0 {\n"
-                    "      root server0root0;\n"
-                    "    }\n"
-                    "    location /server0path1 {\n"
-                    "      root server0root1;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name server1;\n"
-                    "    location /server1path0 {\n"
-                    "      root server1root0;\n"
-                    "    }\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8080 default_server;\n"
-                    "    server_name server2;\n"
-                    "      location /server2path0{\n"
-                    "        root server2root0;\n"
-                    "      }\n"
-                    "      location /server2path1{\n"
-                    "        root server2root1;\n"
-                    "      }\n"
-                    "      location /server2path2{\n"
-                    "        root server2root2;\n"
-                    "      }\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server0;\n"
+      "    location /server0path0 {\n"
+      "      root server0root0;\n"
+      "    }\n"
+      "    location /server0path1 {\n"
+      "      root server0root1;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name server1;\n"
+      "    location /server1path0 {\n"
+      "      root server1root0;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8080 default_server;\n"
+      "    server_name server2;\n"
+      "      location /server2path0{\n"
+      "        root server2root0;\n"
+      "      }\n"
+      "      location /server2path1{\n"
+      "        root server2root1;\n"
+      "      }\n"
+      "      location /server2path2{\n"
+      "        root server2root2;\n"
+      "      }\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   Lexer lexer(raw);
   Parser parser(lexer);
@@ -900,7 +911,7 @@ TEST_CASE("GetRouteView() explicit default server 3", "[ServerRegistry]")
   Validator validator(lexer, parser, validatorIpPort);
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
-  
+
   REQUIRE(serverRegistry.GetServerViewCount() == 3);
   REQUIRE(serverRegistry.GetServerCount() == 1);
 
@@ -931,7 +942,6 @@ TEST_CASE("GetRouteView() explicit default server 3", "[ServerRegistry]")
 
   routeView = serverRegistry.GetRouteView("::", "8080", "server2", "noMatch");
   REQUIRE(routeView == nullptr);
-
 
   // name does not match
   routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/server0path0");
@@ -961,25 +971,26 @@ TEST_CASE("GetRouteView() explicit default server 3", "[ServerRegistry]")
 
 TEST_CASE("ServerRegistry move constructor", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example0.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name example1.com;\n"
-                    "\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name example2.com;\n"
-                    "\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example0.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name example1.com;\n"
+      "\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name example2.com;\n"
+      "\n"
+      "  }\n"
+      "}\n";
 
   Lexer lexer(raw);
   Parser parser(lexer);
@@ -987,12 +998,13 @@ TEST_CASE("ServerRegistry move constructor", "[ServerRegistry]")
   Validator validator(lexer, parser, validatorIpPort);
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
-  
+
   const void* addressServers = static_cast<const void*>(serverRegistry.GetServersData());
   const void* addressValue = static_cast<const void*>(serverRegistry.GetAddressValue({"::", "8080"}));
   ServerRegistry serverRegistryMoveConstructed(std::move(serverRegistry));
   const void* addressServersMoveConstructed = static_cast<const void*>(serverRegistryMoveConstructed.GetServersData());
-  const void* addressValueMoveConstructed = static_cast<const void*>(serverRegistryMoveConstructed.GetAddressValue({"::", "8080"}));
+  const void* addressValueMoveConstructed =
+      static_cast<const void*>(serverRegistryMoveConstructed.GetAddressValue({"::", "8080"}));
 
   REQUIRE(addressServers == addressServersMoveConstructed);
   REQUIRE(addressValue == addressValueMoveConstructed);
@@ -1004,23 +1016,24 @@ TEST_CASE("ServerRegistry move constructor", "[ServerRegistry]")
 
 TEST_CASE("listen", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    listen 9090;\n"
-                    "    listen 120.0.0.64:8081;\n"
-                    "    listen 120.0.0.64;\n"
-                    "    listen [120::120]:8082;\n"
-                    "    listen [120::120];\n"
-                    "    server_name example0.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    server_name example1.com;\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    listen 9090;\n"
+      "    listen 120.0.0.64:8081;\n"
+      "    listen 120.0.0.64;\n"
+      "    listen [120::120]:8082;\n"
+      "    listen [120::120];\n"
+      "    server_name example0.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    server_name example1.com;\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1031,7 +1044,8 @@ TEST_CASE("listen", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1067,24 +1081,25 @@ TEST_CASE("listen", "[ServerRegistry]")
 
 TEST_CASE("listen invalid - duplicate hostname IP:port combinations", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen [120::0ABC]:8082;\n"
-                    "    listen 8080;\n"
-                    "    listen 9090;\n"
-                    "    listen 120.0.0.64:8081;\n"
-                    "    listen 120.0.0.64;\n"
-                    "    listen [0120::abc]:8082;\n"
-                    "    listen [120::0001];\n"
-                    "    server_name example0.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 120.0.0.64:8081;\n"
-                    "    server_name example1.com;\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen [120::0ABC]:8082;\n"
+      "    listen 8080;\n"
+      "    listen 9090;\n"
+      "    listen 120.0.0.64:8081;\n"
+      "    listen 120.0.0.64;\n"
+      "    listen [0120::abc]:8082;\n"
+      "    listen [120::0001];\n"
+      "    server_name example0.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 120.0.0.64:8081;\n"
+      "    server_name example1.com;\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1095,7 +1110,8 @@ TEST_CASE("listen invalid - duplicate hostname IP:port combinations", "[ServerRe
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
   REQUIRE(lexer.GetError() == false);
@@ -1131,7 +1147,7 @@ TEST_CASE("listen invalid - duplicate hostname IP:port combinations", "[ServerRe
   REQUIRE(serverView7.ipPort.ip == "120.0.0.64");
   REQUIRE(serverView7.ipPort.port == "8081");
 
-  std::set<std::size_t> errorsIdx{20,26};
+  std::set<std::size_t> errorsIdx{20, 26};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -1151,51 +1167,52 @@ TEST_CASE("listen invalid - duplicate hostname IP:port combinations", "[ServerRe
 
 TEST_CASE("listen - ipv6 normalization", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen [::]:8081;\n"
-                    "    server_name example0.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [::]:8082;\n"
-                    "    server_name example1.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120::120]:8081;\n"
-                    "    server_name example2.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120:0:0:0:120]:8082;\n"
-                    "    server_name example3.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120:120:120::120]:8081;\n"
-                    "    server_name example4.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120:120:120:0:120]:8082;\n"
-                    "    server_name example5.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120:120:120::]:8081;\n"
-                    "    server_name example6.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120:120:120:0:0]:8082;\n"
-                    "    server_name example7.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [120:120:120:120:120:120:120:0]:8081;\n"
-                    "    server_name example8.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen [0:120:120:120:120:120:120:120]:8082;\n"
-                    "    server_name example9.com;\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen [::]:8081;\n"
+      "    server_name example0.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [::]:8082;\n"
+      "    server_name example1.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120::120]:8081;\n"
+      "    server_name example2.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120:0:0:0:120]:8082;\n"
+      "    server_name example3.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120:120:120::120]:8081;\n"
+      "    server_name example4.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120:120:120:0:120]:8082;\n"
+      "    server_name example5.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120:120:120::]:8081;\n"
+      "    server_name example6.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120:120:120:0:0]:8082;\n"
+      "    server_name example7.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [120:120:120:120:120:120:120:0]:8081;\n"
+      "    server_name example8.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen [0:120:120:120:120:120:120:120]:8082;\n"
+      "    server_name example9.com;\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1206,7 +1223,8 @@ TEST_CASE("listen - ipv6 normalization", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == true);
   REQUIRE(lexer.GetError() == false);
@@ -1251,38 +1269,39 @@ TEST_CASE("listen - ipv6 normalization", "[ServerRegistry]")
 
 TEST_CASE("listen invalid - duplicate hostname IP:port combinations after ipv6 normalization", "[ServerRegistry]")
 {
-  std::string raw = "http {\n"
-                    "  server {\n"
-                    "    listen 120.0.0.120:8081;\n"
-                    "    listen [120::120]:8082;\n"
-                    "    listen [120:120:0:0:0:0:0:120]:8082;\n"
-                    "    listen [0:0:0:0:0:0:0:0]:8082;\n"
-                    "    listen [0:0:0:120:0:0:0:0]:8082;\n"
-                    "    listen [0:0:0:0:120:0:0:0]:8082;\n"
-                    "    listen [0000:000:00:0:0:0:0:120]:8082;\n"
-                    "    listen [::];\n"
-                    "    listen [0ABC:0:0:0:0:0:0:0]:8082;\n"
-                    "    listen [0ABC:DEFF:000A:A000:0:0:0:0]:8082;\n"
-                    "    listen [0ABC:0:000:A000:0:0:0:F]:8082;\n"
-                    "    listen [0ABC:0:000:0:A000:0:0:F]:8082;\n"
-                    "    server_name test.com;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 120.0.0.120:8081;\n"
-                    "    listen [120:0:0:0:0:0:0:120]:8082;\n"
-                    "    listen [120:120::120]:8082;\n"
-                    "    listen [::]:8082;\n"
-                    "    listen [0:0:0:120::]:8082;\n"
-                    "    listen [::120:0:0:0]:8082;\n"
-                    "    listen [::120]:8082;\n"
-                    "    listen [::];\n"
-                    "    listen [abc::]:8082;\n"
-                    "    listen [0abc:deff:000a:a000:0000:000:00:0]:8082;\n"
-                    "    listen [0abC:0:000:a000:0:0:0:f]:8082;\n"
-                    "    listen [0abc:0:000:0:a000:0:0:f]:8082;\n"
-                    "    server_name test.com;\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "http {\n"
+      "  server {\n"
+      "    listen 120.0.0.120:8081;\n"
+      "    listen [120::120]:8082;\n"
+      "    listen [120:120:0:0:0:0:0:120]:8082;\n"
+      "    listen [0:0:0:0:0:0:0:0]:8082;\n"
+      "    listen [0:0:0:120:0:0:0:0]:8082;\n"
+      "    listen [0:0:0:0:120:0:0:0]:8082;\n"
+      "    listen [0000:000:00:0:0:0:0:120]:8082;\n"
+      "    listen [::];\n"
+      "    listen [0ABC:0:0:0:0:0:0:0]:8082;\n"
+      "    listen [0ABC:DEFF:000A:A000:0:0:0:0]:8082;\n"
+      "    listen [0ABC:0:000:A000:0:0:0:F]:8082;\n"
+      "    listen [0ABC:0:000:0:A000:0:0:F]:8082;\n"
+      "    server_name test.com;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 120.0.0.120:8081;\n"
+      "    listen [120:0:0:0:0:0:0:120]:8082;\n"
+      "    listen [120:120::120]:8082;\n"
+      "    listen [::]:8082;\n"
+      "    listen [0:0:0:120::]:8082;\n"
+      "    listen [::120:0:0:0]:8082;\n"
+      "    listen [::120]:8082;\n"
+      "    listen [::];\n"
+      "    listen [abc::]:8082;\n"
+      "    listen [0abc:deff:000a:a000:0000:000:00:0]:8082;\n"
+      "    listen [0abC:0:000:a000:0:0:0:f]:8082;\n"
+      "    listen [0abc:0:000:0:a000:0:0:f]:8082;\n"
+      "    server_name test.com;\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1293,7 +1312,8 @@ TEST_CASE("listen invalid - duplicate hostname IP:port combinations after ipv6 n
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
   REQUIRE(lexer.GetError() == false);
@@ -1384,21 +1404,22 @@ TEST_CASE("Servers with default listen values - duplicate hostname IP:port combi
 
 TEST_CASE("server_name - valid", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name0 name1 name2;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name name3 name4 name5;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name0 name1 name2;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name name3 name4 name5;\n"
+      "  }\n"
+      "  server {\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1409,14 +1430,14 @@ TEST_CASE("server_name - valid", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == false);
-
 
   REQUIRE(serverRegistry.GetServerViewCount() == 3);
 
@@ -1438,21 +1459,22 @@ TEST_CASE("server_name - valid", "[ServerRegistry]")
 
 TEST_CASE("server_name - invalid", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name0 name0 name2;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8082;\n"
-                    "    server_name name3 name4 name4;\n"
-                    "  }\n"
-                    "  server {\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name0 name0 name2;\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8082;\n"
+      "    server_name name3 name4 name4;\n"
+      "  }\n"
+      "  server {\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1463,7 +1485,8 @@ TEST_CASE("server_name - invalid", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
   REQUIRE(lexer.GetError() == false);
@@ -1488,7 +1511,7 @@ TEST_CASE("server_name - invalid", "[ServerRegistry]")
   REQUIRE(serverView2.hostNames.size() == 1);
   REQUIRE(serverView2.hostNames.at(0) == "");
 
-  std::set<std::size_t> errorsIdx{9,21};
+  std::set<std::size_t> errorsIdx{9, 21};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -1508,29 +1531,30 @@ TEST_CASE("server_name - invalid", "[ServerRegistry]")
 
 TEST_CASE("root", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0 name1 name2;\n"
-                    "    root serverRoot0;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        root locationRoot01;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name3 name4 name5;\n"
-                    "    root serverRoot1;\n"
-                    "    location locPref1 {\n"
-                    "      root locationRoot1;\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0 name1 name2;\n"
+      "    root serverRoot0;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        root locationRoot01;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name3 name4 name5;\n"
+      "    root serverRoot1;\n"
+      "    location locPref1 {\n"
+      "      root locationRoot1;\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1541,7 +1565,8 @@ TEST_CASE("root", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1564,28 +1589,29 @@ TEST_CASE("root", "[ServerRegistry]")
 
 TEST_CASE("index", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "  index httpIndex;\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "    index serverIndex0;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        index locationIndex01;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    location locPref1 {\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "  index httpIndex;\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "    index serverIndex0;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        index locationIndex01;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    location locPref1 {\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1596,7 +1622,8 @@ TEST_CASE("index", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1619,20 +1646,21 @@ TEST_CASE("index", "[ServerRegistry]")
 
 TEST_CASE("alias", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        alias locationAlias01;\n"
-                    "      }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        alias locationAlias01;\n"
+      "      }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1643,7 +1671,8 @@ TEST_CASE("alias", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1663,28 +1692,29 @@ TEST_CASE("alias", "[ServerRegistry]")
 
 TEST_CASE("client_max_body_size", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "  client_max_body_size 8m;\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "    client_max_body_size 32K;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        client_max_body_size 1G;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    location locPref1 {\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "  client_max_body_size 8m;\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "    client_max_body_size 32K;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        client_max_body_size 1G;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    location locPref1 {\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1695,7 +1725,8 @@ TEST_CASE("client_max_body_size", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1718,29 +1749,30 @@ TEST_CASE("client_max_body_size", "[ServerRegistry]")
 
 TEST_CASE("error_page", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "  error_page 301 /httpErrorPage;\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "    error_page 401 /serverErrorPage;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        error_page 500 http://locationErrorPage;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    location locPref1 {\n"
-                    "      error_page 301 https://locationErrorPage;\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "  error_page 301 /httpErrorPage;\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "    error_page 401 /serverErrorPage;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        error_page 500 http://locationErrorPage;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    location locPref1 {\n"
+      "      error_page 301 https://locationErrorPage;\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1751,7 +1783,8 @@ TEST_CASE("error_page", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1780,31 +1813,32 @@ TEST_CASE("error_page", "[ServerRegistry]")
 
 TEST_CASE("return", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "    return 301 /new.com;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        return 301 http://new01.com;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    location locPref10 {\n"
-                    "      return http://temporary.com;\n"
-                    "    }\n"
-                    "    location locPref11 {\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "    return 301 /new.com;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        return 301 http://new01.com;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    location locPref10 {\n"
+      "      return http://temporary.com;\n"
+      "    }\n"
+      "    location locPref11 {\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1815,7 +1849,8 @@ TEST_CASE("return", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1846,31 +1881,32 @@ TEST_CASE("return", "[ServerRegistry]")
 
 TEST_CASE("allowed_methods", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "    allowed_methods POST;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        allowed_methods DELETE;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    location locPref10 {\n"
-                    "      allowed_methods GET POST DELETE;\n"
-                    "    }\n"
-                    "    location locPref11 {\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "    allowed_methods POST;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        allowed_methods DELETE;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    location locPref10 {\n"
+      "      allowed_methods GET POST DELETE;\n"
+      "    }\n"
+      "    location locPref11 {\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1881,7 +1917,8 @@ TEST_CASE("allowed_methods", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1899,38 +1936,40 @@ TEST_CASE("allowed_methods", "[ServerRegistry]")
   REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
   REQUIRE(serverView0.routes.at(1).allowedMask == RouteView::MethodMask::kDelete);
   REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
-  REQUIRE(serverView1.routes.at(0).allowedMask == (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
+  REQUIRE(serverView1.routes.at(0).allowedMask ==
+          (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
   REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
   REQUIRE(serverView1.routes.at(1).allowedMask == RouteView::MethodMask::kGet);
 }
 
 TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "    autoindex on;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        autoindex off;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    location locPref10 {\n"
-                    "    }\n"
-                    "    location locPref11 {\n"
-                    "      autoindex on;\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "    autoindex on;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        autoindex off;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    location locPref10 {\n"
+      "    }\n"
+      "    location locPref11 {\n"
+      "      autoindex on;\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -1941,7 +1980,8 @@ TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -1966,31 +2006,32 @@ TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
 
 TEST_CASE("autoindex http on", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "  autoindex on;\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        autoindex off;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    autoindex off;\n"
-                    "    location locPref10 {\n"
-                    "    }\n"
-                    "    location locPref11 {\n"
-                    "      autoindex on;\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "  autoindex on;\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        autoindex off;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    autoindex off;\n"
+      "    location locPref10 {\n"
+      "    }\n"
+      "    location locPref11 {\n"
+      "      autoindex on;\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -2001,7 +2042,8 @@ TEST_CASE("autoindex http on", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -2026,20 +2068,21 @@ TEST_CASE("autoindex http on", "[ServerRegistry]")
 
 TEST_CASE("cgi", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        cgi on;\n"
-                    "      }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        cgi on;\n"
+      "      }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -2050,7 +2093,8 @@ TEST_CASE("cgi", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -2070,32 +2114,33 @@ TEST_CASE("cgi", "[ServerRegistry]")
 
 TEST_CASE("cgi_extension", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name name0;\n"
-                    "      location locPref00 {\n"
-                    "      }\n"
-                    "      location locPref01 {\n"
-                    "        cgi_extension php /usr/bin/location-php-cgi;\n"
-                    "      }\n"
-                    "  }\n"
-                    "  server {\n"
-                    "    listen 8081;\n"
-                    "    server_name name1;\n"
-                    "    cgi_extension php /usr/bin/server-php-cgi;\n"
-                    "    cgi_extension perl /usr/bin/server-perl;\n"
-                    "    location locPref10 {\n"
-                    "    }\n"
-                    "    location locPref11 {\n"
-                    "      cgi_extension py /usr/bin/location-python3;\n"
-                    "      cgi_extension php /usr/bin/location-php-cgi;\n"
-                    "    }\n"
-                    "  }\n"
-                    "\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name name0;\n"
+      "      location locPref00 {\n"
+      "      }\n"
+      "      location locPref01 {\n"
+      "        cgi_extension php /usr/bin/location-php-cgi;\n"
+      "      }\n"
+      "  }\n"
+      "  server {\n"
+      "    listen 8081;\n"
+      "    server_name name1;\n"
+      "    cgi_extension php /usr/bin/server-php-cgi;\n"
+      "    cgi_extension perl /usr/bin/server-perl;\n"
+      "    location locPref10 {\n"
+      "    }\n"
+      "    location locPref11 {\n"
+      "      cgi_extension py /usr/bin/location-python3;\n"
+      "      cgi_extension php /usr/bin/location-php-cgi;\n"
+      "    }\n"
+      "  }\n"
+      "\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -2106,7 +2151,8 @@ TEST_CASE("cgi_extension", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -2139,45 +2185,46 @@ TEST_CASE("cgi_extension", "[ServerRegistry]")
 
 TEST_CASE("one server, four locations, lots of inheritance", "[ServerRegistry]")
 {
-  std::string raw = "\n"
-                    "http {\n"
-                    "  index indexHttp.html;\n"
-                    "  autoindex on;\n"
-                    "  client_max_body_size 10m;\n"
-                    "  error_page 400 401 402 /http;\n"
-                    "\n"
-                    "  server {\n"
-                    "    listen 8080;\n"
-                    "    server_name example.com;\n"
-                    "    client_max_body_size 2m;\n"
-                    "    error_page 500 /server;\n"
-                    "\n"
-                    "    location / {\n"
-                    "      root ./www;\n"
-                    "      index indexLocation.html;\n"
-                    "      autoindex off;\n"
-                    "      error_page 504 /location;\n"
-                    "    }\n"
-                    "\n"
-                    "    location /uploads {\n"
-                    "      root ./www;\n"
-                    "      client_max_body_size 10m;\n"
-                    "      allowed_methods POST DELETE;\n"
-                    "      error_page 400 401 402 /location;\n"
-                    "    }\n"
-                    "\n"
-                    "    location /old-page {\n"
-                    "      return 301 /new-page;\n"
-                    "    }\n"
-                    "\n"
-                    "    location /cgi-bin {\n"
-                    "      root ./www;\n"
-                    "      allowed_methods GET POST;\n"
-                    "      cgi_extension php /usr/bin/php-cgi;\n"
-                    "      cgi_extension py /usr/bin/python3;\n"
-                    "    }\n"
-                    "  }\n"
-                    "}\n";
+  std::string raw =
+      "\n"
+      "http {\n"
+      "  index indexHttp.html;\n"
+      "  autoindex on;\n"
+      "  client_max_body_size 10m;\n"
+      "  error_page 400 401 402 /http;\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    server_name example.com;\n"
+      "    client_max_body_size 2m;\n"
+      "    error_page 500 /server;\n"
+      "\n"
+      "    location / {\n"
+      "      root ./www;\n"
+      "      index indexLocation.html;\n"
+      "      autoindex off;\n"
+      "      error_page 504 /location;\n"
+      "    }\n"
+      "\n"
+      "    location /uploads {\n"
+      "      root ./www;\n"
+      "      client_max_body_size 10m;\n"
+      "      allowed_methods POST DELETE;\n"
+      "      error_page 400 401 402 /location;\n"
+      "    }\n"
+      "\n"
+      "    location /old-page {\n"
+      "      return 301 /new-page;\n"
+      "    }\n"
+      "\n"
+      "    location /cgi-bin {\n"
+      "      root ./www;\n"
+      "      allowed_methods GET POST;\n"
+      "      cgi_extension php /usr/bin/php-cgi;\n"
+      "      cgi_extension py /usr/bin/python3;\n"
+      "    }\n"
+      "  }\n"
+      "}\n";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -2188,7 +2235,8 @@ TEST_CASE("one server, four locations, lots of inheritance", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -2293,7 +2341,8 @@ TEST_CASE("minimal valid config file", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty());
   REQUIRE(lexer.GetError() == false);
@@ -2340,43 +2389,44 @@ TEST_CASE("minimal valid config file", "[ServerRegistry]")
 
 TEST_CASE("Bell's default.conf", "[ServerRegistry]")
 {
-  std::string raw = " http {"
-                    "   index index.html;"
-                    "   client_max_body_size 1m;"
-                    "   autoindex off;"
-                    "   server {"
-                    "     listen 8080;"
-                    "     server_name localhost;"
-                    "     root ./www;"
-                    "     index index.html;"
-                    "     allowed_methods GET POST DELETE;"
-                    "     error_page 404 /404.html;"
-                    "     error_page 500 /500.html;"
-                    "     # default location\n"
-                    "     location / {"
-                    "         root ./www;"
-                    "         autoindex on;"
-                    "     }"
-                    "     # upload / POST testing\n"
-                    "     location /upload {"
-                    "         root ./www;"
-                    "         allowed_methods POST;"
-                    "     }"
-                    "     # delete testing\n"
-                    "     location /delete {"
-                    "        root ./www;"
-                    "        allowed_methods DELETE;"
-                    "     }"
-                    "     # CGI (for later)\n"
-                    "     location /cgi-bin {"
-                    "         root ./www/cgi-bin;"
-                    "         cgi on;"
-                    "         cgi_extension .py /usr/bin/python3;"
-                    "         cgi_extension .sh /bin/bash;"
-                    "         allowed_methods GET POST;"
-                    "     }"
-                    "   }"
-                    " }";
+  std::string raw =
+      " http {"
+      "   index index.html;"
+      "   client_max_body_size 1m;"
+      "   autoindex off;"
+      "   server {"
+      "     listen 8080;"
+      "     server_name localhost;"
+      "     root ./www;"
+      "     index index.html;"
+      "     allowed_methods GET POST DELETE;"
+      "     error_page 404 /404.html;"
+      "     error_page 500 /500.html;"
+      "     # default location\n"
+      "     location / {"
+      "         root ./www;"
+      "         autoindex on;"
+      "     }"
+      "     # upload / POST testing\n"
+      "     location /upload {"
+      "         root ./www;"
+      "         allowed_methods POST;"
+      "     }"
+      "     # delete testing\n"
+      "     location /delete {"
+      "        root ./www;"
+      "        allowed_methods DELETE;"
+      "     }"
+      "     # CGI (for later)\n"
+      "     location /cgi-bin {"
+      "         root ./www/cgi-bin;"
+      "         cgi on;"
+      "         cgi_extension .py /usr/bin/python3;"
+      "         cgi_extension .sh /bin/bash;"
+      "         allowed_methods GET POST;"
+      "     }"
+      "   }"
+      " }";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
@@ -2387,7 +2437,8 @@ TEST_CASE("Bell's default.conf", "[ServerRegistry]")
   Builder builder(lexer, parser, validatorIpPort);
   ServerRegistry serverRegistry(builder.BuildServerRegistry());
   lexer.PrintErrorMessages();
-  std::string output = buffer.str();std::cerr.rdbuf(oldBuf);
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
 
   lexer.PrintErrorMessages();
 
@@ -2413,7 +2464,8 @@ TEST_CASE("Bell's default.conf", "[ServerRegistry]")
   REQUIRE(routeView0.index == "index.html");
   REQUIRE(routeView0.autoindex == true);
   REQUIRE(routeView0.clientMaxBody == std::size_t(1 * 1024 * 1024));
-  REQUIRE(routeView0.allowedMask == (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
+  REQUIRE(routeView0.allowedMask ==
+          (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
   REQUIRE(routeView0.returnRule.has_value() == false);
   REQUIRE(routeView0.errorPages.size() == 2);
   REQUIRE(routeView0.errorPages.at(404) == "/404.html");

@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/13 19:08:02 by bewong        #+#    #+#                 */
-/*   Updated: 2026/04/01 20:51:14 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/02 12:40:32 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,8 +16,6 @@
 #include <sys/socket.h>
 
 #include <cassert>
-#include <cstring>
-#include <string_view>
 
 #include "Connection.hpp"
 #include "EpollManager.hpp"
@@ -78,11 +76,13 @@ void Server::Accept(EpollManager& manager, const struct epoll_event& event)
     if (client.GetFD() == -1)
       break;
 
-    auto [it, inserted] = connections_.emplace(client.GetFD(), Connection{client});
+    const int client_fd = client.GetFD();
+
+    auto [it, inserted] = connections_.emplace(client_fd, Connection{std::move(client)});
     if (!inserted)
     {
       Logger::Log(LogLevel::CRITICAL, "Server <{}>: duplicate client <{}> found! Dropped the connection...", socket_,
-                  client);
+                  client_fd);
       connections_.erase(it);
       continue;
     }
@@ -94,20 +94,20 @@ void Server::Accept(EpollManager& manager, const struct epoll_event& event)
         HandleConnection(manager, event);
       };
 
-      manager.AddFd(client.GetFD(), EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN, callback);
-      Logger::Log(LogLevel::INFO, "Server <{}> accepted client connection <{}>", socket_, client);
+      manager.AddFd(client_fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN, callback);
+      Logger::Log(LogLevel::INFO, "Server <{}> accepted client connection <{}>", socket_, client_fd);
     }
     catch (const std::exception& ex)
     {
       connections_.erase(it);
       Logger::Log(LogLevel::ERROR,
                   "Server <{}> unable to register the client <{}> into the poll: {}. Dropping the connection!", socket_,
-                  client, ex.what());
+                  client_fd, ex.what());
     }
   }
 }
 
-void Server::HandleConnection(EpollManager& manager, const struct epoll_event& event)
+void Server::HandleConnection(EpollManager& manager, const epoll_event& event)
 {
   ConnectionIterator it = connections_.find(event.data.fd);
   if (it == connections_.end())

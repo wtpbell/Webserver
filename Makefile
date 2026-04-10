@@ -6,7 +6,7 @@ CXXEXTRA	:=
 D_FLAGS		:= -MMD -MP
 SRC_DIR		:= src/
 BIN			:= bin/
-BIN_DIRS	:= $(BIN) $(BIN)exception/ $(BIN)config/ $(BIN)io/ $(BIN)http/ $(BIN)cgi/
+BIN_DIRS	:= $(BIN) $(BIN)exception/ $(BIN)config/ $(BIN)io/ $(BIN)http/ $(BIN)router/ $(BIN)cgi/
 MAIN		:= $(BIN)main.o
 
 SRCS		:= Logger.cpp helper.cpp signal.cpp Server.cpp EpollManager.cpp string.cpp Connection.cpp
@@ -14,9 +14,10 @@ SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp Validator.cpp Validator
 SRCS_EXCEPT	:= $(addprefix exception/, FileDescriptorException.cpp ServerException.cpp EPollManagerException.cpp)
 SRCS_IO		:= $(addprefix io/, SharedFD.cpp Socket.cpp TimerFD.cpp)
 SRCS_HTTP	:= $(addprefix http/, HTTPMessage.cpp HTTPParser.cpp HTTPUtils.cpp HTTPRequest.cpp HTTPResponse.cpp\
-				HTTPValidator.cpp HTTPStatus.cpp HTTPResponse.cpp SessionManager.cpp HTTPCookie.cpp)
+				HTTPValidator.cpp HTTPStatus.cpp ResponseFactory.cpp SessionManager.cpp HTTPCookie.cpp)
+SRCS_ROUTER	:= $(addprefix router/, Router.cpp RequestHandler.cpp)
 SRCS_CGI	:= $(addprefix cgi/, CGI.cpp CGIParser.cpp CGIProcess.cpp CGIRequest.cpp CGIResponse.cpp)
-SRCS		:= $(SRCS) $(SRCS_CONFIG) $(SRCS_EXCEPT) $(SRCS_IO) $(SRCS_HTTP) $(SRCS_CGI)
+SRCS		:= $(SRCS) $(SRCS_CONFIG) $(SRCS_EXCEPT) $(SRCS_IO) $(SRCS_HTTP) $(SRCS_ROUTER) $(SRCS_CGI)
 
 OBJS		:= $(SRCS:%.cpp=$(BIN)%.o)
 DEPS		:= $(BIN)main.d $(SRCS:%.cpp=$(BIN)%.d)
@@ -27,7 +28,8 @@ TEST_DIRS		:= $(BIN)$(TEST_DIR) $(BIN)$(TEST_DIR)cgi/
 TEST_NAME		:= $(BIN)$(TEST_DIR)run_tests
 TEST_SRCS		:= catch_amalgamated.cpp test_sharedfd.cpp test_socket.cpp Client.cpp test_epollmanager.cpp test_logger.cpp\
 					test_configs_lexer.cpp test_configs_parser.cpp test_configs_validator.cpp test_configs_builder.cpp test_configs_server_registry.cpp test_http_paths.cpp test_http_parser.cpp test_http_validator.cpp\
-					test_integrate_parser_validator.cpp test_http_response.cpp test_TimerFD.cpp test_http_session_manager.cpp
+					test_integrate_parser_validator.cpp test_http_response.cpp test_TimerFD.cpp test_http_session_manager.cpp test_body_sink.cpp test_router.cpp test_http_delete_request.cpp \
+					test_http_get_request.cpp test_http_post_request.cpp test_connection.cpp
 TEST_SRCS_CGI	:= $(addprefix cgi/, test_CGI.cpp test_CGIRequest.cpp test_CGIResponse.cpp test_CGIParser.cpp)
 TEST_SRCS		:= $(TEST_SRCS) $(TEST_SRCS_CGI)
 TEST_OBJS		:= $(TEST_SRCS:%.cpp=$(BIN)$(TEST_DIR)%.o)

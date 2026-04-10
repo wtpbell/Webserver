@@ -49,7 +49,7 @@ namespace
       parser.Parse("");
     }
 
-    REQUIRE(parser.ExitResult() == HTTPParser::ParseResult::Done);
+    REQUIRE(parser.ExitResult() == HTTPParser::ParseResult::kDone);
     return request;
   }
 

@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:14:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:30:26 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/02 15:57:44 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,10 +109,20 @@ std::string_view HTTPRequest::GetHost(void) const
   if (host.empty())
     return {};
 
+  if (host.front() == '[')
+  {
+    auto end = host.find(']');
+    return end == std::string_view::npos ? std::string_view{} : host.substr(1, end - 1);
+  }
+
   auto colon = host.find(':');
-  return (colon == std::string_view::npos) ? host : host.substr(0, colon);
+  return colon == std::string_view::npos ? host : host.substr(0, colon);
 }
 
+const std::optional<HTTPRequest::Path>& HTTPRequest::GetBodyFilePath(void) const
+{
+  return bodyFilePath_;
+}
 const HTTPRequest::CookieMap& HTTPRequest::GetCookies(void) const
 {
   return cookies_;
@@ -163,6 +173,11 @@ void HTTPRequest::SetComplete(bool complete)
   isComplete_ = complete;
 }
 
+void HTTPRequest::SetBodyFilePath(Path p)
+{
+  bodyFilePath_ = std::move(p);
+}
+
 void HTTPRequest::SetCookies(CookieMap&& cookies)
 {
   cookies_ = std::move(cookies);
@@ -180,10 +195,11 @@ bool HTTPRequest::HasCookie(std::string_view name) const
 
 void HTTPRequest::Clear(void)
 {
-  method_ = HTTP::Method::UNSUPPORTED;
+  method_ = HTTP::Method::kUnsupported;
   target_.clear();
   uri_.clear();
   query_.clear();
   isComplete_ = false;
   path_.clear();
+  bodyFilePath_.reset();
 }

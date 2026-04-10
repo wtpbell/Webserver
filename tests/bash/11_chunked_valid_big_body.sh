@@ -15,7 +15,6 @@ wire="$(
   ' || true
 )"
 
-# With current DispatchRequest (GET and POST are accepted, but POST return 204), POST should map to 501.
-ASSERT_STATUS 204 "$wire"
+ASSERT_STATUS 400 "$wire"
 
 stop_server

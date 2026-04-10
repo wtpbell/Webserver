@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   Parser.hpp                                          :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2025/12/02 10:35:32 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:35:34 by jstuhrin       ########   codam.nl       */
+/*                                                        ::::::::            */
+/*   Parser.hpp                                         :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2025/12/02 10:35:32 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/07 10:26:16 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,30 +42,27 @@ enum class Identifier
 
 struct Node
 {
-  Identifier name;
-  Identifier context;
-  std::string lexeme;
-  std::vector<Node> params;
-  std::vector<Node> directives;
-  std::vector<Node> nestedBlocks;
-  std::size_t idxTokenListStart;
-  std::size_t idxTokenListEnd;
-  bool error;
+    Identifier name;
+    Identifier context;
+    std::string lexeme;
+    std::vector<Node> params;
+    std::vector<Node> directives;
+    std::vector<Node> nestedBlocks;
+    std::size_t idxTokenListStart;
+    std::size_t idxTokenListEnd;
+    bool error;
 
-  Node(Identifier name, Identifier context, const Lexer& lexer, std::size_t currentTokenIdx)
-    : name(name)
-    , context(context)
-    , lexeme(lexer.GetLexeme(currentTokenIdx))
-    , idxTokenListStart(currentTokenIdx)
-    , idxTokenListEnd(currentTokenIdx)
-    , error(false)
-  {}
+    Node(Identifier name, Identifier context, const Lexer& lexer, std::size_t currentTokenIdx)
+        : name(name),
+          context(context),
+          lexeme(lexer.GetLexeme(currentTokenIdx)),
+          idxTokenListStart(currentTokenIdx),
+          idxTokenListEnd(currentTokenIdx),
+          error(false)
+    {
+    }
 
-  Node()
-    : idxTokenListStart(0)
-    , idxTokenListEnd(0)
-    , error(false)
-  {}
+    Node() : idxTokenListStart(0), idxTokenListEnd(0), error(false) {}
 };
 
 class Parser

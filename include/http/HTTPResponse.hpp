@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/14 10:48:28 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:18:12 by bewong        ########   odam.nl         */
+/*   Updated: 2026/03/17 10:04:08 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,8 +35,8 @@ class HTTPResponse : public HTTPMessage
     void SetStatus(HTTP::Status status);
 
   private:
-    HTTP::Status status_{HTTP::Status::OK};
-    std::string reason_{"OK"};
+    HTTP::Status status_{HTTP::Status::kOk};
+    std::string reason_{"kOk"};
 };
 
 #endif

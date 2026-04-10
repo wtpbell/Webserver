@@ -1,25 +1,23 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   ValidatorIpPort.cpp                                 :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2026/03/17 11:49:00 by jstuhrin       #+#    #+#                */
-/*   Updated: 2026/03/17 11:49:10 by jstuhrin       ########   odam.nl        */
+/*                                                        ::::::::            */
+/*   ValidatorIpPort.cpp                                :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/03/17 11:49:00 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/10 10:20:00 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <optional>
-#include <charconv>
+#include "config/ValidatorIpPort.hpp"
+
 #include <array>
-#include <sstream>
+#include <charconv>
 #include <limits>
-#include <iostream>
+#include <optional>
 
 #include "config/Lexer.hpp"
-#include "config/Parser.hpp"
-#include "config/ValidatorIpPort.hpp"
 
 //////////////////// PUBLIC ////////////////////
 
@@ -99,7 +97,7 @@ bool ValidatorIpPort::ValidateDoubleColon(const std::string& ipv6, std::string& 
 }
 
 bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                               std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const
+                                     std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const
 {
   std::string::size_type start = 0;
   std::string::size_type end = ipv6.find("::");
@@ -144,7 +142,8 @@ bool ValidatorIpPort::ExpandIpv6Left(const std::string& ipv6, std::array<std::st
 }
 
 bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::string, 8>& quartets,
-                                std::size_t& numQuartets, bool hasZeroCompression, std::string& errorMessage) const
+                                      std::size_t& numQuartets, bool hasZeroCompression,
+                                      std::string& errorMessage) const
 {
   if (ipv6.find("::") == std::string::npos)
   {
@@ -191,7 +190,8 @@ bool ValidatorIpPort::ExpandIpv6Right(const std::string& ipv6, std::array<std::s
   return true;
 }
 
-bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets, std::string& errorMessage) const
+bool ValidatorIpPort::ExpandIpv6(const std::string& ipv6, std::array<std::string, 8>& quartets,
+                                 std::string& errorMessage) const
 {
   std::string::size_type end = ipv6.find(':');
   if (end == std::string::npos)
@@ -375,7 +375,8 @@ bool ValidatorIpPort::IsZero(const std::string& quartet) const
   return true;
 }
 
-bool ValidatorIpPort::LongestConsecutiveZeros(const std::array<std::string, 8>& quartets, std::size_t& lenZeros, std::size_t& startZeros) const
+bool ValidatorIpPort::LongestConsecutiveZeros(const std::array<std::string, 8>& quartets, std::size_t& lenZeros,
+                                              std::size_t& startZeros) const
 {
   std::size_t currentLen = 0;
   std::size_t startCurrent = 0;
@@ -420,7 +421,7 @@ bool ValidatorIpPort::LongestConsecutiveZeros(const std::array<std::string, 8>& 
     lenZeros = longestLen;
     startZeros = longestStart;
     return true;
-  } 
+  }
   return false;
 }
 

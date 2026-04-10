@@ -8,8 +8,8 @@ start_server
 wire="$(
 python3 - <<'PY' | send_raw
 path = "/" + ("a" * 9000)
-req = f"GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n"
-print(req, end="")
+request = f"GET {path} HTTP/1.1\r\nHost: localhost\r\n\r\n"
+print(request, end="")
 PY
 )"
 

@@ -18,13 +18,13 @@
 #include <string>
 
 Lexer::Lexer(std::string buffer)
-  : line_(1)
-  , col_(1)
-  , posBuffer_(0)
-  , idxCurrentToken_(0)
-  , madeEofToken_(false)
-  , error_(false)
-  , buffer_(std::move(buffer))
+    : line_(1),
+      col_(1),
+      posBuffer_(0),
+      idxCurrentToken_(0),
+      madeEofToken_(false),
+      error_(false),
+      buffer_(std::move(buffer))
 {
   while (!madeEofToken_)
   {
@@ -322,7 +322,7 @@ std::string Lexer::TokenKindToString(TokenKind kind) const
     case TokenKind::kCgi:
       return "Cgi";
     case TokenKind::kCgiExtension:
-    	return "Cgi_extension";
+      return "Cgi_extension";
     case TokenKind::kDefaultServer:
       return "Default_server";
     case TokenKind::kHttp:
@@ -364,7 +364,7 @@ void Lexer::MakeToken()
   Traverse(leadingTrivia);
   TokenKind kind = DetermineKind();
   std::string lexeme = ExtractLexeme();
-	Token token(kind, std::move(lexeme), std::move(leadingTrivia), line_, col_, idxCurrentToken_);
+  Token token(kind, std::move(lexeme), std::move(leadingTrivia), line_, col_, idxCurrentToken_);
   Traverse(token.lexeme);
   if (token.kind == TokenKind::kString)
   {

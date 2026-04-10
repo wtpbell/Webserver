@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   SessionManager.cpp                                 :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/02/25 11:41:07 by bewong            #+#    #+#             */
-/*   Updated: 2026/02/25 11:41:07 by bewong           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   SessionManager.cpp                                 :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/04/02 12:01:38 by bewong        #+#    #+#                 */
+/*   Updated: 2026/04/02 12:01:38 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,17 +22,17 @@
 #include "http/HTTPResponse.hpp"
 #include "http/HTTPValidator.hpp"
 
-void SessionManager::UseOrCreateSession(HTTPRequest& req, HTTPResponse& res)
+void SessionManager::UseOrCreateSession(HTTPRequest& request, HTTPResponse& res)
 {
-  UseOrCreateSessionAt(req, res, std::time(nullptr));
+  UseOrCreateSessionAt(request, res, std::time(nullptr));
 }
 
 // if the client keeps sending the same session id, it will be refreshed
-void SessionManager::UseOrCreateSessionAt(HTTPRequest& req, HTTPResponse& res, std::time_t now)
+void SessionManager::UseOrCreateSessionAt(HTTPRequest& request, HTTPResponse& res, std::time_t now)
 {
   CleanupExpired(now);
 
-  std::string_view sid = req.GetCookieOr("session_id", "");
+  std::string_view sid = request.GetCookieOr("session_id", "");
 
   if (HTTP::validate::IsValidSid(sid))
   {

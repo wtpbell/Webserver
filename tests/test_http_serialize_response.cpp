@@ -9,14 +9,14 @@ static bool contains(const std::string& str, const std::string& substr)
   return str.find(substr) != std::string::npos;
 }
 
-TEST_CASE("SerializeResponse basic 200 OK with body", "SerializeResponse")
+TEST_CASE("SerializeResponse basic 200 kOk with body", "SerializeResponse")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::OK);
-  resp.SetHeader("Content-Type", "text/plain");
-  resp.SetBody("Success\n");  // 8 bytes
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kOk);
+  response.SetHeader("Content-Type", "text/plain");
+  response.SetBody("Success\n");  // 8 bytes
 
-  const std::string wire = HTTP::wire::SerializeResponse(resp);
+  const std::string wire = HTTP::wire::SerializeResponse(response);
 
   REQUIRE(contains(wire, "HTTP/1.1 200 OK\r\n"));
   REQUIRE(contains(wire, "\r\n\r\n"));  // header/body separator
@@ -34,13 +34,13 @@ TEST_CASE("SerializeResponse basic 200 OK with body", "SerializeResponse")
 
 TEST_CASE("SerializeResponse overwrites user Content-Length", "SerializeResponse")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::OK);
-  resp.SetHeader("Content-Type", "text/plain");
-  resp.SetHeader("Content-Length", "999");
-  resp.SetBody("Success\n");
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kOk);
+  response.SetHeader("Content-Type", "text/plain");
+  response.SetHeader("Content-Length", "999");
+  response.SetBody("Success\n");
 
-  const std::string wire = HTTP::wire::SerializeResponse(resp);
+  const std::string wire = HTTP::wire::SerializeResponse(response);
 
   INFO("wire=\n" << wire);
   REQUIRE(contains(wire, "Content-Length: 8\r\n"));
@@ -49,13 +49,13 @@ TEST_CASE("SerializeResponse overwrites user Content-Length", "SerializeResponse
 
 TEST_CASE("SerializeResponse ignore Transfer-Encoding", "SerializeResponse")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::OK);
-  resp.SetHeader("Content-Type", "text/plain");
-  resp.SetHeader("Transfer-Encoding", "chunked");
-  resp.SetBody("Success\n");
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kOk);
+  response.SetHeader("Content-Type", "text/plain");
+  response.SetHeader("Transfer-Encoding", "chunked");
+  response.SetBody("Success\n");
 
-  const std::string wire = HTTP::wire::SerializeResponse(resp);
+  const std::string wire = HTTP::wire::SerializeResponse(response);
 
   INFO("wire=\n" << wire);
   REQUIRE(contains(wire, "Content-Length: 8\r\n"));
@@ -64,11 +64,11 @@ TEST_CASE("SerializeResponse ignore Transfer-Encoding", "SerializeResponse")
 
 TEST_CASE("SerializeResponse doesn't force Connection close unless explicitly set", "SerializeResponse")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::OK);
-  resp.SetBody("x");
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kOk);
+  response.SetBody("x");
 
-  const std::string wire = HTTP::wire::SerializeResponse(resp);
+  const std::string wire = HTTP::wire::SerializeResponse(response);
 
   INFO("wire=\n" << wire);
   REQUIRE(contains(wire, "Content-Length: 1\r\n"));
@@ -77,12 +77,12 @@ TEST_CASE("SerializeResponse doesn't force Connection close unless explicitly se
 
 TEST_CASE("SerializeResponse preserves explicit Connection: close", "SerializeResponse")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::OK);
-  resp.SetHeader("Connection", "close");
-  resp.SetBody("x");
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kOk);
+  response.SetHeader("Connection", "close");
+  response.SetBody("x");
 
-  const std::string wire = HTTP::wire::SerializeResponse(resp);
+  const std::string wire = HTTP::wire::SerializeResponse(response);
   const bool close = contains(wire, "Connection: close\r\n") || contains(wire, "connection: close\r\n");
 
   INFO("wire=\n" << wire);
@@ -91,11 +91,11 @@ TEST_CASE("SerializeResponse preserves explicit Connection: close", "SerializeRe
 
 TEST_CASE("SerializeResponse empty body: content-length: 0", "SerializeResponse")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::OK);
-  resp.SetBody("");
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kOk);
+  response.SetBody("");
 
-  const std::string wire = HTTP::wire::SerializeResponse(resp);
+  const std::string wire = HTTP::wire::SerializeResponse(response);
 
   INFO("wire=\n" << wire);
   REQUIRE(contains(wire, "Content-Length: 0\r\n"));

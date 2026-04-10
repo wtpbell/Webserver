@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   Lexer.hpp                                           :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2025/12/02 10:35:18 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/02 10:35:23 by jstuhrin       ########   codam.nl       */
+/*                                                        ::::::::            */
+/*   Lexer.hpp                                          :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2025/12/02 10:35:18 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/07 10:26:12 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,24 +44,26 @@ enum class TokenKind
 
 struct Token
 {
-  TokenKind kind;
-  std::string lexeme;
-  std::string leadingTrivia;
-  std::size_t line;
-  std::size_t col;
-  std::size_t idxTokenList;
-  bool error;
-  std::string errorMessage;
+    TokenKind kind;
+    std::string lexeme;
+    std::string leadingTrivia;
+    std::size_t line;
+    std::size_t col;
+    std::size_t idxTokenList;
+    bool error;
+    std::string errorMessage;
 
-  Token(TokenKind kind, std::string lexeme, std::string leadingTrivia, std::size_t line, std::size_t col, std::size_t idxCurrentToken_)
-  	: kind(kind)
-  	, lexeme(std::move(lexeme))
-  	, leadingTrivia(std::move(leadingTrivia))
-  	, line(line)
-  	, col(col)
-  	, idxTokenList(idxCurrentToken_)
-  	, error(false)
-  {}
+    Token(TokenKind kind, std::string lexeme, std::string leadingTrivia, std::size_t line, std::size_t col,
+          std::size_t idxCurrentToken_)
+        : kind(kind),
+          lexeme(std::move(lexeme)),
+          leadingTrivia(std::move(leadingTrivia)),
+          line(line),
+          col(col),
+          idxTokenList(idxCurrentToken_),
+          error(false)
+    {
+    }
 };
 
 class Lexer

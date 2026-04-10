@@ -19,12 +19,13 @@
 
 enum class ValidationResult
 {
-  OK,
-  BadRequest,
-  NotImplemented,
-  PayloadTooLarge,
-  VersionNotSupported,
-  URITooLong,
+  kOk,
+  kBadRequest,
+  kNotImplemented,
+  kPayloadTooLarge,
+  kVersionNotSupported,
+  kURITooLong,
+  kInternalServerError
 };
 
 namespace HTTP
@@ -38,7 +39,7 @@ namespace HTTP
 
     inline bool IsValidMethod(std::string_view method)
     {
-      return HTTP::StringToMethod(method) != HTTP::Method::UNSUPPORTED;
+      return HTTP::StringToMethod(method) != HTTP::Method::kUnsupported;
     }
 
     bool IsValidTarget(std::string_view method, std::string_view target);
@@ -56,11 +57,11 @@ namespace HTTP
   }  // namespace validate
 }  // namespace HTTP
 
-ValidationResult ValidateRequest(const HTTPRequest& req);
-ValidationResult ValidateStartLine(const HTTPRequest& req);
-ValidationResult ValidateHeader(const HTTPRequest& req);
-ValidationResult ValidateCookies(const HTTPRequest& req);
-ValidationResult ValidateTransferEncoding(const HTTPRequest& req);
-ValidationResult ValidateContentLength(const HTTPRequest& req);
+ValidationResult ValidateRequest(const HTTPRequest& request);
+ValidationResult ValidateStartLine(const HTTPRequest& request);
+ValidationResult ValidateHeader(const HTTPRequest& request);
+ValidationResult ValidateCookies(const HTTPRequest& request);
+ValidationResult ValidateTransferEncoding(const HTTPRequest& request);
+ValidationResult ValidateContentLength(const HTTPRequest& request);
 
 #endif  // HTTPVALIDATOR_HPP

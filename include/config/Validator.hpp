@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   Validator.hpp                                       :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2025/12/17 15:27:41 by jstuhrin       #+#    #+#                */
-/*   Updated: 2025/12/17 15:27:43 by jstuhrin       ########   odam.nl        */
+/*                                                        ::::::::            */
+/*   Validator.hpp                                      :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2025/12/17 15:27:41 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/02 11:14:05 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,6 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <optional>
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
@@ -83,114 +82,45 @@ class Validator
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
 
-    const std::array<std::string_view, 3> allowedMethods_{
-      "GET",
-      "POST",
-      "DELETE"
-    };
+    const std::array<std::string_view, 3> allowedMethods_{"GET", "POST", "DELETE"};
 
-    const std::set<std::string_view> supportedErrorPageCodesSet_{
-      "301",
-      "400",
-      "401",
-      "402",
-      "403",
-      "404",
-      "405",
-      "500",
-      "502",
-      "503",
-      "504"
-    };
+    const std::set<std::string_view> supportedErrorPageCodesSet_{"301", "400", "401", "402", "403", "404",
+                                                                 "405", "500", "502", "503", "504"};
 
     std::string supportedErrorPageCodesStr_;
-  
-    const std::set<std::string_view> supportedReturnCodesSet_{
-      "100",
-      "301"
-    };
+
+    const std::set<std::string_view> supportedReturnCodesSet_{"100", "301"};
 
     std::string supportedReturnCodesStr_;
 
     const std::set<Identifier> duplicatesIllegal_{
-      Identifier::kCgi,
-      Identifier::kIndex,
-      Identifier::kAutoindex,
-      Identifier::kClientMaxBodySize,
-      Identifier::kAllowedMethods,
-      Identifier::kReturn,
-      Identifier::kRoot,
-      Identifier::kAlias,
+        Identifier::kCgi,
+        Identifier::kIndex,
+        Identifier::kAutoindex,
+        Identifier::kClientMaxBodySize,
+        Identifier::kAllowedMethods,
+        Identifier::kReturn,
+        Identifier::kRoot,
+        Identifier::kAlias,
     };
 
     const std::map<Identifier, std::set<Identifier>> validDirectives_{
-      {
-        Identifier::kMain, {}
-      },
-      {
-        Identifier::kHttp,
-        {
-          Identifier::kIndex,
-          Identifier::kClientMaxBodySize,
-          Identifier::kErrorPage,
-          Identifier::kAutoindex
-        }
-      },
-      {
-        Identifier::kServer,
-        {
-          Identifier::kListen,
-          Identifier::kServerName,
-          Identifier::kRoot,
-          Identifier::kIndex,
-          Identifier::kClientMaxBodySize,
-          Identifier::kErrorPage,
-          Identifier::kReturn,
-          Identifier::kAllowedMethods,
-          Identifier::kAutoindex,
-          Identifier::kCgiExtension
-        }
-      },
-      {
-        Identifier::kLocation,
-        {
-          Identifier::kRoot,
-          Identifier::kIndex,
-          Identifier::kAlias,
-          Identifier::kClientMaxBodySize,
-          Identifier::kErrorPage,
-          Identifier::kReturn,
-          Identifier::kAllowedMethods,
-          Identifier::kAutoindex,
-          Identifier::kCgi,
-          Identifier::kCgiExtension
-        }
-      }
-    };
-  
-    const std::map<Identifier, std::set<Identifier>> validBlocks_{
-      {
-        Identifier::kMain,
-        {
-          Identifier::kHttp
-        }
-      },
-      {
-        Identifier::kHttp,
-        {
-          Identifier::kServer
-        }
-      },
-      {
-        Identifier::kServer,
-        {
-          Identifier::kLocation
-        }
-      },
-      {
-        Identifier::kLocation, {}
-      }
-    };
+        {Identifier::kMain, {}},
+        {Identifier::kHttp,
+         {Identifier::kIndex, Identifier::kClientMaxBodySize, Identifier::kErrorPage, Identifier::kAutoindex}},
+        {Identifier::kServer,
+         {Identifier::kListen, Identifier::kServerName, Identifier::kRoot, Identifier::kIndex,
+          Identifier::kClientMaxBodySize, Identifier::kErrorPage, Identifier::kReturn, Identifier::kAllowedMethods,
+          Identifier::kAutoindex, Identifier::kCgiExtension}},
+        {Identifier::kLocation,
+         {Identifier::kRoot, Identifier::kIndex, Identifier::kAlias, Identifier::kClientMaxBodySize,
+          Identifier::kErrorPage, Identifier::kReturn, Identifier::kAllowedMethods, Identifier::kAutoindex,
+          Identifier::kCgi, Identifier::kCgiExtension}}};
+
+    const std::map<Identifier, std::set<Identifier>> validBlocks_{{Identifier::kMain, {Identifier::kHttp}},
+                                                                  {Identifier::kHttp, {Identifier::kServer}},
+                                                                  {Identifier::kServer, {Identifier::kLocation}},
+                                                                  {Identifier::kLocation, {}}};
 };
 
 #endif

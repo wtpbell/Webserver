@@ -1,47 +1,46 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   Builder.cpp                                         :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2026/02/12 10:14:00 by jstuhrin       #+#    #+#                */
-/*   Updated: 2026/02/12 10:14:00 by jstuhrin       ########   odam.nl        */
+/*                                                        ::::::::            */
+/*   Builder.cpp                                        :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/02/12 10:14:00 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/10 09:48:36 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <cstdint>
-#include <string>
-#include <filesystem>
-#include <map>
-#include <vector>
-#include <cassert>
-#include <charconv>
-#include <cctype>
-#include <string_view>
-#include <sstream>
-#include <set>
+#include "config/Builder.hpp"
+
 #include <array>
-
+#include <cassert>
+#include <cctype>
+#include <charconv>
+#include <cstdint>
+#include <filesystem>
 #include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
+#include <string_view>
+#include <vector>
 
+#include "config/Builder.hpp"
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
-#include "config/Validator.hpp"
-#include "config/ValidatorIpPort.hpp"
-#include "config/Builder.hpp"
-#include "config/ServerRegistry.hpp"
 #include "config/RouteView.hpp"
+#include "config/ServerRegistry.hpp"
 #include "config/ServerView.hpp"
+#include "config/ValidatorIpPort.hpp"
 
 Builder::Builder(Lexer& lexer, Parser& parser, const ValidatorIpPort& validatorIpPort)
-  : lexer_(lexer)
-  , parser_(parser)
-  , validatorIpPort_(validatorIpPort)
-  , error_(false)
-  , defaultPort_("8080")
-  , defaultIp_("::")
-  , defaultReturnCode_(302)
+    : lexer_(lexer),
+      parser_(parser),
+      validatorIpPort_(validatorIpPort),
+      error_(false),
+      defaultPort_("8080"),
+      defaultIp_("::"),
+      defaultReturnCode_(302)
 {
   ExtractHttpData();
   assert(ipPortNodes_.size() == hasDefaultServerFlagVector_.size());
@@ -67,18 +66,18 @@ bool Builder::GetError() const
 
 ServerRegistry Builder::BuildServerRegistry()
 {
-  return ServerRegistry(std::move(serverViews_),
-    std::move(serverViewMap_),
-    std::move(routeViewMap_),
-    std::move(defaultServerRouteViewMap_));
+  return ServerRegistry(std::move(serverViews_), std::move(serverViewMap_), std::move(routeViewMap_),
+                        std::move(defaultServerRouteViewMap_));
 }
 
 //////////////////// PRIVATE ////////////////////
 
-void Builder::SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message, std::size_t tokenIndex)
+void Builder::SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message,
+                              std::size_t tokenIndex)
 {
   std::stringstream ss;
-  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme << kReset_ << "` " << message << "\n";
+  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme
+     << kReset_ << "` " << message << "\n";
   lexer_.SetTokenErrorMessage(tokenIndex, ss.str());
   lexer_.SetTokenErrorTrue(tokenIndex);
 }
@@ -88,14 +87,17 @@ void Builder::Error(Node& node, std::string_view message)
   switch (node.name)
   {
     case Identifier::kListen:
-      SetErrorMessage(lexer_.GetLine(node.params[0].idxTokenListStart), lexer_.GetCol(node.params[0].idxTokenListStart), node.params[0].lexeme, message, node.params[0].idxTokenListStart);
+      SetErrorMessage(lexer_.GetLine(node.params[0].idxTokenListStart), lexer_.GetCol(node.params[0].idxTokenListStart),
+                      node.params[0].lexeme, message, node.params[0].idxTokenListStart);
       break;
     case Identifier::kServer:
-      SetErrorMessage(lexer_.GetLine(node.idxTokenListEnd), lexer_.GetCol(node.idxTokenListEnd), lexer_.GetLexeme(node.idxTokenListEnd), message, node.idxTokenListEnd);
+      SetErrorMessage(lexer_.GetLine(node.idxTokenListEnd), lexer_.GetCol(node.idxTokenListEnd),
+                      lexer_.GetLexeme(node.idxTokenListEnd), message, node.idxTokenListEnd);
       break;
     case Identifier::kParam:
     case Identifier::kDefaultServer:
-      SetErrorMessage(lexer_.GetLine(node.idxTokenListStart), lexer_.GetCol(node.idxTokenListStart), lexer_.GetLexeme(node.idxTokenListStart), message, node.idxTokenListStart);
+      SetErrorMessage(lexer_.GetLine(node.idxTokenListStart), lexer_.GetCol(node.idxTokenListStart),
+                      lexer_.GetLexeme(node.idxTokenListStart), message, node.idxTokenListStart);
       break;
     default:
       assert(false && "invalid Node type in Builder::Error()");
@@ -198,15 +200,15 @@ void Builder::ExtractClientMaxBodySize(const Node& dir, RouteView& routeView)
   char last = std::tolower(numberLexeme.back());
   switch (last)
   {
-  case 'k':
-    number *= 1024;
-    break;
-  case 'm':
-    number *= 1024 * 1024;
-    break;
-  case 'g':
-    number *= 1024 * 1024 * 1024;
-    break;
+    case 'k':
+      number *= 1024;
+      break;
+    case 'm':
+      number *= 1024 * 1024;
+      break;
+    case 'g':
+      number *= 1024 * 1024 * 1024;
+      break;
   }
   routeView.clientMaxBody = number;
 }
@@ -236,7 +238,8 @@ void Builder::ExtractReturn(const Node& dir, RouteView& routeView)
   routeView.returnRule.emplace(RouteView::ReturnRule{});
   if (std::isdigit(static_cast<unsigned char>(dir.params[0].lexeme.front())))
   {
-    std::from_chars(dir.params[0].lexeme.data(), dir.params[0].lexeme.data() + dir.params[0].lexeme.size(), routeView.returnRule->code);
+    std::from_chars(dir.params[0].lexeme.data(), dir.params[0].lexeme.data() + dir.params[0].lexeme.size(),
+                    routeView.returnRule->code);
     if (dir.params.size() > 1)
     {
       routeView.returnRule->target = dir.params[1].lexeme;
@@ -269,7 +272,8 @@ void Builder::ExtractErrorPage(const Node& dir, RouteView& routeView)
   }
 }
 
-void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView, std::set<std::string>& locationPrefixSet)
+void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView,
+                                               std::set<std::string>& locationPrefixSet)
 {
   const std::string& locationPrefix = location.params[0].lexeme;
   auto result = locationPrefixSet.insert(locationPrefix);
@@ -375,7 +379,7 @@ void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serve
         if (result.second == false)
         {
           Error(param, "- duplicate hostname in server");
-        }   
+        }
         serverView.hostNames.emplace_back(param.lexeme);
         serverNameNodes_.emplace_back(&param);
       }
@@ -388,7 +392,7 @@ void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerVi
   std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
   if (numListenDirectives == 0)
   {
-    ValidateAndExtractServerNames(serverBlock,serverView);
+    ValidateAndExtractServerNames(serverBlock, serverView);
     SetServerViewDefaults(serverBlock, serverView);
     serverViews_.emplace_back(serverView);
     return;
@@ -486,7 +490,8 @@ void Builder::ExtractLocationDirectives(const Node& location, RouteView& routeVi
   }
 }
 
-void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView, std::set<std::string>& locationPrefixSet)
+void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView,
+                                  std::set<std::string>& locationPrefixSet)
 {
   if (serverBlock.nestedBlocks.empty())
   {
@@ -544,7 +549,8 @@ void Builder::ValidateIpPortHostName()
       {
         if (serverNameNodes_[serverNameNodesIdx]->name == Identifier::kServer)
         {
-          Error(*serverNameNodes_[serverNameNodesIdx], "expected: `server_name` - duplicate hostname IP:port combination");
+          Error(*serverNameNodes_[serverNameNodesIdx],
+                "expected: `server_name` - duplicate hostname IP:port combination");
         }
         else
         {
@@ -598,9 +604,9 @@ void Builder::PopulateDefaultServerRouteViewMap()
     if (defaultServerRouteViewMap_.count(ipPort) == 0 || hasDefaultServerFlagVector_[idx] == true)
     {
       defaultServerRouteViewMap_.erase(ipPort);
-      std::map<std::string, RouteView*>& routes = defaultServerRouteViewMap_[ipPort]; 
+      std::map<std::string, RouteView*>& routes = defaultServerRouteViewMap_[ipPort];
       for (RouteView& routeView : serverView.routes)
-      {        
+      {
         routes.emplace(routeView.locationPrefix, &routeView);
       }
     }

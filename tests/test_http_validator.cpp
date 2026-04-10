@@ -6,7 +6,6 @@
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPValidator.hpp"
 
-
 // For validator-unit tests we almost always only need:
 //   start-line + headers parsed successfully
 // We do NOT want to parse any body here, because:
@@ -19,13 +18,13 @@ static HTTPRequest MakeParsedHeadersOnly(std::string_view raw)
   auto res = parser.Parse(raw);
 
   // These test inputs should include the blank line terminating headers.
-  REQUIRE(res == HTTPParser::ParseResult::HeadersDone);
+  REQUIRE(res == HTTPParser::ParseResult::kHeadersDone);
 
   // Force "no body" so the parser can finish without requiring bytes.
   parser.SetNoBody();
 
   res = parser.Parse({});
-  REQUIRE(res == HTTPParser::ParseResult::Done);
+  REQUIRE(res == HTTPParser::ParseResult::kDone);
 
   return parser.TakeRequest();
 }
@@ -38,15 +37,15 @@ static HTTPRequest MakeParsedRequestWithBody(std::string_view raw)
 
   auto res = parser.Parse(raw);
 
-  if (res == HTTPParser::ParseResult::HeadersDone)
+  if (res == HTTPParser::ParseResult::kHeadersDone)
   {
-    const HTTPRequest& req = parser.GetRequest();
+    const HTTPRequest& request = parser.GetRequest();
 
     // Body framing decision only:
     // - Only select chunked mode if TE is exactly "chunked"
     //   (for validator tests like TE:gzip we must NOT enter chunked mode)
     bool isChunked = false;
-    if (auto te = req.GetHeaderValuesOf("transfer-encoding"))
+    if (auto te = request.GetHeaderValuesOf("transfer-encoding"))
     {
       for (const auto& v : *te)
       {
@@ -75,7 +74,7 @@ static HTTPRequest MakeParsedRequestWithBody(std::string_view raw)
 
     if (isChunked)
       parser.SetChunked();
-    else if (auto len = req.GetContentLength())
+    else if (auto len = request.GetContentLength())
       parser.SetContentLength(*len);
     else
       parser.SetNoBody();
@@ -83,24 +82,24 @@ static HTTPRequest MakeParsedRequestWithBody(std::string_view raw)
     res = parser.Parse({});
   }
 
-  REQUIRE(res == HTTPParser::ParseResult::Done);
+  REQUIRE(res == HTTPParser::ParseResult::kDone);
   return parser.TakeRequest();
 }
 
 static HTTPRequest MakeValidRequest()
 {
-  HTTPRequest req;
-  req.SetMethod("GET");
-  req.SetTarget("/");
-  req.SetVersion("HTTP/1.1");
-  req.AddHeader("host", "example.com");
-  req.SetComplete(true);
-  return req;
+  HTTPRequest request;
+  request.SetMethod("GET");
+  request.SetTarget("/");
+  request.SetVersion("HTTP/1.1");
+  request.AddHeader("host", "example.com");
+  request.SetComplete(true);
+  return request;
 }
 
 TEST_CASE("HTTPValidator::ValidateRequest - Basic Request", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Transfer-Encoding: chunked\r\n"
@@ -108,7 +107,7 @@ TEST_CASE("HTTPValidator::ValidateRequest - Basic Request", "[http][validator]")
       "0\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
 }
 
 TEST_CASE("HTTPValidator rejects oversized body", "[http][validator]")
@@ -125,41 +124,41 @@ TEST_CASE("HTTPValidator rejects oversized body", "[http][validator]")
                           "\r\n" +
                           body;
 
-  auto req = MakeParsedRequestWithBody(raw);
+  auto request = MakeParsedRequestWithBody(raw);
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::PayloadTooLarge);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kPayloadTooLarge);
 }
 
 TEST_CASE("HTTPValidator rejects missing Host header", "[http][validator]")
 {
-  HTTPRequest req;
-  req.SetMethod("GET");
-  req.SetTarget("/");
-  req.SetVersion("HTTP/1.1");
-  req.SetComplete(true);
+  HTTPRequest request;
+  request.SetMethod("GET");
+  request.SetTarget("/");
+  request.SetVersion("HTTP/1.1");
+  request.SetComplete(true);
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects unsupported method", "[http][validator]")
 {
-  HTTPRequest req = MakeValidRequest();
-  req.SetMethod("BREW");
+  HTTPRequest request = MakeValidRequest();
+  request.SetMethod("BREW");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::NotImplemented);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kNotImplemented);
 }
 
 TEST_CASE("HTTPValidator rejects invalid header name", "[http][validator]")
 {
-  HTTPRequest req = MakeValidRequest();
-  req.AddHeader("Bad Header", "value");  // space not allowed
+  HTTPRequest request = MakeValidRequest();
+  request.AddHeader("Bad Header", "value");  // space not allowed
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects CL and chunked together", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Content-Length: 10\r\n"
@@ -168,47 +167,47 @@ TEST_CASE("HTTPValidator rejects CL and chunked together", "[http][validator]")
       "0\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects invalid target", "[http][validator]")
 {
-  HTTPRequest req = MakeValidRequest();
-  req.SetTarget("relative/path");  // must start with /
+  HTTPRequest request = MakeValidRequest();
+  request.SetTarget("relative/path");  // must start with /
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects unsupported HTTP version", "[http][validator]")
 {
-  HTTPRequest req = MakeValidRequest();
-  req.SetVersion("HTTP/1.0");
+  HTTPRequest request = MakeValidRequest();
+  request.SetVersion("HTTP/1.0");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::VersionNotSupported);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kVersionNotSupported);
 }
 
 TEST_CASE("HTTPValidator rejects multiple Host headers", "[http][validator]")
 {
-  HTTPRequest req = MakeValidRequest();
-  req.AddHeader("Host", "example.org");
+  HTTPRequest request = MakeValidRequest();
+  request.AddHeader("Host", "example.org");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects unsupported Transfer-Encoding", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Transfer-Encoding: gzip\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::NotImplemented);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kNotImplemented);
 }
 
 TEST_CASE("HTTPValidator allows multiple identical Content-Length headers", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Content-Length: 10\r\n"
@@ -216,160 +215,159 @@ TEST_CASE("HTTPValidator allows multiple identical Content-Length headers", "[ht
       "\r\n"
       "0123456789");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
 }
 
 TEST_CASE("HTTPValidator rejects negative Content-Length", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Content-Length: -1\r\n"
       "\r\n"
       "0123456789");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects mismatched Content-Length headers", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Content-Length: 10\r\n"
       "Content-Length: 5\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator accepts multiple Cookie headers", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: session=abc\r\n"
       "Cookie: user=john\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects invalid Content-Length value", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Content-Length: abc\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator rejects chunked trailing comma", "[http][validator]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Transfer-Encoding: chunked                              ,                           \r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("HTTPValidator accept valid Cookie header", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: ID=31d4d96e407aad42; lang=en-US\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
 }
 
 TEST_CASE("ValidateCookies accept empty Cookie header value", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie:\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
 }
 
 TEST_CASE("ValidateCookies accept Cookie with empty value", "[http][validate][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: ID=31d4d96e407aad42; lang=\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
 }
 
 TEST_CASE("ValidateCookies accept Cookie with empty input", "[http][validate][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: ID=31d4d96e407aad42;;lang=en-US\r\n"
       "\r\n");
 
-  REQUIRE(ValidateRequest(req) == ValidationResult::OK);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
 }
 
 TEST_CASE("ValidateCookies rejects cookie segment without '='", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: a=b; c\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("ValidateCookies rejects empty cookie name", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: =x\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("ValidateCookies rejects space in cookie name", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: a b=c\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
-
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("ValidateCookies rejects space in cookie value", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: a=hello world\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("ValidateCookies rejects comma in cookie value", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: a=1,2\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("ValidateCookies rejects quote/backslash in cookie value", "[http][validator][cookie]")
@@ -379,23 +377,23 @@ TEST_CASE("ValidateCookies rejects quote/backslash in cookie value", "[http][val
       "Host: example.com\r\n"
       "Cookie: a=\"x\"\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req1) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(req1) == ValidationResult::kBadRequest);
 
   auto req2 = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: a=\\x\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req2) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(req2) == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("ValidateCookies rejects multiple Cookie headers", "[http][validator][cookie]")
 {
-  auto req = MakeParsedHeadersOnly(
+  auto request = MakeParsedHeadersOnly(
       "POST / HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "Cookie: a=b\r\n"
       "Cookie: c=d\r\n"
       "\r\n");
-  REQUIRE(ValidateRequest(req) == ValidationResult::BadRequest);
+  REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }

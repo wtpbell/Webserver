@@ -1,16 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   HTTPCookie.cpp                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: bewong <bewong@student.codam.nl>           +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/03/04 11:22:58 by bewong            #+#    #+#             */
-/*   Updated: 2026/03/04 11:22:58 by bewong           ###   ########.fr       */
+/*                                                        ::::::::            */
+/*   HTTPCookie.cpp                                     :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/04/02 10:02:33 by bewong        #+#    #+#                 */
+/*   Updated: 2026/04/02 10:02:33 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "http/HTTPCookie.hpp"
+
+#include <string>
+#include <string_view>
 
 #include "http/HTTPValidator.hpp"
 #include "string.hpp"
@@ -44,9 +47,9 @@ namespace HTTP
       return true;
     }
 
-    bool AttachCookies(HTTPRequest& req)
+    bool AttachCookies(HTTPRequest& request)
     {
-      const auto* vals = req.GetHeaderValuesOf("cookie");
+      const auto* vals = request.GetHeaderValuesOf("cookie");
       if (!vals || vals->empty())
         return true;
       if (vals->size() != 1)
@@ -56,7 +59,7 @@ namespace HTTP
       if (!HTTP::cookie::ParseCookieHeader((*vals)[0], &cookies))
         return false;
 
-      req.SetCookies(std::move(cookies));
+      request.SetCookies(std::move(cookies));
       return true;
     }
   }  // namespace cookie

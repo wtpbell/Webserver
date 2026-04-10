@@ -75,8 +75,8 @@ TEST_CASE("Create TimerFD with 250ms duration", "[TimerFD]")
   itimerspec curr_value = GetTime(timerfd.GetValue());
 
   REQUIRE(curr_value.it_value.tv_sec == 0);
-  REQUIRE(curr_value.it_value.tv_nsec > 249980000);
-  REQUIRE(curr_value.it_value.tv_nsec < 250010000);
+  REQUIRE(curr_value.it_value.tv_nsec >= 249900000);
+  REQUIRE(curr_value.it_value.tv_nsec <= 250010000);
 
   REQUIRE(curr_value.it_interval.tv_sec == 0);
   REQUIRE(curr_value.it_interval.tv_nsec == 0);

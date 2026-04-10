@@ -3,20 +3,20 @@
 
 TEST_CASE("HTTPResponse SetStatus updates code and reason", "[http][SetStatus]")
 {
-  HTTPResponse resp;
-  resp.SetStatus(HTTP::Status::NOT_FOUND);
+  HTTPResponse response;
+  response.SetStatus(HTTP::Status::kNotFound);
 
-  REQUIRE(resp.GetStatusCode() == 404);
-  REQUIRE(resp.GetReason() == "Not Found");
+  REQUIRE(response.GetStatusCode() == 404);
+  REQUIRE(response.GetReason() == "Not Found");
 }
 
 TEST_CASE("HTTPResponse SetHeader overwrites existing header", "[http][SetHeader]")
 {
-  HTTPResponse resp;
-  resp.SetHeader("Content-Type", "text/plain");
-  resp.SetHeader("Content-Type", "application/json");
+  HTTPResponse response;
+  response.SetHeader("Content-Type", "text/plain");
+  response.SetHeader("Content-Type", "application/json");
 
-  std::string_view val = resp.GetFirstHeaderValueOf("Content-Type");
+  std::string_view val = response.GetFirstHeaderValueOf("Content-Type");
 
   REQUIRE_FALSE(val.empty());
   REQUIRE(val == "application/json");
@@ -24,54 +24,54 @@ TEST_CASE("HTTPResponse SetHeader overwrites existing header", "[http][SetHeader
 
 TEST_CASE("HTTPResponse GetFirstHeaderValueOf returns empty when missing", "[http][GetFirstHeaderValueOf]")
 {
-  HTTPResponse resp;
-  REQUIRE(resp.GetFirstHeaderValueOf("X-Nope").empty());
+  HTTPResponse response;
+  REQUIRE(response.GetFirstHeaderValueOf("X-Nope").empty());
 }
 
 TEST_CASE("HTTPResponse body is stored verbatim", "[http][SetBody]")
 {
-  HTTPResponse resp;
-  resp.SetBody("abc");
+  HTTPResponse response;
+  response.SetBody("abc");
 
-  REQUIRE(resp.GetBody() == "abc");
-  REQUIRE(resp.GetBody().size() == 3);
+  REQUIRE(response.GetBody() == "abc");
+  REQUIRE(response.GetBody().size() == 3);
 }
 
 TEST_CASE("ToHTTPStatus maps ValidationResult correctly", "[http][ToHTTPStatus]")
 {
-  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::BadRequest) == HTTP::Status::BAD_REQUEST);
+  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::kBadRequest) == HTTP::Status::kBadRequest);
 
-  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::URITooLong) == HTTP::Status::URI_TOO_LONG);
+  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::kURITooLong) == HTTP::Status::kURITooLong);
 
-  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::PayloadTooLarge) == HTTP::Status::PAYLOAD_TOO_LARGE);
+  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::kPayloadTooLarge) == HTTP::Status::kPayloadTooLarge);
 
-  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::NotImplemented) == HTTP::Status::NOT_IMPLEMENTED);
+  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::kNotImplemented) == HTTP::Status::kNotImplemented);
 
-  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::VersionNotSupported) == HTTP::Status::HTTP_VERSION_NOT_SUPPORTED);
+  REQUIRE(HTTP::ToHTTPStatus(ValidationResult::kVersionNotSupported) == HTTP::Status::kVersionNotSupported);
 }
 
 TEST_CASE("ToReasonPhrase returns non-empty for all HTTP statuses", "[http][ToReasonPhrase]")
 {
   using HTTP::Status;
 
-  const Status all[] = {Status::OK,
-                        Status::CREATED,
-                        Status::NO_CONTENT,
-                        Status::BAD_REQUEST,
-                        Status::UNAUTHORIZED,
-                        Status::FORBIDDEN,
-                        Status::NOT_FOUND,
-                        Status::METHOD_NOT_ALLOWED,
-                        Status::PAYLOAD_TOO_LARGE,
-                        Status::URI_TOO_LONG,
-                        Status::UNSUPPORTED_MEDIA_TYPE,
-                        Status::RANGE_NOT_SATISFIABLE,
-                        Status::INTERNAL_SERVER_ERROR,
-                        Status::NOT_IMPLEMENTED,
-                        Status::BAD_GATEWAY,
-                        Status::SERVICE_UNAVAILABLE,
-                        Status::GATEWAY_TIMEOUT,
-                        Status::HTTP_VERSION_NOT_SUPPORTED};
+  const Status all[] = {Status::kOk,
+                        Status::kCreated,
+                        Status::kNoContent,
+                        Status::kBadRequest,
+                        Status::kUnauthorized,
+                        Status::kForbidden,
+                        Status::kNotFound,
+                        Status::kMethodNotAllowed,
+                        Status::kPayloadTooLarge,
+                        Status::kURITooLong,
+                        Status::kUnsupportedMediaType,
+                        Status::kRangeNotSatisfiable,
+                        Status::kInternalServerError,
+                        Status::kNotImplemented,
+                        Status::kBadGateway,
+                        Status::kServiceUnavailable,
+                        Status::kGatewayTimeout,
+                        Status::kVersionNotSupported};
 
   for (auto s : all)
     REQUIRE(HTTP::ToReasonPhrase(s).size() > 0);

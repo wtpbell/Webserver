@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   Builder.hpp                                         :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2026/02/12 10:14:00 by jstuhrin       #+#    #+#                */
-/*   Updated: 2026/02/12 10:14:00 by jstuhrin       ########   odam.nl        */
+/*                                                        ::::::::            */
+/*   Builder.hpp                                        :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/02/12 10:14:00 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/10 09:48:18 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,17 +14,17 @@
 #define BUILDER_HPP
 
 #include <cstdint>
-#include <string>
 #include <map>
-#include <vector>
 #include <set>
+#include <string>
+#include <vector>
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
-#include "ValidatorIpPort.hpp"
-#include "ServerRegistry.hpp"
 #include "RouteView.hpp"
+#include "ServerRegistry.hpp"
 #include "ServerView.hpp"
+#include "ValidatorIpPort.hpp"
 
 class Builder
 {
@@ -45,7 +45,8 @@ class Builder
     void PopulateServerViewMap();
     void PopulateRouteViewMap();
     void PopulateDefaultServerRouteViewMap();
-    void SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message, std::size_t tokenIndex);
+    void SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message,
+                         std::size_t tokenIndex);
     void Error(Node& dir, std::string_view message);
     void ValidateAndExtractListen(Node& serverBlock, ServerView& serverView);
     void ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView);
@@ -59,13 +60,15 @@ class Builder
     void ExtractRoot(const Node& node, RouteView& routeView);
     void ExtractAlias(const Node& node, RouteView& routeView);
     void ExtractErrorPage(const Node& node, RouteView& routeView);
-    void ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView, std::set<std::string>& locationPrefixSet);
+    void ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView,
+                                          std::set<std::string>& locationPrefixSet);
     void ExtractHttpData();
     void ExtractServerBlockDirectivesRouteView(const Node& serverBlock, RouteView& routeView);
     void ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView);
     void ExtractServerBlockData(Node& http, RouteView& routeView);
     void ExtractLocationDirectives(const Node& location, RouteView& routeView);
-    void ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView, std::set<std::string>& locationPrefixSet);
+    void ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView,
+                             std::set<std::string>& locationPrefixSet);
     void SetServerViewDefaults(Node& serverBlock, ServerView& serverView);
 
     Lexer& lexer_;

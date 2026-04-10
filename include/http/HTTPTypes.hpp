@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 14:54:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/01/28 10:31:09 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/02 09:56:57 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,11 +15,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <ctime>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-#include <ctime>
 
 namespace HTTP
 {
@@ -32,7 +32,8 @@ namespace HTTP
   inline constexpr std::string_view kSERVER_NAME = "Webserv/1.0";
   inline constexpr std::size_t kMaxRequestLine = 8000;
   inline constexpr std::size_t kMaxHeaderSize = 8192;
-  inline constexpr std::size_t kMaxBodySize = 1024 * 1024;  // 1 MB (example)
+  inline constexpr std::size_t kMaxBodySize = 1024 * 1024;    // 1 MB (example)
+  inline constexpr std::size_t kMemoryThreshold = 64 * 1024;  // 64KB
   inline constexpr std::time_t kTTL = 1800;
   inline constexpr std::string_view HTTP_TCHAR =
       "!#$%&'*+-.^_`|~"
@@ -42,10 +43,10 @@ namespace HTTP
 
   enum class Method : std::uint8_t
   {
-    GET,
-    POST,
-    DELETE,
-    UNSUPPORTED
+    kGet,
+    kPost,
+    kDelete,
+    kUnsupported
   };
 
   inline constexpr struct MethodEntry
@@ -53,9 +54,9 @@ namespace HTTP
       HTTP::Method method;
       std::string_view name;
   } kMethodMap[] = {
-      {HTTP::Method::GET, "GET"},
-      {HTTP::Method::POST, "POST"},
-      {HTTP::Method::DELETE, "DELETE"},
+      {HTTP::Method::kGet, "GET"},
+      {HTTP::Method::kPost, "POST"},
+      {HTTP::Method::kDelete, "DELETE"},
   };
 
   constexpr Method StringToMethod(std::string_view s)
@@ -63,7 +64,7 @@ namespace HTTP
     for (const MethodEntry& p : kMethodMap)
       if (p.name == s)
         return p.method;
-    return Method::UNSUPPORTED;
+    return Method::kUnsupported;
   }
 
   constexpr std::string_view MethodToString(Method m)

@@ -20,10 +20,7 @@
 
 #include "config/Lexer.hpp"
 
-Parser::Parser(Lexer& lexer)
-  : lexer_(lexer)
-  , currentTokenIdx_{}
-  , error_(false)
+Parser::Parser(Lexer& lexer) : lexer_(lexer), currentTokenIdx_{}, error_(false)
 {
   ast_.name = Identifier::kMain;
   ast_.context = Identifier::kMain;
@@ -110,7 +107,7 @@ std::string Parser::IdentifierToString(Identifier identifier) const
     case Identifier::kCgi:
       return "cgi";
     case Identifier::kCgiExtension:
-    	return "cgi_extension";
+      return "cgi_extension";
     case Identifier::kDefaultServer:
       return "default_server";
     case Identifier::kHttp:
@@ -178,7 +175,7 @@ bool Parser::IsDirective() const
          lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kAllowedMethods ||
          lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kAutoindex ||
          lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kCgi ||
-  			 lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kCgiExtension;
+         lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kCgiExtension;
 }
 
 bool Parser::IsSemicolon() const
@@ -225,7 +222,7 @@ Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
     case TokenKind::kCgi:
       return Identifier::kCgi;
     case TokenKind::kCgiExtension:
-    	return Identifier::kCgiExtension;
+      return Identifier::kCgiExtension;
     case TokenKind::kDefaultServer:
       return Identifier::kDefaultServer;
     case TokenKind::kString:
@@ -244,8 +241,8 @@ void Parser::Next()
 std::string Parser::BuildErrorMessage(std::string_view errorType, std::string_view expectedMessage)
 {
   std::stringstream ss;
-  ss << lexer_.GetLine(currentTokenIdx_) << ":" << lexer_.GetCol(currentTokenIdx_) << ": " << kRed_ << "error:" << kReset_ << " " << errorType
-     << ": ";
+  ss << lexer_.GetLine(currentTokenIdx_) << ":" << lexer_.GetCol(currentTokenIdx_) << ": " << kRed_
+     << "error:" << kReset_ << " " << errorType << ": ";
   if (lexer_.GetTokenKind(currentTokenIdx_) == TokenKind::kEof)
   {
     ss << kRed_ << "EOF" << kReset_;
@@ -283,7 +280,8 @@ Node Parser::ParseDirective(Identifier context)
     }
     else
     {
-      directive.params.emplace_back(Node(TokenKindToIdentifier(lexer_.GetTokenKind(currentTokenIdx_)), directive.name, lexer_, currentTokenIdx_));
+      directive.params.emplace_back(
+          Node(TokenKindToIdentifier(lexer_.GetTokenKind(currentTokenIdx_)), directive.name, lexer_, currentTokenIdx_));
       Next();
     }
   }

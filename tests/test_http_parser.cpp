@@ -11,21 +11,21 @@ static std::string MakeHugeHeaderValue(std::size_t minBytes)
 }
 
 // Parse like the server’s mechanics (but without validation):
-//   1) Parse raw bytes until HeadersDone / Done / Error
-//   2) If HeadersDone -> pick a framing mode from headers
+//   1) Parse raw bytes until kHeadersDone / kDone / Error
+//   2) If kHeadersDone -> pick a framing mode from headers
 //   3) Continue parsing buffered bytes with Parse({})
 
 static ParseRes ParseToCompletion(HTTPParser& parser, std::string_view raw)
 {
   ParseRes r = parser.Parse(raw);
 
-  while (r == ParseRes::HeadersDone)
+  while (r == ParseRes::kHeadersDone)
   {
-    const HTTPRequest& req = parser.GetRequest();
+    const HTTPRequest& request = parser.GetRequest();
 
-    if (req.HasHeader("transfer-encoding"))
+    if (request.HasHeader("transfer-encoding"))
       parser.SetChunked();
-    else if (auto len = req.GetContentLength())
+    else if (auto len = request.GetContentLength())
       parser.SetContentLength(*len);
     else
       parser.SetNoBody();
@@ -47,7 +47,7 @@ TEST_CASE("HTTPParser::Parse - Basic Request", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
   REQUIRE(parser.HasError() == false);
 }
@@ -67,7 +67,7 @@ TEST_CASE("HTTPParser::Parse - Multiple trailing CRLF", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
   REQUIRE(parser.HasError() == false);
 }
@@ -83,7 +83,7 @@ TEST_CASE("HTTPParser::Parse - Multiple Spaces After Colon", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
   REQUIRE(parser.HasError() == false);
 }
@@ -98,7 +98,7 @@ TEST_CASE("HTTPParser::Parse - Header Whitespace Before Colon", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Error);
+  REQUIRE(result == ParseRes::kError);
   REQUIRE(parser.HasError() == true);
 }
 
@@ -112,7 +112,7 @@ TEST_CASE("HTTPParser::Parse - Header Without Space After Colon", "[httpparser]"
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == true);
 }
@@ -127,7 +127,7 @@ TEST_CASE("HTTPParser::Parse - Header With Tab After Colon", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
 }
 
@@ -142,7 +142,7 @@ TEST_CASE("HTTPParser::Parse - Duplicate Headers Allowed", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
 }
 
@@ -156,7 +156,7 @@ TEST_CASE("HTTPParser::Parse - Content-Length zero", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
   REQUIRE(parser.HasError() == false);
 }
@@ -172,7 +172,7 @@ TEST_CASE("HTTPParser::Parse - Content-Length Body Incomplete", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == false);
 }
@@ -189,7 +189,7 @@ TEST_CASE("HTTPParser::Parse - Multiple Content-Length Headers", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
 }
 
@@ -207,7 +207,7 @@ TEST_CASE("HTTPParser::Parse - Many Headers Without Body", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
   REQUIRE(parser.HasError() == false);
 }
@@ -222,7 +222,7 @@ TEST_CASE("HTTPParser::Parse - Invalid HTTP Version", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == true);
 }
@@ -239,7 +239,7 @@ TEST_CASE("HTTPParser::Parse - Allow Multiple Headers", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == true);
 }
@@ -256,7 +256,7 @@ TEST_CASE("HTTPParser::Parse - Uppercase Headers Allowed", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == true);
 }
@@ -270,7 +270,7 @@ TEST_CASE("HTTPParser::Parse - Incomplete Request", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == false);
 }
@@ -286,7 +286,7 @@ TEST_CASE("HTTPParser::Parse - Empty Query String Allowed", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.HasError() == false);
   REQUIRE(parser.IsComplete() == true);
 }
@@ -298,7 +298,7 @@ TEST_CASE("HTTPParser::Parse - Invalid Request", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Error);
+  REQUIRE(result == ParseRes::kError);
   REQUIRE(parser.HasError() == true);
   REQUIRE(parser.IsComplete() == false);
 }
@@ -306,8 +306,9 @@ TEST_CASE("HTTPParser::Parse - Invalid Request", "[httpparser]")
 TEST_CASE("HTTPParser::Parse - Chunked Request", "[httpparser]")
 {
   HTTPParser parser;
-  std::string request = "POST /upload HTTP/1.1\r\n"
-  "Transfer-Encoding: chunked\r\n"
+  std::string request =
+      "POST /upload HTTP/1.1\r\n"
+      "Transfer-Encoding: chunked\r\n"
       "Transfer-Encoding: chunked\r\n"
       "\r\n"
       "5\r\n"
@@ -319,7 +320,7 @@ TEST_CASE("HTTPParser::Parse - Chunked Request", "[httpparser]")
 
   auto result = ParseToCompletion(parser, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
   REQUIRE(parser.HasError() == false);
 }
@@ -330,12 +331,12 @@ TEST_CASE("HTTPParser state/result invariant", "[httpparser][invariant]")
 
   auto r = ParseToCompletion(parser, "GET / HTTP/1.1\r\n\r\n");
 
-  if (r == ParseRes::Done)
+  if (r == ParseRes::kDone)
   {
     REQUIRE(parser.IsComplete());
     REQUIRE_FALSE(parser.HasError());
   }
-  else if (r == ParseRes::Error)
+  else if (r == ParseRes::kError)
   {
     REQUIRE(parser.HasError());
     REQUIRE_FALSE(parser.IsComplete());
@@ -363,40 +364,40 @@ TEST_CASE("HTTPParser::Parse - Multiple Parses", "[httpparser]")
   std::string part7 = "body";
 
   auto result = parser.Parse(part1);
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.IsComplete() == false);
 
   result = parser.Parse(part2);
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.IsComplete() == false);
 
-  // headers end here -> HeadersDone now
+  // headers end here -> kHeadersDone now
   result = parser.Parse(part3);
-  REQUIRE(result == ParseRes::HeadersDone);
+  REQUIRE(result == ParseRes::kHeadersDone);
   REQUIRE(parser.IsComplete() == false);
 
   // decide body mode and continue
-  const HTTPRequest& req = parser.GetRequest();
-  REQUIRE(req.GetContentLength().has_value());
-  parser.SetContentLength(*req.GetContentLength());
+  const HTTPRequest& request = parser.GetRequest();
+  REQUIRE(request.GetContentLength().has_value());
+  parser.SetContentLength(*request.GetContentLength());
 
   result = parser.Parse({});
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
 
   result = parser.Parse(part4);
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.IsComplete() == false);
 
   result = parser.Parse(part5);
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.IsComplete() == false);
 
   result = parser.Parse(part6);
-  REQUIRE(result == ParseRes::NeedMoreData);
+  REQUIRE(result == ParseRes::kNeedMoreData);
   REQUIRE(parser.IsComplete() == false);
 
   result = parser.Parse(part7);
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(parser.IsComplete() == true);
 }
 
@@ -411,13 +412,13 @@ TEST_CASE("HTTPParser rejects non-empty trailer after last chunk", "[http][parse
                                "0\r\n"
                                " \r\n");
 
-  REQUIRE(res == HTTPParser::ParseResult::Error);
+  REQUIRE(res == HTTPParser::ParseResult::kError);
 }
 TEST_CASE("HTTPParser rejects headers section larger than kMaxHeaderSize (complete lines)", "[http][parser]")
 {
   HTTPParser p;
   std::string huge = MakeHugeHeaderValue(HTTP::kMaxHeaderSize + 64);
-  std::string req =
+  std::string request =
       "GET / HTTP/1.1\r\n"
       "Host: localhost\r\n"
       "X-Big: " +
@@ -425,11 +426,11 @@ TEST_CASE("HTTPParser rejects headers section larger than kMaxHeaderSize (comple
       "\r\n"
       "\r\n";
 
-  HTTPParser::ParseResult r = p.Parse(req);
+  HTTPParser::ParseResult r = p.Parse(request);
 
-  REQUIRE(r == HTTPParser::ParseResult::Error);
+  REQUIRE(r == HTTPParser::ParseResult::kError);
   REQUIRE(p.HasError());
-  REQUIRE(p.GetError() == ValidationResult::PayloadTooLarge);
+  REQUIRE(p.GetError() == ValidationResult::kPayloadTooLarge);
 }
 
 TEST_CASE("HTTPParser rejects headers larger than kMaxHeaderSize even without CRLF", "[http][parser]")
@@ -444,22 +445,22 @@ TEST_CASE("HTTPParser rejects headers larger than kMaxHeaderSize even without CR
 
   HTTPParser::ParseResult r = p.Parse(partial);
 
-  REQUIRE(r == HTTPParser::ParseResult::Error);
+  REQUIRE(r == HTTPParser::ParseResult::kError);
   REQUIRE(p.HasError());
-  REQUIRE(p.GetError() == ValidationResult::PayloadTooLarge);
+  REQUIRE(p.GetError() == ValidationResult::kPayloadTooLarge);
 }
 
 TEST_CASE("HTTPParser accepts cookies header", "[http][parser][cookie]")
 {
   HTTPParser p;
-  std::string req =
+  std::string request =
       "GET / HTTP/1.1\r\n"
       "Host: localhost\r\n"
       "Cookie: SID=31d4d96e407aad42; lang=en-US\r\n"
       "\r\n";
-  auto result = ParseToCompletion(p, req);
+  auto result = ParseToCompletion(p, request);
 
-  REQUIRE(result == ParseRes::Done);
+  REQUIRE(result == ParseRes::kDone);
   REQUIRE(p.IsComplete() == true);
   REQUIRE(p.HasError() == false);
 }

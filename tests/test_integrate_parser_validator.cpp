@@ -6,7 +6,6 @@
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPValidator.hpp"
 
-
 struct ParsedAndValidated
 {
     HTTPParser::ParseResult parse;
@@ -22,14 +21,14 @@ static ParsedAndValidated ParseAndValidate(std::string_view raw)
   HTTPParser parser;
 
   HTTPParser::ParseResult pres = parser.Parse(raw);
-  if (pres == HTTPParser::ParseResult::NeedMoreData || pres == HTTPParser::ParseResult::Error)
+  if (pres == HTTPParser::ParseResult::kNeedMoreData || pres == HTTPParser::ParseResult::kError)
     return {pres, std::nullopt};
-  if (pres == HTTPParser::ParseResult::HeadersDone)
+  if (pres == HTTPParser::ParseResult::kHeadersDone)
   {
     const HTTPRequest& partial = parser.GetRequest();
     const ValidationResult vr = ValidateRequest(partial);
 
-    if (vr != ValidationResult::OK)
+    if (vr != ValidationResult::kOk)
       return {pres, vr};
     if (partial.HasHeader("transfer-encoding"))
       parser.SetChunked();
@@ -38,13 +37,13 @@ static ParsedAndValidated ParseAndValidate(std::string_view raw)
     else
       parser.SetNoBody();
     pres = parser.Parse({});
-    if (pres != HTTPParser::ParseResult::Done)
+    if (pres != HTTPParser::ParseResult::kDone)
       return {pres, std::nullopt};
   }
-  if (pres != HTTPParser::ParseResult::Done)
+  if (pres != HTTPParser::ParseResult::kDone)
     return {pres, std::nullopt};
-  HTTPRequest req = parser.TakeRequest();
-  return {pres, ValidateRequest(req)};
+  HTTPRequest request = parser.TakeRequest();
+  return {pres, ValidateRequest(request)};
 }
 
 TEST_CASE("Parser + Validator: valid chunked request", "[http][integration]")
@@ -57,8 +56,8 @@ TEST_CASE("Parser + Validator: valid chunked request", "[http][integration]")
       "0\r\n"
       "\r\n");
 
-  REQUIRE(res.parse == HTTPParser::ParseResult::Done);
-  REQUIRE(res.validate == ValidationResult::OK);
+  REQUIRE(res.parse == HTTPParser::ParseResult::kDone);
+  REQUIRE(res.validate == ValidationResult::kOk);
 }
 
 TEST_CASE("Parser + Validator: invalid HTTP version", "[http][integration]")
@@ -72,7 +71,7 @@ TEST_CASE("Parser + Validator: invalid HTTP version", "[http][integration]")
       "\r\n");
 
   // Parser should fail at start-line level.
-  REQUIRE(res.validate == ValidationResult::VersionNotSupported);
+  REQUIRE(res.validate == ValidationResult::kVersionNotSupported);
 }
 
 TEST_CASE("Parser + Validator: reject CL and chunked together", "[http][integration]")
@@ -87,8 +86,8 @@ TEST_CASE("Parser + Validator: reject CL and chunked together", "[http][integrat
       "\r\n");
 
   // Parser reaches end-of-headers; validator rejects the header combination.
-  REQUIRE(res.parse == HTTPParser::ParseResult::HeadersDone);
-  REQUIRE(res.validate == ValidationResult::BadRequest);
+  REQUIRE(res.parse == HTTPParser::ParseResult::kHeadersDone);
+  REQUIRE(res.validate == ValidationResult::kBadRequest);
 }
 
 TEST_CASE("Parser+Validator: TE split across lines rejected before body parsing", "[http][integration]")
@@ -102,6 +101,6 @@ TEST_CASE("Parser+Validator: TE split across lines rejected before body parsing"
       "0\r\n"
       "\r\n");
 
-  REQUIRE(res.parse == HTTPParser::ParseResult::HeadersDone);
-  REQUIRE(res.validate == ValidationResult::BadRequest);
+  REQUIRE(res.parse == HTTPParser::ParseResult::kHeadersDone);
+  REQUIRE(res.validate == ValidationResult::kBadRequest);
 }

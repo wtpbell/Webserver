@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   FileDescriptorException.cpp                        :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.ccodam.nl>               +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/23 12:09:24 by jboon         #+#    #+#                 */
-/*   Updated: 2025/11/24 18:17:36 by jboon         ########   codam.nl         */
+/*   Updated: 2026/04/07 10:27:30 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 

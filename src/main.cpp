@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/13 17:24:28 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/01 20:54:10 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/02 16:03:52 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ static void ConstructServers(std::vector<Server>& servers, const ServerRegistry&
     catch (const FileDescriptorException& ex)
     {
       Logger::Log(LogLevel::ERROR, "(҂◡_◡) ᕤ Failure to construct the server <{}:{}>: {}", serverData.first.ip,
-        serverData.first.port, ex.what());
+                  serverData.first.port, ex.what());
     }
   }
 }
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     std::vector<Server> servers;
     ConstructServers(servers, *serverRegistry);
 
-    Logger::Log(LogLevel::INFO, "Listening on the sockets and adding them to the poll manager...");
+    Logger::Log(LogLevel::INFO, "Start listing on the sockets and adding them to the poll manager...");
     EpollManager manager;
     for (auto& server : servers)
       server.RegisterFD(manager);

@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/11 14:37:22 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/01 20:55:48 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/02 12:39:54 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,10 +51,12 @@ class Socket : public SharedFD
 
     static Socket CreateSocket(int domain, int type, int protocol);
     static Socket CreateSocket(const char* host, const char* service, int flags = 0, Type type = Type::kIPv6);
+    // static Socket CreateTCPSocket(const char* host, const char* service, Type type);
     static std::pair<Socket, Socket> SocketPair(int domain, int type, int protocol);
     static addrinfo_t* GetAddrInfo(addrinfo_t& hints, const char* host, const char* service);
 
     void Bind(void);
+
 
     void Listen(int backlog = SOMAXCONN);
     void Connect(void);

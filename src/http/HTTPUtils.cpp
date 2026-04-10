@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 13:31:19 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:46:39 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/02 11:52:27 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,8 +16,10 @@
 
 #include <cctype>
 #include <ctime>
+#include <filesystem>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include "http/HTTPResponse.hpp"
 #include "string.hpp"
@@ -109,7 +111,6 @@ namespace HTTP
       out += response.GetReason();
       out += HTTP::kCRLF;
 
-      // Write headers except content-length (we compute it)
       for (const auto& [key, values] : response.GetHeaders())
       {
         if (key == "content-length" || key == "transfer-encoding")
@@ -126,6 +127,15 @@ namespace HTTP
         }
       }
 
+      if (!response.HasHeader("date"))
+      {
+        char date_buf[64];
+        String::GMTCstring(date_buf, sizeof(date_buf));
+        out += "Date: ";
+        out += date_buf;
+        out += HTTP::kCRLF;
+      }
+
       out += "Content-Length: ";
       out += std::to_string(body.size());
       out += HTTP::kCRLF;
@@ -135,5 +145,18 @@ namespace HTTP
       return out;
     }
 
+    std::string GetLastModifiedHttpDate(const std::string& filepath)
+    {
+      std::error_code ec;
+      auto ft = std::filesystem::last_write_time(filepath, ec);
+      if (ec)
+        return "";
+
+      const std::time_t t = String::FileTimeToTimeT(ft);
+
+      char buf[64];
+      String::GMTCstringFromTime(t, buf, sizeof(buf));
+      return std::string(buf);
+    }
   }  // namespace wire
 }  // namespace HTTP

@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                         ::::::::           */
-/*   RouteView.hpp                                       :+:    :+:           */
-/*                                                      +:+                   */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>          +#+                    */
-/*                                                    +#+                     */
-/*   Created: 2026/03/27 13:51:00 by jstuhrin       #+#    #+#                */
-/*   Updated: 2026/03/27 10:53:00 by jstuhrin       ########   odam.nl        */
+/*                                                        ::::::::            */
+/*   RouteView.hpp                                      :+:    :+:            */
+/*                                                     +:+                    */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*                                                   +#+                      */
+/*   Created: 2026/03/27 13:51:00 by jstuhrin      #+#    #+#                 */
+/*   Updated: 2026/04/02 10:10:11 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,44 +14,44 @@
 #define ROUTEVIEW_HPP
 
 #include <cstdint>
-#include <string>
 #include <filesystem>
-#include <optional>
 #include <map>
+#include <optional>
+#include <string>
 #include <type_traits>
 
 struct RouteView
 {
-  enum class MethodMask : unsigned
-  {
-    kNone = 0,
-    kGet = 1u << 0,
-    kPost = 1u << 1,
-    kDelete = 1u << 2,
-    kAll = kGet | kPost | kDelete,
-  };
+    enum class MethodMask : unsigned
+    {
+      kNone = 0,
+      kGet = 1u << 0,
+      kPost = 1u << 1,
+      kDelete = 1u << 2,
+      kAll = kGet | kPost | kDelete,
+    };
 
-  struct ReturnRule
-  {
-    std::uint16_t code;
-    std::string target;
-  };
+    struct ReturnRule
+    {
+        std::uint16_t code;
+        std::string target;
+    };
 
-  std::string locationPrefix = "/";
+    std::string locationPrefix = "/";
 
-  std::filesystem::path root = "./www";
-  std::optional<std::filesystem::path> alias;
-  std::string index = "index.html";
+    std::filesystem::path root = "./www";
+    std::optional<std::filesystem::path> alias;
+    std::string index = "index.html";
 
-  bool autoindex = false;
-  std::size_t clientMaxBody = 1u << 20;
-  MethodMask allowedMask = MethodMask::kGet;
+    bool autoindex = false;
+    std::size_t clientMaxBody = 1u << 20;
+    MethodMask allowedMask = MethodMask::kGet;
 
-  std::optional<ReturnRule> returnRule;
-  std::map<std::uint16_t, std::string> errorPages;
+    std::optional<ReturnRule> returnRule;
+    std::map<std::uint16_t, std::string> errorPages;
 
-  bool cgi = false;
-  std::optional<std::map<std::string, std::filesystem::path>> cgiExePaths;
+    bool cgi = false;
+    std::optional<std::map<std::string, std::filesystem::path>> cgiExePaths;
 };
 
 // Do we need Has() ?

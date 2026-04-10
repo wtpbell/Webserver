@@ -21,17 +21,13 @@
 #include <set>
 #include <sstream>
 #include <vector>
-#include <optional>
 
 #include "config/Lexer.hpp"
 #include "config/Parser.hpp"
 #include "config/ValidatorIpPort.hpp"
 
 Validator::Validator(Lexer& lexer, Parser& parser, ValidatorIpPort& validatorIpPort)
-  : lexer_(lexer)
-  , parser_(parser)
-  , validatorIpPort_(validatorIpPort)
-  , error_(false)
+    : lexer_(lexer), parser_(parser), validatorIpPort_(validatorIpPort), error_(false)
 {
   std::string::size_type size = 25 + (supportedErrorPageCodesSet_.size() * 4);
   supportedErrorPageCodesStr_.reserve(size);
@@ -84,14 +80,15 @@ bool Validator::IsValidURL(Node& param)
 std::string Validator::BuildErrorMessage(std::string_view errorType, std::string_view message, std::size_t idx)
 {
   std::stringstream ss;
-  ss << lexer_.GetLine(idx) << ":" << lexer_.GetCol(idx) << ": " << kRed_ << "error:" << kReset_ << " " << errorType << ": ";
+  ss << lexer_.GetLine(idx) << ":" << lexer_.GetCol(idx) << ": " << kRed_ << "error:" << kReset_ << " " << errorType
+     << ": ";
   if (lexer_.GetTokenKind(idx) == TokenKind::kEof)
   {
     ss << kRed_ << "EOF" << kReset_;
   }
   else
   {
-    ss << "`" << kRed_ << lexer_.GetLexeme(idx) << kReset_ << "`"; 
+    ss << "`" << kRed_ << lexer_.GetLexeme(idx) << kReset_ << "`";
   }
   ss << message << "\n";
   return ss.str();
@@ -147,7 +144,8 @@ void Validator::ValidateNumDirs(Node& block)
       if ((dir.name == Identifier::kRoot && directivesSet.count(Identifier::kAlias)) ||
           (dir.name == Identifier::kAlias && directivesSet.count(Identifier::kRoot)))
       {
-        Error("unexpected token", " location block must not contain both `alias` and `root`", dir, dir.idxTokenListStart);
+        Error("unexpected token", " location block must not contain both `alias` and `root`", dir,
+              dir.idxTokenListStart);
       }
     }
   }
@@ -232,8 +230,8 @@ void Validator::ValidateNestedDirs(Node& block)
         ValidateCgi(dir);
         break;
       case Identifier::kCgiExtension:
-      	ValidateCgiExtension(dir);
-      	break;
+        ValidateCgiExtension(dir);
+        break;
       default:
         assert(false && "Invalid node in block.directives in ValidateNestedDirs");
         __builtin_unreachable();
@@ -368,9 +366,7 @@ void Validator::ValidateName(Node& param)
   {
     for (char c : label)
     {
-      if (!islower(static_cast<unsigned char>(c)) &&
-          !std::isdigit(static_cast<unsigned char>(c)) &&
-          c != '-' &&
+      if (!islower(static_cast<unsigned char>(c)) && !std::isdigit(static_cast<unsigned char>(c)) && c != '-' &&
           c != ':')
       {
         Error("name contains illegal character", "", param, param.idxTokenListStart);
@@ -598,7 +594,8 @@ void Validator::ValidateErrorPage(Node& dir)
   }
   if (!IsValidURL(dir.params[i]))
   {
-    Error("invalid URL prefix", " URL may begin with `/` or `http://` or `https://`", dir.params[i], dir.params[i].idxTokenListStart);
+    Error("invalid URL prefix", " URL may begin with `/` or `http://` or `https://`", dir.params[i],
+          dir.params[i].idxTokenListStart);
   }
 }
 
@@ -629,7 +626,8 @@ void Validator::ValidateReturn(Node& dir)
   std::size_t i = 0;
   if (!IsValidReturnCode(dir.params[i]) && !IsValidURL(dir.params[i]))
   {
-    Error("invalid parameter", " expected CODE or URL," + supportedReturnCodesStr_, dir.params[i], dir.params[i].idxTokenListStart);
+    Error("invalid parameter", " expected CODE or URL," + supportedReturnCodesStr_, dir.params[i],
+          dir.params[i].idxTokenListStart);
     return;
   }
   if (IsValidReturnCode(dir.params[i]))
@@ -637,7 +635,8 @@ void Validator::ValidateReturn(Node& dir)
     ++i;
     if (dir.params.size() >= 2 && !IsValidURL(dir.params[i]))
     {
-      Error("invalid URL prefix", " URL may begin with `/` or `http://` or `https://`", dir.params[i], dir.params[i].idxTokenListStart);
+      Error("invalid URL prefix", " URL may begin with `/` or `http://` or `https://`", dir.params[i],
+            dir.params[i].idxTokenListStart);
     }
     ++i;
     for (; i < dir.params.size(); ++i)
@@ -756,24 +755,23 @@ void Validator::ValidateCgi(Node& dir)
   ValidateOnOffParam(dir);
 }
 
-
 //////////////////// cgi_extension //////////////////
 
 void Validator::ValidateCgiExtension(Node& dir)
 {
-	/*
-	Syntax: cgi_extension type path;
-	Default: -
-	Context: location
-	*/
-	if (IsParamsEmpty(dir, " expected: TYPE PATH"))
+  /*
+  Syntax: cgi_extension type path;
+  Default: -
+  Context: location
+  */
+  if (IsParamsEmpty(dir, " expected: TYPE PATH"))
   {
     return;
   }
   if (dir.params.size() == 1)
   {
-  	Error("unexpected token", " expected: PATH", dir.params[0], dir.params[0].idxTokenListStart + 1);
-  	return;
+    Error("unexpected token", " expected: PATH", dir.params[0], dir.params[0].idxTokenListStart + 1);
+    return;
   }
   for (std::size_t i = 2; i < dir.params.size(); ++i)
   {

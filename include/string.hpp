@@ -6,12 +6,14 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:23:40 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/10 17:46:41 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/02 10:02:22 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <string>
 #include <string_view>
+#include <ctime>
+#include <filesystem>
 
 namespace String
 {
@@ -24,10 +26,12 @@ namespace String
   void ToLowerInPlace(std::string& s);
   std::string& ToUpper(std::string& str);
   void AppendHex(std::string& result, unsigned char c);
-  bool starts_with(std::string_view s, std::string_view prefix);
+  bool StartsWith(std::string_view s, std::string_view prefix);
   bool ConvertToNumber(std::string_view sv, std::size_t& result, int base = 10);
   bool IsCloseToken(std::string_view v);
   std::string CanonicalizeHeader(std::string_view key);
   std::string& ReplaceOccurrence(std::string& str, char occurrence, char replacement);
   const char* GMTCstring(char* stime, std::size_t n);
+  const char* GMTCstringFromTime(std::time_t time, char* stime, std::size_t n);
+  std::time_t FileTimeToTimeT(const std::filesystem::file_time_type& ft);
 }  // namespace String

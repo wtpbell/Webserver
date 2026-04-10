@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Connection.hpp                                     :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:33:36 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/01 20:54:54 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/02 12:40:12 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,9 @@
 
 #include <deque>
 #include <string>
+#include <string_view>
 
+#include "config/RouteView.hpp"
 #include "config/ServerRegistry.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
@@ -23,22 +25,18 @@
 #include "http/HTTPValidator.hpp"
 #include "http/SessionManager.hpp"
 #include "io/Socket.hpp"
-
-// TODO: replace with actual Router
-class Router
-{
-};
+#include "router/Router.hpp"
 
 class Connection
 {
     using IpPort = ServerView::IpPort;
 
   public:
-    Connection(const Socket& s) : socket_(s) {}
+    Connection(Socket socket);
     Connection(void) = delete;
-    Connection(const Connection& other) = default;
+    Connection(const Connection& other) = delete;
     Connection(Connection&& other) noexcept = default;
-    Connection& operator=(const Connection& rhs) = default;
+    Connection& operator=(const Connection& rhs) = delete;
     Connection& operator=(Connection&& rhs) noexcept = default;
     ~Connection(void) = default;
 
@@ -66,19 +64,55 @@ class Connection
     };
 
     ReadResult ReadOnce(std::string& out);
-    void InitBodyParser(HTTPParser& parser, const HTTPRequest& req);
-    void HandleHeadersDone(void);
-    bool CheckConnectionClose(const HTTPRequest* request, const HTTPResponse& response) const;
-    HTTPResponse DispatchRequest(const HTTPRequest& req);
-    void QueueResponse(const HTTPResponse& resp, bool closeAfter);
+    void InitBodyParser(HTTPParser& parser, const HTTPRequest& request);
+    std::optional<ValidationResult> HandleHeadersDone(const ServerRegistry& serverRegistry);
+    bool CheckConnectionClose(const HTTPRequest& request, const HTTPResponse& response) const;
+    void QueueResponse(const HTTPResponse& response, bool closeAfter);
     void QueueError(ValidationResult result);
+    State ProcessInput(std::string_view in, const Router& router, const ServerRegistry& serverRegistry,
+                       SessionManager& sessionManager);
+    Connection::State FailRequest(ValidationResult error);
+    std::optional<ValidationResult> ValidatePartialRequest(HTTPRequest& request);
+    void MatchRouteAndApplyLimits(const ServerRegistry& serverRegistry, const HTTPRequest& request);
+    std::optional<ValidationResult> ConfigureBodyStorage(HTTPRequest& request);
+    std::optional<ValidationResult> AttachRequestCookies(HTTPRequest& request);
 
     Socket socket_;
     HTTPParser parser_;
+    IpPort ipport_;
+    const RouteView* matchedRoute_;
+    std::string matchedHost_;
+
     std::deque<std::string> outputQueue_;  // queued responses (pipeline)
     std::size_t remaining_ = 0;            // number of bytes already sent
     bool closeAfterSend_ = false;
     bool peerClosed_ = false;
+
+#ifdef UNIT_TEST
+  public:
+    using TestIpPort = ServerView::IpPort;
+
+    State TestProcessInput(std::string_view in, const Router& router, const ServerRegistry& serverRegistry,
+                           SessionManager& sessionManager)
+    {
+      return ProcessInput(in, router, serverRegistry, sessionManager);
+    }
+
+    void TestSetIpPort(const ServerView::IpPort& ipport)
+    {
+      ipport_ = ipport;
+    }
+
+    const std::deque<std::string>& TestGetOutputQueue() const
+    {
+      return outputQueue_;
+    }
+
+    bool TestGetCloseAfterSend() const
+    {
+      return closeAfterSend_;
+    }
+#endif
 };
 
 #endif  // CONNECTION_H_

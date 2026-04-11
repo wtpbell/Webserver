@@ -40,17 +40,17 @@ class Builder
     ServerRegistry BuildServerRegistry();
 
   private:
-    std::size_t GetNumListenDirectives(const Node& serverBlock);
+    std::size_t GetNumListenDirectives(const Node& serverBlock) const;
     void ValidateIpPortHostName();
     void PopulateServerViewMap();
     void PopulateRouteViewMap();
     void PopulateDefaultServerRouteViewMap();
-    void SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message,
-                         std::size_t tokenIndex);
+    void SetErrorMessage(const std::size_t line, const std::size_t col, std::string_view lexeme,
+                         std::string_view message, const std::size_t tokenIndex);
     void Error(Node& dir, std::string_view message);
     void ValidateAndExtractListen(Node& serverBlock, ServerView& serverView);
-    void ValidateServerNames(Node& serverBlock);
-    void ExtractServerNames(Node& serverBlock, ServerView& serverView);
+    void ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView, std::vector<Node*>& currentServerNameNodes);
+    void CopyServerNameNodes(const std::size_t numListenDirectives, const std::vector<Node*>& currentServerNameNodes);
     void ExtractCgi(const Node& httpBlock, RouteView& routeView);
     void ExtractCgiExtension(const Node& httpBlock, RouteView& routeView);
     void ExtractIndex(const Node& node, RouteView& routeView);

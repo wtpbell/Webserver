@@ -72,8 +72,8 @@ ServerRegistry Builder::BuildServerRegistry()
 
 //////////////////// PRIVATE ////////////////////
 
-void Builder::SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message,
-                              std::size_t tokenIndex)
+void Builder::SetErrorMessage(const std::size_t line, const std::size_t col, std::string_view lexeme,
+                              std::string_view message, const std::size_t tokenIndex)
 {
   std::stringstream ss;
   ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme
@@ -156,7 +156,7 @@ void Builder::ValidateAndExtractListen(Node& dir, ServerView& serverView)
   if (dir.params.size() == 2)
   {
     hasDefaultServerFlagVector_.push_back(true);
-    auto result = hasDefaultServerFlagSet_.insert({ip, port});
+    const auto result = hasDefaultServerFlagSet_.insert({ip, port});
     if (result.second == false)
     {
       Error(dir.params[1], "expected `;` - repeat use of `default_server`");
@@ -197,7 +197,7 @@ void Builder::ExtractClientMaxBodySize(const Node& dir, RouteView& routeView)
   const std::string& numberLexeme = dir.params[0].lexeme;
   std::size_t number{};
   std::from_chars(numberLexeme.data(), numberLexeme.data() + numberLexeme.size(), number);
-  char last = std::tolower(numberLexeme.back());
+  const char last = std::tolower(numberLexeme.back());
   switch (last)
   {
     case 'k':
@@ -276,7 +276,7 @@ void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeV
                                                std::set<std::string>& locationPrefixSet)
 {
   const std::string& locationPrefix = location.params[0].lexeme;
-  auto result = locationPrefixSet.insert(locationPrefix);
+  const auto result = locationPrefixSet.insert(locationPrefix);
   if (result.second == false)
   {
     Error(location.params[0], "duplicate location prefix in server");
@@ -353,7 +353,7 @@ void Builder::ExtractServerBlockDirectivesRouteView(const Node& serverBlock, Rou
   }
 }
 
-std::size_t Builder::GetNumListenDirectives(const Node& serverBlock)
+std::size_t Builder::GetNumListenDirectives(const Node& serverBlock) const
 {
   std::size_t numListenDirectives = 0;
   for (const Node& dir : serverBlock.directives)
@@ -366,7 +366,7 @@ std::size_t Builder::GetNumListenDirectives(const Node& serverBlock)
   return numListenDirectives;
 }
 
-void Builder::ValidateServerNames(Node& serverBlock)
+void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView, std::vector<Node*>& currentServerNameNodes)
 {
   std::set<std::string> serverNamesSet;
   for (Node& dir : serverBlock.directives)
@@ -375,39 +375,37 @@ void Builder::ValidateServerNames(Node& serverBlock)
     {
       for (Node& param : dir.params)
       {
-        auto result = serverNamesSet.insert(param.lexeme);
+        const auto result = serverNamesSet.insert(param.lexeme);
         if (result.second == false)
         {
           Error(param, "- duplicate hostname in server");
-        }   
+        }
+        serverView.hostNames.emplace_back(param.lexeme);
+        currentServerNameNodes.emplace_back(&param);
       }
     }
   }
 }
 
-void Builder::ExtractServerNames(Node& serverBlock, ServerView& serverView)
+void Builder::CopyServerNameNodes(const std::size_t numListenDirectives, const std::vector<Node*>& currentServerNameNodes)
 {
-  std::set<std::string> serverNamesSet;
-  for (Node& dir : serverBlock.directives)
+  for (std::size_t num = 0; num < numListenDirectives; ++num)
   {
-    if (dir.name == Identifier::kServerName)
+    for (Node* node : currentServerNameNodes)
     {
-      for (Node& param : dir.params)
-      {  
-        serverView.hostNames.emplace_back(param.lexeme);
-        serverNameNodes_.emplace_back(&param);
-      }
+      serverNameNodes_.push_back(node);
     }
   }
 }
 
 void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView)
 {
-  ValidateServerNames(serverBlock);
-  std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
+  std::vector<Node*> currentServerNameNodes;
+  ValidateAndExtractServerNames(serverBlock, serverView, currentServerNameNodes);
+  const std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
+  CopyServerNameNodes(numListenDirectives, currentServerNameNodes);
   if (numListenDirectives == 0)
   {
-    ExtractServerNames(serverBlock, serverView);
     SetServerViewDefaults(serverBlock, serverView);
     serverViews_.emplace_back(serverView);
     return;
@@ -419,7 +417,6 @@ void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerVi
     {
       if (currentListenDirective == numListenDirectives)
       {
-        ExtractServerNames(serverBlock, serverView);
         ValidateAndExtractListen(dir, serverView);
         SetServerViewDefaults(serverBlock, serverView);
         serverViews_.emplace_back(serverView);
@@ -428,7 +425,6 @@ void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerVi
       else
       {
         ServerView serverViewCopy(serverView);
-        ExtractServerNames(serverBlock, serverViewCopy);
         ValidateAndExtractListen(dir, serverViewCopy);
         SetServerViewDefaults(serverBlock, serverViewCopy);
         serverViews_.emplace_back(serverViewCopy);
@@ -441,7 +437,7 @@ void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerVi
 void Builder::ExtractServerBlockData(Node& http, RouteView& routeView)
 {
   std::size_t currentServerBlockIdx = 0;
-  std::size_t lastServerBlockIdx = http.nestedBlocks.size() - 1;
+  const std::size_t lastServerBlockIdx = http.nestedBlocks.size() - 1;
   for (Node& serverBlock : http.nestedBlocks)
   {
     ServerView serverView;
@@ -514,7 +510,7 @@ void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, Rou
     return;
   }
   std::size_t currentRouteIdx = 0;
-  std::size_t lastRouteIdx = serverBlock.nestedBlocks.size() - 1;
+  const std::size_t lastRouteIdx = serverBlock.nestedBlocks.size() - 1;
   for (Node& location : serverBlock.nestedBlocks)
   {
     if (currentRouteIdx == lastRouteIdx)
@@ -559,24 +555,18 @@ void Builder::ValidateIpPortHostName()
   {
     for (const std::string& hostName : serverView.hostNames)
     {
-      auto result = ipPortHostNamesSet.insert({serverView.ipPort.ip, serverView.ipPort.port, hostName});
+      const auto result = ipPortHostNamesSet.insert({serverView.ipPort.ip, serverView.ipPort.port, hostName});
       if (result.second == false)
       {
         if (serverNameNodes_[serverNameNodesIdx]->name == Identifier::kServer)
         {
           Error(*serverNameNodes_[serverNameNodesIdx],
                 "expected: `server_name` - duplicate hostname IP:port combination");
-        }
-        else
-        {
-          Error(*serverNameNodes_[serverNameNodesIdx], "- duplicate hostname IP:port combination");
-        }
-        if (ipPortNodes_[ipPortNodesIdx]->name == Identifier::kServer)
-        {
           Error(*ipPortNodes_[ipPortNodesIdx], "expected: `listen` - duplicate hostname IP:port combination");
         }
         else
         {
+          Error(*serverNameNodes_[serverNameNodesIdx], "- duplicate hostname IP:port combination");
           Error(*ipPortNodes_[ipPortNodesIdx], "- duplicate hostname IP:port combination");
         }
       }
@@ -598,7 +588,7 @@ void Builder::PopulateRouteViewMap()
 {
   for (ServerView& serverView : serverViews_)
   {
-    ServerView::IpPort& ipPort = serverView.ipPort;
+    const ServerView::IpPort& ipPort = serverView.ipPort;
     for (const std::string& hostName : serverView.hostNames)
     {
       std::map<std::string, RouteView*>& routes = routeViewMap_[ipPort][hostName];
@@ -615,7 +605,7 @@ void Builder::PopulateDefaultServerRouteViewMap()
   std::size_t idx = 0;
   for (ServerView& serverView : serverViews_)
   {
-    ServerView::IpPort& ipPort = serverView.ipPort;
+    const ServerView::IpPort& ipPort = serverView.ipPort;
     if (defaultServerRouteViewMap_.count(ipPort) == 0 || hasDefaultServerFlagVector_[idx] == true)
     {
       defaultServerRouteViewMap_.erase(ipPort);

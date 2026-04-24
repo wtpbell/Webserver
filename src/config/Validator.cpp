@@ -348,56 +348,6 @@ void Validator::ValidateListen(Node& dir)
 
 //////////////////// server_name //////////////////
 
-void Validator::ValidateName(Node& param)
-{
-  if (param.lexeme.size() > 253)
-  {
-    Error("name exceeds maximum length of 253 characters", "", param, param.idxTokenListStart);
-    return;
-  }
-  std::vector<std::string> labels;
-  std::string::size_type start = 0;
-  std::string::size_type end = param.lexeme.find('.');
-  while (end != std::string::npos)
-  {
-    labels.emplace_back(param.lexeme.substr(start, end - start));
-    start = end + 1;
-    end = param.lexeme.find('.', start);
-  }
-  labels.emplace_back(param.lexeme.substr(start));
-  for (const std::string& label : labels)
-  {
-    for (char c : label)
-    {
-      if (!islower(static_cast<unsigned char>(c)) && !std::isdigit(static_cast<unsigned char>(c)) && c != '-' &&
-          c != ':')
-      {
-        Error("name contains illegal character", "", param, param.idxTokenListStart);
-        return;
-      }
-    }
-    if (label.size() == 0)
-    {
-      Error("label has length zero", "", param, param.idxTokenListStart);
-      return;
-    }
-    if (label.size() > 63)
-    {
-      Error("label exceeds maximum length of 63 characters", "", param, param.idxTokenListStart);
-      return;
-    }
-    if (label.front() == '-')
-    {
-      Error("label starts with hyphen", "", param, param.idxTokenListStart);
-      return;
-    }
-    if (label.back() == '-')
-    {
-      Error("label ends with hyphen", "", param, param.idxTokenListStart);
-      return;
-    }
-  }
-}
 
 void Validator::ValidateServerName(Node& dir)
 {
@@ -405,16 +355,10 @@ void Validator::ValidateServerName(Node& dir)
   Syntax:   server_name name ...;
   Default:  server_name "";
   Context:  server
-
-  https://man7.org/linux/man-pages/man7/hostname.7.html
   */
   if (IsParamsEmpty(dir, " expected: NAME ..."))
   {
     return;
-  }
-  for (Node& param : dir.params)
-  {
-    ValidateName(param);
   }
 }
 

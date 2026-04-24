@@ -370,7 +370,12 @@ TEST_CASE("missing semicolon", "[validator]")
 
 TEST_CASE("all token kinds once", "[validator]")
 {
-  std::string raw = "string 1234;{}#this is not a location token\n location http server listen server_name  root   index    return #this is  not   an   alias    token      \n     alias client_max_body_size\nerror_page\nallowed_methods client_max_body_size  autoindex\n";
+  std::string raw = "string 1234;{}#this is not a location token\n"
+                    "location http server listen server_name  root   index    return #this is  not   an   alias    token      \n"
+                    "     alias client_max_body_size\n"
+                    "error_page\n"
+                    "allowed_methods client_max_body_size  autoindex\n";
+
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
@@ -409,7 +414,109 @@ TEST_CASE("all token kinds once", "[validator]")
 
 TEST_CASE("validator.Validate prints no errors for correct config tree", "[Validator]")
 {
-  std::string raw = "http {    client_max_body_size 10m;    error_page 404 /errors/404.html;    error_page 500 502 503 504 /errors/50x.html;        server {        listen 8080;        listen 8443;        server_name blog.example.com;        root /var/www/blog;        error_page 404 /404.html;        error_page 500 /500.html;        index index.html index.htm;        allowed_methods GET POST;        location /admin {            root /var/www/blog;        }    }    server {        listen 3000;        server_name static.example.com;        root /var/www/static;        client_max_body_size 50m;        location / {            allowed_methods GET;        }    }    }";
+  std::string raw = "http {"
+                    "    client_max_body_size 10m;"
+                    ""
+                    "    error_page 404 /errors/404.html;"
+                    "    error_page 500 502 503 504 /errors/50x.html;"
+                    ""
+                    "    server {"
+                    "        listen 80;"
+                    "        listen 443;"
+                    "        server_name example.com www.example.com;"
+                    ""
+                    "        root /var/www/example;"
+                    ""
+                    "        error_page 404 /errors/404.html;"
+                    "        error_page 500 502 503 504 /errors/50x.html;"
+                    "        "
+                    "        location /errors/404.html {"
+                    ""
+                    "        }"
+                    "        "
+                    "        location /errors/50x.html {"
+                    "            "
+                    "        }"
+                    ""
+                    "        location /api {"
+                    "            allowed_methods GET POST DELETE;"
+                    "            root /var/www/example;"
+                    "        }"
+                    ""
+                    "        location /old-page {"
+                    "            return 301 /new-page;"
+                    "        }"
+                    ""
+                    "        location /downloads {"
+                    "            root /var/www/example;"
+                    "        }"
+                    ""
+                    "        location /private {"
+                    "            root /var/www/example;"
+                    "        }"
+                    ""
+                    "        location /docs {"
+                    "            root /var/www/example;"
+                    "            index index.html index.htm default.html;"
+                    "        }"
+                    ""
+                    "        location /upload {"
+                    "            allowed_methods POST;"
+                    "            "
+                    "            root /var/www/uploads;"
+                    "        }"
+                    "    }"
+                    ""
+                    "    server {"
+                    "        listen 8080;"
+                    "        listen 8443;"
+                    "        server_name blog.example.com;"
+                    ""
+                    "        root /var/www/blog;"
+                    ""
+                    "        error_page 404 /404.html;"
+                    "        error_page 500 /500.html;"
+                    ""
+                    "        index index.html index.htm;"
+                    ""
+                    "        allowed_methods GET POST;"
+                    ""
+                    "        location /admin {"
+                    "            root /var/www/blog;"
+                    "        }"
+                    "    }"
+                    ""
+                    "    server {"
+                    "        listen 3000;"
+                    "        server_name static.example.com;"
+                    ""
+                    "        root /var/www/static;"
+                    ""
+                    "        client_max_body_size 50m;"
+                    ""
+                    "        location / {"
+                    "            allowed_methods GET;"
+                    "        }"
+                    "    }"
+                    ""
+                    "    server {"
+                    "        listen 5000;"
+                    "        server_name api.example.com;"
+                    ""
+                    "        error_page 404 /api/errors/not_found.json;"
+                    "        error_page 500 /api/errors/server_error.json;"
+                    ""
+                    "        location /api/v1 {"
+                    "            root /var/www/api;"
+                    "            allowed_methods DELETE GET POST;"
+                    "        }"
+                    ""
+                    "        location /api/v0 {"
+                    "            return 100;"
+                    "        }"
+                    "    }"
+                    "}";
+
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
@@ -420,9 +527,11 @@ TEST_CASE("validator.Validate prints no errors for correct config tree", "[Valid
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
-
   REQUIRE(output.empty());
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == false);
+
   for (std::size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     CAPTURE(i);
@@ -646,12 +755,27 @@ TEST_CASE("errors incorrectly nested dirs", "[Validator]")
 
 TEST_CASE("errors alias", "[Validator]")
 {
-  std::string raw = "http {server {location /path { alias /path;alias path;alias /path;alias path /path;alias /path path;}}}";
+  std::string raw = "http {"
+                    "  server {"
+                    "    location /path {"
+                    ""
+                    "      # valid\n"
+                    ""
+                    "      alias /path;"
+                    ""
+                    "      # invalid\n"
+                    ""
+                    "      alias path;"
+                    "      alias /path;"
+                    "      alias path /path;"
+                    "      alias /path path;"
+                    "    }"
+                    "  }"
+                    "}";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -659,7 +783,7 @@ TEST_CASE("errors alias", "[Validator]")
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
-
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
@@ -683,11 +807,31 @@ TEST_CASE("errors alias", "[Validator]")
 
 TEST_CASE("errors allowed_methods", "[Validator]")
 {
-  std::string raw = "http {  server {    location path {       allowed_methods GET POST DELETE;      allowed_methods GET;      allowed_methods POST;      allowed_methods DELETE;      allowed_methods DELETE POST GET;            allowed_methods;      allowed_methods GET POST delete DELETE;      allowed_methods method;      allowed_methods METHOD;      allowed_methods POSt;      allowed_methods GET POST DELETE GET POST DELETE;      allowed_methods get post delete GET POST delete GET POST DELETE get post DELETE GET POST DELETE;    }  }}";
+  std::string raw = "http {"
+                    "  server {"
+                    "    location path {"
+                    "      # valid\n"
+                    "      allowed_methods GET POST DELETE;"
+                    "      allowed_methods GET;"
+                    "      allowed_methods POST;"
+                    "      allowed_methods DELETE;"
+                    "      allowed_methods DELETE POST GET;"
+                    "      "
+                    "      # invalid\n"
+                    "      allowed_methods;"
+                    "      allowed_methods GET POST delete DELETE;"
+                    "      allowed_methods method;"
+                    "      allowed_methods METHOD;"
+                    "      allowed_methods POSt;"
+                    "      allowed_methods GET POST DELETE GET POST DELETE;"
+                    "      allowed_methods get post delete GET POST delete GET POST DELETE get post DELETE GET POST DELETE;"
+                    "    }"
+                    "  }"
+                    "}";
+
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -697,6 +841,7 @@ TEST_CASE("errors allowed_methods", "[Validator]")
 
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{12, 15, 18, 21, 26, 27, 28, 31, 34, 35, 37, 38, 40, 41, 43, 47, 48, 49, 51, 52, 53, 54, 57, 58, 59, 61, 62, 63, 64, 65, 66};
@@ -719,12 +864,41 @@ TEST_CASE("errors allowed_methods", "[Validator]")
 
 TEST_CASE("errors autoindex", "[Validator]")
 {
-  std::string raw = "http {      autoindex on;  autoindex off;  server {        autoindex on;    autoindex off;    location /path{      autoindex on;      autoindex off;      autoindex ;      autoindex on off;      autoindex off on on on ;      autoindex huh?;      autoindex on;    }  }}";
+  std::string raw = "http {"
+                    "  "
+                    "  #valid\n"
+                    ""
+                    "  autoindex on;"
+                    "  autoindex off;"
+                    ""
+                    "  server {"
+                    ""
+                    "    #valid\n"
+                    ""
+                    "    autoindex on;"
+                    "    autoindex off;"
+                    ""
+                    "    location /path{"
+                    ""
+                    "      #valid\n"
+                    ""
+                    "      autoindex on;"
+                    "      autoindex off;"
+                    ""
+                    "      # invalid\n"
+                    ""
+                    "      autoindex ;"
+                    "      autoindex on off;"
+                    "      autoindex off on on on ;"
+                    "      autoindex huh?;"
+                    "      autoindex on;"
+                    "    }"
+                    "  }"
+                    "}";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -734,6 +908,7 @@ TEST_CASE("errors autoindex", "[Validator]")
 
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{5, 13, 22, 25, 26, 27, 29, 31, 33, 34, 35, 37, 38, 40, 41};
@@ -810,7 +985,6 @@ TEST_CASE("errors cgi", "[Validator]")
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -820,6 +994,7 @@ TEST_CASE("errors cgi", "[Validator]")
 
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{0, 1, 2, 5, 8, 9, 11, 13, 15, 17, 21, 24, 25, 26, 27, 29, 31, 33, 35, 39, 42, 43, 44, 45, 47, 49, 51, 53, 61, 64, 65, 66, 67, 69, 71, 73, 75};
@@ -893,7 +1068,6 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -903,6 +1077,7 @@ TEST_CASE("errors client_max_body_size", "[Validator]")
 
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 47, 48, 49, 51, 52, 54, 55, 57, 58, 60, 61, 63, 64, 65, 67, 68, 70, 71, 73, 74, 76, 77, 79, 81, 83, 85, 87, 89, 91, 93, 95, 97, 98, 100, 101, 103, 104, 106, 107, 109, 110, 112, 113, 115, 116, 118, 119, 121, 122};
@@ -952,7 +1127,6 @@ TEST_CASE("errors error_page", "[Validator]")
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
 
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -961,6 +1135,7 @@ TEST_CASE("errors error_page", "[Validator]")
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{30, 33, 37, 42, 45, 46, 49, 50, 61, 62, 74, 86};
@@ -984,11 +1159,21 @@ TEST_CASE("errors error_page", "[Validator]")
 
 TEST_CASE("errors index", "[Validator]")
 {
-  std::string raw = "http { index file file file;  index ;  index file file file;}";
+  std::string raw = "http {"
+                    "  "
+                    "  # valid\n"
+                    ""
+                    "  index file file file;"
+                    ""
+                    "  # invalid\n"
+                    ""
+                    "  index ;"
+                    "  index file file file;"
+                    "}";
+
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -997,6 +1182,7 @@ TEST_CASE("errors index", "[Validator]")
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{7, 8, 9, 12, 14};
@@ -1331,7 +1517,6 @@ TEST_CASE("errors listen", "[Validator]")
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -1340,6 +1525,7 @@ TEST_CASE("errors listen", "[Validator]")
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{14, 17, 20, 23, 26, 29, 32, 41, 43, 46, 49, 52, 55, 58, 61, 64, 67, 70, 73, 76, 79, 82, 85, 88, 91, 94, 97, 100, 103, 106, 109, 112, 115, 118, 121, 124, 127, 130, 133, 136, 139, 142, 145, 149, 150, 153, 156, 321, 324, 328, 329, 332, 335, 338, 340, 343, 346, 349, 352, 355, 358, 361, 364, 367, 370, 373, 376, 379, 382, 385, 388, 391, 394, 397, 400, 403, 406, 409, 412, 415, 418, 421, 424, 427, 430, 433, 436, 439, 442, 445, 448, 451, 454, 457, 460, 463, 466, 469, 472, 475, 478, 481, 484, 487, 490, 493, 496, 499, 502, 505, 508, 511, 514, 517, 520, 523, 526, 529, 532, 535, 538, 541, 544, 547, 550, 553, 556, 559, 562, 565, 568, 571, 574, 577, 580, 583, 586, 589, 592, 595, 598, 601, 604, 607, 610, 613, 616, 619, 622, 625, 628, 631, 634, 637, 640, 643, 646, 652, 655, 661, 664, 667, 680, 683, 684, 687, 692, 696, 697};
@@ -1362,11 +1548,35 @@ TEST_CASE("errors listen", "[Validator]")
 
 TEST_CASE("errors return", "[Validator]")
 {
-  std::string raw = "http {  server {    location  /path/path {     return 100 /path;      return 100 http://someplacesomewhere;      return 100;      return /path;      return http://someplace;     return ;      return code;      return path;      return 100 path;      return code /path;      return 100 /path more more more;      return 100 /path;    }  }}";
+  std::string raw = "http {"
+                    "  server {"
+                    "    location  /path/path {"
+                    ""
+                    "      # valid\n"
+                    ""
+                    "      return 100 /path;"
+                    "      return 100 http://someplacesomewhere;"
+                    "      return 100;"
+                    "      return /path;"
+                    "      return http://someplace;"
+                    ""
+                    "      # invalid\n"
+                    ""
+                    "      return ;"
+                    "      return code;"
+                    "      return path;"
+                    "      return 100 path;"
+                    "      return code /path;"
+                    "      return 100 /path more more more;"
+                    ""
+                    "      return 100 /path;"
+                    "    }"
+                    "  }"
+                    "}";
+
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == true);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -1375,6 +1585,7 @@ TEST_CASE("errors return", "[Validator]")
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
   std::set<std::size_t> errorsIdx{11, 15, 18, 21, 24, 25, 26, 27, 29, 30, 32, 34, 36, 37, 40, 43, 44, 45, 47, 49};
@@ -1397,87 +1608,25 @@ TEST_CASE("errors return", "[Validator]")
 
 TEST_CASE("errors root", "[Validator]")
 {
-  std::string raw = "http {  server {root /path;   root ;    root path;    root /path /path;    root /path;  }}";
-
-  std::stringstream buffer;
-  auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
-  Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == true);
-  Parser parser(lexer);
-  ValidatorIpPort validatorIpPort;
-  Validator validator(lexer, parser, validatorIpPort);
-  lexer.PrintErrorMessages();
-  std::string output = buffer.str();
-  std::cerr.rdbuf(oldBuf);
-
-  REQUIRE(output.empty() == false);
-  REQUIRE(parser.GetError() == false);
-  REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{7, 8, 9, 12, 14, 16, 17};
-  for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
-  {
-    if (errorsIdx.count(i) != 0)
-    {
-      CAPTURE(i);
-      REQUIRE(lexer.GetTokenError(i) == true);
-      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == false);
-    }
-    else
-    {
-      CAPTURE(i);
-      REQUIRE(lexer.GetTokenError(i) == false);
-      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == true);
-    }
-  }
-}
-
-TEST_CASE("errors server_name", "[Validator]")
-{
-  std::string raw = "# start with comment\n"
-                    "\n"
-                    "http {\n"
-                    "  server {\n"
+  std::string raw = "http {"
+                    "  server {"
+                    ""
                     "    # valid\n"
-                    "    server_name www.example1.com www.example2.com www.example3.com;\n"
-                    "    server_name hostname:8080;\n"
-                    "    server_name hostname;\n"
-                    "    server_name our-server.com;\n"
-                    "    server_name our-machine.our-host.our-domain;\n"
-                    "    server_name 63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.61chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
-                    "\n"
+                    ""
+                    "    root /path;"
+                    ""
                     "    # invalid\n"
-                    "    server_name ;\n"
-                    "    server_name &/();\n"
-                    "    server_name test.test.test.test!!.test;\n"
-                    "    server_name 63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.63chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.62chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
-                    "    server_name 64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.test.test;\n"
-                    "    server_name test.test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.test.test;\n"
-                    "    server_name test.test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
-                    "    server_name -test;\n"
-                    "    server_name test-;\n"
-                    "    server_name -test.test;\n"
-                    "    server_name test-.test;\n"
-                    "    server_name test.-test;\n"
-                    "    server_name test.test-;\n"
-                    "    server_name .test;\n"
-                    "    server_name test.;\n"
-                    "    server_name .test.test;\n"
-                    "    server_name test..test;\n"
-                    "    server_name test.test.;\n"
-                    "    server_name test test. test..test;\n"
-                    "    server_name test- test-.test test;\n"
-                    "\n"
-                    "\n"
-                    "\n"
-                    "\n"
-                    "    server_name test.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars.64chaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaars;\n"
-                    "  }\n"
-                    "}\n";
+                    ""
+                    "    root ;"
+                    "    root path;"
+                    "    root /path /path;"
+                    "    root /path;"
+                    "  }"
+                    "}";
 
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -1486,9 +1635,11 @@ TEST_CASE("errors server_name", "[Validator]")
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == true);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{25, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72, 75, 79, 80, 83, 84, 88};
+
+  std::set<std::size_t> errorsIdx{7, 8, 9, 12, 14, 16, 17};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)
@@ -1533,7 +1684,6 @@ TEST_CASE("errors cgi_extension", "[Validator]")
   std::stringstream buffer;
   auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
   Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
   Parser parser(lexer);
   ValidatorIpPort validatorIpPort;
   Validator validator(lexer, parser, validatorIpPort);
@@ -1542,47 +1692,11 @@ TEST_CASE("errors cgi_extension", "[Validator]")
   std::cerr.rdbuf(oldBuf);
 
   REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == true);
+
   std::set<std::size_t> errorsIdx{16, 19, 22, 26, 31, 32, 33, 34};
-  for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
-  {
-    if (errorsIdx.count(i) != 0)
-    {
-      CAPTURE(i);
-      REQUIRE(lexer.GetTokenError(i) == true);
-      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == false);
-    }
-    else
-    {
-      CAPTURE(i);
-      REQUIRE(lexer.GetTokenError(i) == false);
-      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == true);
-    }
-  }
-}
-
-// mixed errors
-
-TEST_CASE("multi_error05.conf", "[validator]")
-{
-  std::string raw = ";;;http {    client_max_body_size 10000000000M;    error_page 404 /errors/404.html;    error_page 500 502 503 504 /errors/50x.html;    server {        listen 80;        listen 443 ssl;        server_name example.com www.example.com;        root /var/www/example;        error_page 404 /errors/404.html;        error_page 500 502 503 504 /errors/50x.html;                location /errors/404.html {                    }                location /errors/50x.html {            ;        }                location /api {            allowed_methods POST DELETE GET;            root /path /var/www/example;;;;        }                location /old-page {            return 100 /new-page;        }                location /kapouet {            root /tmp/www;        }        g enabled        location /downloads {            root /var/www/example;            autoindex on;        }                location /private {            root /var/www/example;            autoindex off;        }                location /docs {            root /var/www/example;            index index.html index.htm default.html;        }                location /upload {            allowed_methods POST POST;            root /var/www/uploads;        }    }        server /invalid_param {        listen 8080;        listen 8443 ssl;        server_name blog.example.com;        root /var/www/blog;        error_page 404 /404.html;        error_page 500 /500.html;        index index.html index.htm;        allowed_methods GEt POST;        location /admin {            root /var/www/blog;            autoindex off;        }    }     server    server {        listen 3000;        server_name static.example.com;        root /var/www/static;        autoindex on;        client_max_body_size 50M;        location / {            allowed_methods GET;        }    }{}        server {        listen 5000;        server_name api.example.commmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm;        error_page 404 /api/errors/not_found.json;        error_page 500 /api/errors/server_error.json;        location /api/v1 {            root /var/www/api;            allowed_methods GET POST DELETE;        }                location /api/v0 /path {            return 999 /api/v1;            }}invalid {";
-  
-  std::stringstream buffer;
-  auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
-  Lexer lexer(raw);
-  REQUIRE(lexer.GetError() == false);
-  Parser parser(lexer);
-  ValidatorIpPort validatorIpPort;
-  Validator validator(lexer, parser, validatorIpPort);
-  lexer.PrintErrorMessages();
-  std::string output = buffer.str();
-  std::cerr.rdbuf(oldBuf);
-
-  REQUIRE(output.empty() == false);
-  REQUIRE(parser.GetError() == true);
-  REQUIRE(validator.GetError() == true);
-  std::set<std::size_t> errorsIdx{0, 1, 2, 26, 53, 65, 67, 68, 69, 86, 87, 125, 133, 140, 161, 176, 201, 203, 209, 233, 236, 241, 242};
   for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
   {
     if (errorsIdx.count(i) != 0)

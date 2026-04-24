@@ -54,7 +54,6 @@ class Validator
     void HandleIpv6(Node& dir);
     void HandlePortNum(Node& dir);
     void ValidateListen(Node& dir);
-    void ValidateName(Node& param);
     void ValidateServerName(Node& dir);
     void ValidateRoot(Node& dir);
     void ValidateIndex(Node& dir);

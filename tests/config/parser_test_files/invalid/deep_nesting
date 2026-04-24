@@ -1,0 +1,920 @@
+
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+http {
+
+  server {
+    listen 8081;
+    server_name example0.com ex0.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test {
+
+    }
+
+    location /test/test {
+
+    }
+
+    location /test/test/test {
+
+    }
+  }
+
+  server {
+    listen 8082;
+    listen 124.0.0.34:8081;
+    server_name example1.com ex1.com;
+
+    client_max_body_size 2m;
+
+    location / {
+      root ./www;
+      index index.html;
+      autoindex off;
+    }
+
+    location /test1 {
+
+    }
+
+    location /test1/test {
+
+    }
+
+    location /test1/test/test {
+      
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}
+    }
+  }
+
+  server {
+    server_name ex2.com;
+  }
+}

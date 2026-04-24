@@ -32,7 +32,7 @@ class ServerRegistry
     ServerRegistry(const ServerRegistry& other) = delete;
     ServerRegistry(ServerRegistry&& other) = default;
     ServerRegistry& operator=(const ServerRegistry& other) = delete;
-    ServerRegistry& operator=(ServerRegistry&& other) = default;
+    ServerRegistry& operator=(ServerRegistry&& other) = delete;
     ~ServerRegistry() = default;
 
     std::size_t GetServerViewCount() const;

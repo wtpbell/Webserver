@@ -149,7 +149,7 @@ TEST_CASE("LBrace", "[parser]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
-  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31m{[0m` expected: DIRECTIVE or BLOCKDIRECTIVE\n");
+  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31m{[0m` expected: DIRECTIVE or BLOCKDIRECTIVE or EOF\n");
   REQUIRE(lexer.GetTokenError(1) == false);
   REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
 }
@@ -168,7 +168,7 @@ TEST_CASE("RBrace", "[parser]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
-  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31m}[0m` expected: DIRECTIVE or BLOCKDIRECTIVE\n");
+  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31m}[0m` expected: DIRECTIVE or BLOCKDIRECTIVE or EOF\n");
   REQUIRE(lexer.GetTokenError(1) == false);
   REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
 }
@@ -187,7 +187,7 @@ TEST_CASE("semicolon", "[parser]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
-  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31m;[0m` expected: DIRECTIVE or BLOCKDIRECTIVE\n");
+  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31m;[0m` expected: DIRECTIVE or BLOCKDIRECTIVE or EOF\n");
   REQUIRE(lexer.GetTokenError(1) == false);
   REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
 }
@@ -208,7 +208,7 @@ TEST_CASE("non-printable character", "[parser]")
   REQUIRE(parser.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
   REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m non-printable character: `[31m[0m`\n"
-                                            "1:1: [31merror:[0m unexpected token: `[31m[0m` expected: DIRECTIVE or BLOCKDIRECTIVE\n");
+                                            "1:1: [31merror:[0m unexpected token: `[31m[0m` expected: DIRECTIVE or BLOCKDIRECTIVE or EOF\n");
   REQUIRE(lexer.GetTokenError(1) == false);
   REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
 }
@@ -227,7 +227,7 @@ TEST_CASE("string", "[parser]")
   REQUIRE(output.empty() == false);
   REQUIRE(parser.GetError() == true);
   REQUIRE(lexer.GetTokenError(0) == true);
-  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31mstring[0m` expected: DIRECTIVE or BLOCKDIRECTIVE\n");
+  REQUIRE(lexer.GetTokenErrorMessage(0) ==  "1:1: [31merror:[0m unexpected token: `[31mstring[0m` expected: DIRECTIVE or BLOCKDIRECTIVE or EOF\n");
   REQUIRE(lexer.GetTokenError(1) == false);
   REQUIRE(lexer.GetTokenErrorMessage(1).empty() == true);
 }

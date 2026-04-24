@@ -20,7 +20,12 @@
 
 #include "config/Lexer.hpp"
 
-Parser::Parser(Lexer& lexer) : lexer_(lexer), currentTokenIdx_{}, error_(false)
+Parser::Parser(Lexer& lexer)
+  : lexer_(lexer)
+  , currentTokenIdx_{}
+  , error_(false)
+  , recursionDepth_(0)
+  , recursionTooDeep_(false)
 {
   ast_.name = Identifier::kMain;
   ast_.context = Identifier::kMain;
@@ -36,7 +41,7 @@ Parser::Parser(Lexer& lexer) : lexer_(lexer), currentTokenIdx_{}, error_(false)
     }
     else
     {
-      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true, ast_);
+      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE or EOF", true, ast_);
     }
   }
   ast_.idxTokenListEnd = currentTokenIdx_;
@@ -76,51 +81,6 @@ Node& Parser::GetAst()
 bool Parser::GetError() const
 {
   return error_;
-}
-
-std::string Parser::IdentifierToString(Identifier identifier) const
-{
-  switch (identifier)
-  {
-    case Identifier::kMain:
-      return "main";
-    case Identifier::kListen:
-      return "listen";
-    case Identifier::kServerName:
-      return "server_name";
-    case Identifier::kRoot:
-      return "root";
-    case Identifier::kIndex:
-      return "index";
-    case Identifier::kAlias:
-      return "alias";
-    case Identifier::kClientMaxBodySize:
-      return "client_max_body_size";
-    case Identifier::kErrorPage:
-      return "error_page";
-    case Identifier::kReturn:
-      return "return";
-    case Identifier::kAllowedMethods:
-      return "allowed_methods";
-    case Identifier::kAutoindex:
-      return "autoindex";
-    case Identifier::kCgi:
-      return "cgi";
-    case Identifier::kCgiExtension:
-      return "cgi_extension";
-    case Identifier::kDefaultServer:
-      return "default_server";
-    case Identifier::kHttp:
-      return "http";
-    case Identifier::kServer:
-      return "server";
-    case Identifier::kLocation:
-      return "location";
-    case Identifier::kParam:
-      return "param";
-  }
-  assert(false && "Invalid Identifier passed to IdentifierToString");
-  __builtin_unreachable();
 }
 
 //////////////////// PRIVATE ////////////////////
@@ -233,9 +193,59 @@ Identifier Parser::TokenKindToIdentifier(TokenKind kind) const
   }
 }
 
+std::string Parser::IdentifierToString(Identifier identifier) const
+{
+  switch (identifier)
+  {
+    case Identifier::kMain:
+      return "main";
+    case Identifier::kListen:
+      return "listen";
+    case Identifier::kServerName:
+      return "server_name";
+    case Identifier::kRoot:
+      return "root";
+    case Identifier::kIndex:
+      return "index";
+    case Identifier::kAlias:
+      return "alias";
+    case Identifier::kClientMaxBodySize:
+      return "client_max_body_size";
+    case Identifier::kErrorPage:
+      return "error_page";
+    case Identifier::kReturn:
+      return "return";
+    case Identifier::kAllowedMethods:
+      return "allowed_methods";
+    case Identifier::kAutoindex:
+      return "autoindex";
+    case Identifier::kCgi:
+      return "cgi";
+    case Identifier::kCgiExtension:
+      return "cgi_extension";
+    case Identifier::kDefaultServer:
+      return "default_server";
+    case Identifier::kHttp:
+      return "http";
+    case Identifier::kServer:
+      return "server";
+    case Identifier::kLocation:
+      return "location";
+    case Identifier::kParam:
+      return "param";
+  }
+  assert(false && "Invalid Identifier passed to IdentifierToString");
+  __builtin_unreachable();
+}
+
 void Parser::Next()
 {
   ++currentTokenIdx_;
+}
+
+void Parser::JumpToEof()
+{
+  currentTokenIdx_ = lexer_.GetSizeTokenList() - 1;
 }
 
 std::string Parser::BuildErrorMessage(std::string_view errorType, std::string_view expectedMessage)
@@ -257,6 +267,10 @@ std::string Parser::BuildErrorMessage(std::string_view errorType, std::string_vi
 
 void Parser::Error(std::string_view error_type, std::string_view message, bool skip, Node& node)
 {
+  if (recursionTooDeep_)
+  {
+    return;
+  }
   lexer_.SetTokenErrorMessage(currentTokenIdx_, BuildErrorMessage(error_type, message));
   lexer_.SetTokenErrorTrue(currentTokenIdx_);
   node.error = true;
@@ -344,7 +358,7 @@ void Parser::ParseBlock(Node& blockDirective)
     }
     else
     {
-      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE", true, blockDirective);
+      Error("unexpected token", " expected: DIRECTIVE or BLOCKDIRECTIVE or `}`", true, blockDirective);
     }
   }
   ParseRBrace(blockDirective);
@@ -375,9 +389,18 @@ void Parser::ParseLocationParam(Node& blockDirective)
 Node Parser::ParseBlockDirective(Identifier context)
 {
   Node blockDirective(TokenKindToIdentifier(lexer_.GetTokenKind(currentTokenIdx_)), context, lexer_, currentTokenIdx_);
+  ++recursionDepth_;
+  if (recursionDepth_ > 42)
+  {
+    Error("unexpected token", " blocks nested too deep", false, blockDirective);
+    recursionTooDeep_ = true;
+    JumpToEof();
+    return blockDirective;
+  }
   Next();
   ParseLocationParam(blockDirective);
   ParseBlock(blockDirective);
+  --recursionDepth_;
   return blockDirective;
 }
 

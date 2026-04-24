@@ -185,7 +185,10 @@ void Validator::ValidateNumBlocks(Node& block)
     }
     if (server == 0)
     {
-      Error("unexpected token", " expected `server`", block, block.idxTokenListEnd);
+      if (block.idxTokenListEnd != block.idxTokenListStart)
+      {
+        Error("unexpected token", " expected `server`", block, block.idxTokenListEnd);
+      }
     }
   }
 }

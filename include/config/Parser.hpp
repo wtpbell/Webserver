@@ -94,10 +94,12 @@ class Parser
     bool IsParam() const;
     Identifier TokenKindToIdentifier(TokenKind kind) const;
     void Next();
+    void JumpToEof();
     std::string BuildErrorMessage(std::string_view errorType, std::string_view expectedMessage = "");
     void Error(std::string_view error_type, std::string_view message, bool skip, Node& node);
 
     // parsing logic
+    void Parse();
     Node ParseDirective(Identifier context);
     void ParseLBrace(Node& blockDirective);
     void ParseRBrace(Node& blockDirective);
@@ -115,6 +117,8 @@ class Parser
     std::size_t currentTokenIdx_;
     bool error_;
     Node ast_;
+    std::size_t recursionDepth_;
+    bool recursionTooDeep_;
     static constexpr std::string_view kRed_ = "\033[31m";
     static constexpr std::string_view kReset_ = "\033[0m";
 };

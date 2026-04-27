@@ -425,14 +425,7 @@ namespace request_handler
 
   std::optional<fs::path> ResolvePath(const RouteView& route, std::string_view path, std::string_view remainder)
   {
-    std::string_view tail;
-
-    if (route.alias.has_value())
-      tail = remainder;
-    else if (route.locationPrefix == "/")
-      tail = path;
-    else
-      tail = remainder;
+    std::string_view tail = route.alias.has_value() ? remainder : path;
 
     while (!tail.empty() && tail.front() == '/')
       tail.remove_prefix(1);
@@ -440,15 +433,15 @@ namespace request_handler
     const fs::path base = route.alias ? fs::path(*route.alias) : fs::path(route.root);
 
     std::error_code ec;
-    fs::path root = fs::weakly_canonical(base, ec);
+    fs::path canonBase = fs::weakly_canonical(base, ec);
     if (ec)
       return std::nullopt;
 
-    fs::path joined = fs::weakly_canonical(root / fs::path(tail), ec);
+    fs::path joined = fs::weakly_canonical(canonBase / fs::path(tail), ec);
     if (ec)
       return std::nullopt;
 
-    if (!std::equal(root.begin(), root.end(), joined.begin()))
+    if (!std::equal(canonBase.begin(), canonBase.end(), joined.begin()))
       return std::nullopt;
 
     return joined;

@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 10:16:48 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/06 17:11:10 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:54:55 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,7 @@ class Logger
     static std::string_view LevelToString(LogLevel level);
     static void SetLogFilter(LogLevel filter);
 
-    Logger(void) = delete;
+    Logger() = delete;
 
   private:
     static std::ostream cout_;

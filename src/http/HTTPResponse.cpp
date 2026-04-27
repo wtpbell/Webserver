@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/14 10:48:15 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:31:03 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 16:29:00 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,18 @@
 #include <string>
 
 #include "http/HTTPStatus.hpp"
+
+HTTPResponse::HTTPResponse(HTTP::Status status, std::string body)
+    : HTTPMessage(std::string{HTTP::kVERSION}, HTTP::Headers{}, std::move(body))
+{
+  SetStatus(status);
+}
+
+HTTPResponse::HTTPResponse(HTTP::Status status, HTTP::Headers headers, std::string body)
+    : HTTPMessage(std::string{HTTP::kVERSION}, std::move(headers), std::move(body))
+{
+  SetStatus(status);
+}
 
 std::uint16_t HTTPResponse::GetStatusCode(void) const
 {

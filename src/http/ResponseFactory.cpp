@@ -15,66 +15,65 @@
 #include <string>
 
 #include "http/HTTPStatus.hpp"
+#include "http/HTTPTypes.hpp"
 #include "http/HTTPUtils.hpp"
+#include "http/ResponseFactory.hpp"
 
 namespace HTTP::response
 {
+  namespace
+  {
+    HTTP::Headers MakeHeaders(std::string_view name, std::string_view value)
+    {
+      HTTP::Headers headers;
+      headers.emplace(std::string{name}, std::vector<std::string>{std::string{value}});
+      return headers;
+    }
+
+    HTTPResponse MakeTypedResponse(HTTP::Status st, std::string body, std::string_view contentType)
+    {
+      return HTTPResponse(st, MakeHeaders(kDefaultCTHeader, contentType.empty() ? kDefaultCT : contentType),
+                          std::move(body));
+    }
+  }  // namespace
+
   HTTPResponse MakeText(HTTP::Status st, std::string body, std::string_view content_type)
   {
-    HTTPResponse r;
-    r.SetStatus(st);
-    r.SetHeader(kDefaultCTHeader, content_type.empty() ? kDefaultCT : content_type);
-    r.SetBody(std::move(body));
-    return r;
+    return MakeTypedResponse(st, std::move(body), content_type);
   }
 
   HTTPResponse MakeHTML(HTTP::Status st, std::string body)
   {
-    HTTPResponse r;
-    r.SetStatus(st);
-    r.SetHeader(kDefaultCTHeader, kDefaultHTMLCT);
-    r.SetBody(std::move(body));
-    return r;
+    return MakeTypedResponse(st, std::move(body), kDefaultHTMLCT);
   }
 
   HTTPResponse MakeFile(HTTP::Status st, const std::string& filepath, std::string body)
   {
-    HTTPResponse r;
-    r.SetStatus(st);
-    r.SetHeader(kDefaultCTHeader, HTTP::wire::GetMimeType(filepath));
-    r.SetBody(std::move(body));
+    HTTPResponse r = MakeTypedResponse(st, std::move(body), HTTP::wire::GetMimeType(filepath));
 
-    auto lm = HTTP::wire::GetLastModifiedHttpDate(filepath);
-    if (!lm.empty())
-      r.SetHeader("last-modified", lm);
+    const std::string last_modified = HTTP::wire::GetLastModifiedHttpDate(filepath);
+    if (!last_modified.empty())
+      r.SetHeader("Last-Modified", last_modified);
 
     return r;
   }
 
   HTTPResponse MakeEmpty(HTTP::Status st)
   {
-    HTTPResponse r;
-    r.SetStatus(st);
-    r.SetBody("");
-    return r;
+    return HTTPResponse(st, "");
   }
 
   HTTPResponse MakeError(HTTP::Status st)
   {
-    HTTPResponse r;
-    r.SetStatus(st);
-    r.SetHeader(kDefaultCTHeader, kDefaultCT);
-    r.SetBody(std::to_string(static_cast<int>(st)) + " " + std::string(r.GetReason()) + "\n");
-    return r;
+    return HTTPResponse(st, MakeHeaders(kDefaultCTHeader, kDefaultCT),
+                        std::to_string(static_cast<int>(st)) + " " + std::string(HTTP::ToReasonPhrase(st)) + "\n");
   }
 
   HTTPResponse MakeRedirect(HTTP::Status st, std::string location)
   {
-    HTTPResponse r;
-    r.SetStatus(st);
-    r.SetHeader("Location", std::move(location));
+    HTTPResponse r(st, std::string(HTTP::ToReasonPhrase(st)) + "\n");
     r.SetHeader(kDefaultCTHeader, kDefaultCT);
-    r.SetBody(std::string(r.GetReason()) + "\n");  // optional but helpful
+    r.SetHeader("Location", location);
     return r;
   }
 

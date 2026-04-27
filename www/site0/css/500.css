@@ -1,0 +1,63 @@
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+}
+
+body {
+	font-family: 'Share Tech Mono', monospace;
+	background: #000;
+	color: #fff;
+}
+
+.error-500 {
+	position: relative;
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	overflow: hidden;
+	background-image: url("https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmJxOHd6OWlkamhoNDk2ZTEwNHhvYXVlN2xwemp1Y3JwaDJhNGkxOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/giphy.gif");
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+}
+
+.overlay {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.45);
+}
+
+.content {
+	position: relative;
+	z-index: 1;
+	padding: 24px;
+	max-width: 90vw;
+}
+
+.content h1 {
+	margin: 0 0 12px;
+	font-size: clamp(64px, 14vw, 180px);
+	line-height: 0.9;
+	letter-spacing: 0.08em;
+	text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+.content p {
+	margin: 0;
+	font-size: clamp(18px, 3vw, 36px);
+	letter-spacing: 0.12em;
+	text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 600px) {
+	.overlay {
+		background: rgba(0, 0, 0, 0.55);
+	}
+
+	.content p {
+		line-height: 1.3;
+	}
+}

@@ -82,12 +82,12 @@ HTTPResponse Router::DispatchHandler(const HTTPRequest& request, const RouteView
 #ifdef UNIT_TEST
   if (dispatchHook_)
   {
-    const std::string_view remainder = request_handler::ComputeRemainder(request.GetPath(), route.locationPrefix);
+    const std::string_view remainder = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
     return dispatchHook_(request, route, remainder);
   }
 #endif
 
-  const std::string_view remainder = request_handler::ComputeRemainder(request.GetPath(), route.locationPrefix);
+  const std::string_view remainder = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
   if (remainder.empty())
     return Response::MakeError(Status::kInternalServerError);
 

@@ -15,24 +15,24 @@
 
 #ifdef UNIT_TEST
 #include <functional>
-#include <string_view>
 #endif
+
+#include <string_view>
 
 #include "config/RouteView.hpp"
 #include "config/ServerRegistry.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPResponse.hpp"
 
-
 class Router
 {
   public:
-    Router(void) = default;
+    Router() = default;
     Router(const Router& other) = delete;
     Router(Router&& other) noexcept = default;
     Router& operator=(const Router& other) = delete;
     Router& operator=(Router&& other) noexcept = default;
-    ~Router(void) = default;
+    ~Router() = default;
 
     HTTPResponse Dispatch(const HTTPRequest& request, const RouteView& route, const ServerRegistry& serverRegistry,
                           const ServerView::IpPort& ipPort, std::string_view hostName) const;

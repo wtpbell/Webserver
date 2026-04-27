@@ -61,7 +61,7 @@ namespace request_handler
   FileStatusResult MoveTempIntoPlace(const fs::path& tmp, const fs::path& target, bool targetExisted);
   FileStatusResult FinalizeBodyToPath(const HTTPRequest& request, const fs::path& target, bool existed);
   PathInfo InspectPath(const fs::path& path);
-  std::string_view ComputeRemainder(std::string_view path, std::string_view locationPref);
+  std::string_view ComputeRouteTail(std::string_view path, std::string_view locationPref);
 
   std::optional<HTTPResponse> ValidatePostTarget(const fs::path& path, const PathInfo& info);
   std::optional<HTTPResponse> FileStatusToHTTP(FileStatusResult result);

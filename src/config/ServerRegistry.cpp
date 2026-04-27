@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/24 15:04:18 by jstuhrin      #+#    #+#                 */
-/*   Updated: 2026/04/10 09:49:06 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:52:55 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,6 @@
 #include <string>
 #include <vector>
 
-#include "Logger.hpp"
 #include "config/RouteView.hpp"
 #include "config/ServerView.hpp"
 

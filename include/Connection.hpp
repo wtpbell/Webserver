@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:33:36 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/02 12:40:12 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:51:28 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,12 +33,12 @@ class Connection
 
   public:
     Connection(Socket socket);
-    Connection(void) = delete;
+    Connection() = delete;
     Connection(const Connection& other) = delete;
     Connection(Connection&& other) noexcept = default;
     Connection& operator=(const Connection& rhs) = delete;
     Connection& operator=(Connection&& rhs) noexcept = default;
-    ~Connection(void) = default;
+    ~Connection() = default;
 
     enum class State
     {

@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/12 10:14:00 by jstuhrin      #+#    #+#                 */
-/*   Updated: 2026/04/10 09:48:36 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:57:50 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -379,7 +379,7 @@ void Builder::ValidateServerNames(Node& serverBlock)
         if (result.second == false)
         {
           Error(param, "- duplicate hostname in server");
-        }   
+        }
       }
     }
   }
@@ -393,7 +393,7 @@ void Builder::ExtractServerNames(Node& serverBlock, ServerView& serverView)
     if (dir.name == Identifier::kServerName)
     {
       for (Node& param : dir.params)
-      {  
+      {
         serverView.hostNames.emplace_back(param.lexeme);
         serverNameNodes_.emplace_back(&param);
       }

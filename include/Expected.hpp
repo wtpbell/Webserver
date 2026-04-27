@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Expected.hpp                                       :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jboon <jboon@student.codam.nl>               +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/12 13:48:44 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/12 13:48:45 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/24 15:51:41 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,10 +28,10 @@ template <typename Val, typename Unex>
 class Expected
 {
   public:
-    Expected(void) = delete;
+    Expected() = delete;
     Expected(Val&& value) noexcept : value_(std::move(value)), has_value_(true) {}
     Expected(Unex&& error) noexcept : error_(std::move(error)), has_value_(false) {}
-    ~Expected(void)
+    ~Expected()
     {
       if (has_value_)
         value_.~Val();

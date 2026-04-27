@@ -31,9 +31,9 @@ class Server
     using IpPort = ServerView::IpPort;
 
   public:
-    Server(void) = delete;
+    Server() = delete;
     Server(const IpPort& ipport, Socket::Type type, const ServerRegistry& serverRegistry);
-    ~Server(void);
+    ~Server();
     Server(const Server& other) = delete;
     Server(Server&& other) noexcept = default;
     Server& operator=(const Server& rhs) = delete;

@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/14 10:48:28 by bewong        #+#    #+#                 */
-/*   Updated: 2026/03/17 10:04:08 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 16:35:43 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,25 +18,29 @@
 
 #include "HTTPMessage.hpp"
 #include "HTTPStatus.hpp"
+#include "HTTPTypes.hpp"
 
 class HTTPResponse : public HTTPMessage
 {
   public:
-    HTTPResponse(void) = default;
+    HTTPResponse() = default;
     HTTPResponse(const HTTPResponse& other) = default;
     HTTPResponse(HTTPResponse&& other) noexcept = default;
     HTTPResponse& operator=(const HTTPResponse& other) = default;
     HTTPResponse& operator=(HTTPResponse&& other) noexcept = default;
-    ~HTTPResponse(void) override = default;
+    ~HTTPResponse() override = default;
 
-    std::uint16_t GetStatusCode(void) const;
-    const std::string& GetReason(void) const;
+    HTTPResponse(HTTP::Status status, std::string body);
+    HTTPResponse(HTTP::Status status, HTTP::Headers headers, std::string body);
+
+    std::uint16_t GetStatusCode() const;
+    const std::string& GetReason() const;
 
     void SetStatus(HTTP::Status status);
 
   private:
     HTTP::Status status_{HTTP::Status::kOk};
-    std::string reason_{"kOk"};
+    std::string reason_{"Ok"};
 };
 
 #endif

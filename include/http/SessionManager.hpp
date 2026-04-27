@@ -24,12 +24,12 @@
 class SessionManager
 {
   public:
-    SessionManager(void) = default;
+    SessionManager() = default;
     SessionManager(const SessionManager& other) = default;
     SessionManager(SessionManager&& other) noexcept = default;
     SessionManager& operator=(const SessionManager& other) = default;
     SessionManager& operator=(SessionManager&& other) noexcept = default;
-    ~SessionManager(void) = default;
+    ~SessionManager() = default;
 
     void UseOrCreateSession(HTTPRequest& request, HTTPResponse& res);
     void UseOrCreateSessionAt(HTTPRequest& request, HTTPResponse& res, std::time_t now);

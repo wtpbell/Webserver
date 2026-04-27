@@ -3,21 +3,20 @@
 /*                                                        ::::::::            */
 /*   ServerRegistry.hpp                                 :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
+/*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/24 15:04:18 by jstuhrin      #+#    #+#                 */
-/*   Updated: 2026/04/02 12:29:37 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:52:17 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVERREGISTRY_HPP
 #define SERVERREGISTRY_HPP
 
-#include <cstdint>
+#include <vector>
 #include <map>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 #include "RouteView.hpp"
 #include "ServerView.hpp"

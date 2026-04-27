@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/11/14 15:42:09 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:11:46 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:51:36 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,7 @@ class EpollManager : private SharedFD
     EpollManager(EpollManager&& other) noexcept = delete;
     EpollManager& operator=(const EpollManager& other) = delete;
     EpollManager& operator=(EpollManager&& other) noexcept = delete;
-    ~EpollManager(void) = default;
+    ~EpollManager() = default;
 
     Result Init(void);
 

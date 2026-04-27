@@ -49,12 +49,12 @@ namespace request_handler
     return IsPermDenied(ec) ? Status::kForbidden : Status::kInternalServerError;
   }
 
-  std::string_view ComputeRemainder(std::string_view path, std::string_view locationPrefix)
+  std::string_view ComputeRouteTail(std::string_view path, std::string_view locationPrefix)
   {
     if (locationPrefix.size() > path.size())
       return {};
-    std::string_view remainder = path.substr(locationPrefix.size());
-    return remainder.empty() ? std::string_view("/") : remainder;
+    std::string_view tail = path.substr(locationPrefix.size());
+    return tail.empty() ? std::string_view("/") : tail;
   }
 
   Method MethodToMask(HTTP::Method m)

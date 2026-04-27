@@ -1,0 +1,67 @@
+html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-image: url("https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExamRuaW93bjc3ZHhtNjlvY2c5N3Zrd25yZWxjbzB0aDRpem9pbWQxeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/vFKqnCdLPNOKc/giphy.gif");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        position: relative;
+        overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      color: #fff;
+      max-width: 90vw;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: clamp(28px, 4vw, 48px);
+    }
+
+    p {
+      margin: 0 0 20px;
+      font-size: clamp(16px, 2vw, 20px);
+    }
+
+    a.button {
+      display: inline-block;
+      padding: 12px 20px;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #111;
+      text-decoration: none;
+      font-weight: 700;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    a.button:hover {
+      transform: translateY(-2px);
+      opacity: 0.92;
+    }

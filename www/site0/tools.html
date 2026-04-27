@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Webserv Tools</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="/css/tools.css">
+</head>
+
+<body>
+	<div class="wrap">
+		<h1>Webserv Tools</h1>
+		<p class="subtitle">Simple browser tests for POST upload and DELETE.</p>
+
+		<div class="block">
+			<h2>Upload file (POST)</h2>
+			<label for="fileInput">Choose a file</label>
+			<input id="fileInput" type="file">
+
+			<label for="uploadName">Target filename (optional)</label>
+			<input id="uploadName" type="text" placeholder="leave empty to use the original filename">
+
+			<div class="actions">
+				<button id="uploadBtn" type="button">Upload</button>
+			</div>
+		</div>
+
+		<div class="block">
+			<h2>Delete file (DELETE)</h2>
+			<label for="deletePath">Path to delete</label>
+			<input id="deletePath" type="text" placeholder="/delete/example.txt">
+
+			<div class="actions">
+				<button id="deleteBtn" type="button">Delete</button>
+			</div>
+		</div>
+
+		<div class="block">
+			<h2>Result</h2>
+			<pre id="result">Ready.</pre>
+		</div>
+
+		<div class="actions">
+			<a class="button-link" href="/">Back to Home</a>
+		</div>
+	</div>
+
+	<script>
+		const fileInput = document.getElementById('fileInput');
+		const uploadName = document.getElementById('uploadName');
+		const uploadBtn = document.getElementById('uploadBtn');
+		const deletePath = document.getElementById('deletePath');
+		const deleteBtn = document.getElementById('deleteBtn');
+		const result = document.getElementById('result');
+
+		function showResult(title, response, body) {
+			result.textContent =
+				title + '\n' +
+				'Status: ' + response.status + ' ' + response.statusText + '\n\n' +
+				body;
+		}
+
+		uploadBtn.addEventListener('click', async () => {
+			const file = fileInput.files[0];
+
+			if (!file) {
+				result.textContent = 'Please choose a file first.';
+				return;
+			}
+
+			const name = uploadName.value.trim() || file.name;
+			const target = '/upload/' + encodeURIComponent(name);
+
+			try {
+				const response = await fetch(target, {
+					method: 'POST',
+					headers: {
+						'Content-Type': file.type || 'application/octet-stream'
+					},
+					body: file
+				});
+
+				const body = await response.text();
+				showResult('Upload finished', response, body);
+
+				deletePath.value = '/delete/' + name;
+			} catch (err) {
+				result.textContent = 'Upload failed:\n' + err;
+			}
+		});
+
+		deleteBtn.addEventListener('click', async () => {
+			const path = deletePath.value.trim();
+
+			if (!path) {
+				result.textContent = 'Please enter a path to delete.';
+				return;
+			}
+
+			try {
+				const response = await fetch(path, {
+					method: 'DELETE'
+				});
+
+				const body = await response.text();
+				showResult('Delete finished', response, body);
+			} catch (err) {
+				result.textContent = 'Delete failed:\n' + err;
+			}
+		});
+	</script>
+</body>
+
+</html>

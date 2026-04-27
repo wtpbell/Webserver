@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/02 15:28:21 by bewong        #+#    #+#                 */
-/*   Updated: 2026/04/02 16:44:32 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:53:29 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,17 +58,17 @@ class HTTPParser
         std::size_t remaining = 0;
     };
 
-    HTTPParser(void) = default;
+    HTTPParser() = default;
     HTTPParser(const HTTPParser&) = delete;
     HTTPParser& operator=(const HTTPParser&) = delete;
     HTTPParser(HTTPParser&&) noexcept = default;
     HTTPParser& operator=(HTTPParser&&) noexcept = default;
-    ~HTTPParser(void) = default;
+    ~HTTPParser() = default;
 
     ParseResult Parse(std::string_view data);
-    ParseResult ExitResult(void);
-    bool IsComplete(void) const;
-    bool HasError(void) const;
+    ParseResult ExitResult();
+    bool IsComplete() const;
+    bool HasError() const;
 
     void SetNoBody();
     void SetContentLength(std::size_t n);
@@ -77,24 +77,24 @@ class HTTPParser
     void SetBodySink(std::unique_ptr<IBodySink> sink);
     bool NeedsBodyDecision() const;
 
-    const HTTPRequest& GetRequest(void) const;
-    HTTPRequest& GetRequestMutable(void);
-    ValidationResult GetError(void) const;
-    HTTPRequest TakeRequest(void);
-    void ResetNextRequest(void);
-    void Reset(void);
+    const HTTPRequest& GetRequest() const;
+    HTTPRequest& GetRequestMutable();
+    ValidationResult GetError() const;
+    HTTPRequest TakeRequest();
+    void ResetNextRequest();
+    void Reset();
 
   private:
-    bool ParseStartLine(void);
-    bool ParseHeaders(void);
-    bool ParseBody(void);
-    bool ParseChunked(void);
+    bool ParseStartLine();
+    bool ParseHeaders();
+    bool ParseBody();
+    bool ParseChunked();
 
     // for Parsing Chunk
-    bool ParseChunkSize(void);
-    bool ParseChunkData(void);
-    bool ParseChunkCRLF(void);
-    bool ParseChunkTrailer(void);
+    bool ParseChunkSize();
+    bool ParseChunkData();
+    bool ParseChunkCRLF();
+    bool ParseChunkTrailer();
 
     bool ConsumeLine(const std::string& buf, size_t& pos, size_t& lineEnd);
     bool ParseRequestLine(const size_t lineStart, size_t lineEnd);

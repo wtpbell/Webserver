@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/12 10:14:00 by jstuhrin      #+#    #+#                 */
-/*   Updated: 2026/04/10 09:48:18 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/24 15:52:03 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,8 @@
 
 #include <cstdint>
 #include <map>
+#include <string>
+#include <vector>
 #include <set>
 #include <string>
 #include <vector>

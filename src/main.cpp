@@ -55,40 +55,53 @@ int main(int argc, char* argv[])
 {
   if (argc < 2)
   {
-    std::cerr << "Please provide path to config file. Valid input: `./webserv file.conf [--option]`"
-              << "\n";
+    std::cerr << "Please provide path to config file. Valid input: `./webserv file.conf [--option]`\n";
     return EXIT_FAILURE;
   }
 
   std::optional<ServerRegistry> serverRegistry = LoadConfigs(argc, argv);
   if (serverRegistry == std::nullopt)
-  {
-    return (EXIT_FAILURE);
-  }
+    return EXIT_FAILURE;
 
   Logger::Log(LogLevel::INFO, "Server registry successfully constructed!");
-  try
+
+  Logger::Log(LogLevel::INFO, "Setting up signals...");
+  setupSignals();
+
+  Logger::Log(LogLevel::INFO, "Constructing the servers...");
+  std::vector<Server> servers;
+  ConstructServers(servers, *serverRegistry);
+
+  if (servers.empty())
   {
-    Logger::Log(LogLevel::INFO, "Setting up signals...");
-    setupSignals();
-
-    Logger::Log(LogLevel::INFO, "Constructing the servers...");
-    std::vector<Server> servers;
-    ConstructServers(servers, *serverRegistry);
-
-    Logger::Log(LogLevel::INFO, "Start listing on the sockets and adding them to the poll manager...");
-    EpollManager manager;
-    for (auto& server : servers)
-      server.RegisterFD(manager);
-
-    Logger::Log(LogLevel::INFO, "(⌒ω⌒)ﾉ Webserv is now running!");
-    manager.EventLoop();
+    Logger::Log(LogLevel::CRITICAL, "No valid servers could be constructed.");
+    return EXIT_FAILURE;
   }
-  catch (const std::exception& e)
+
+  EpollManager manager;
+  if (manager.Init() != EpollManager::Result::kOk)
   {
-    Logger::Log(LogLevel::CRITICAL, "ヽ(°〇°)ﾉ Webserv crashed: {}!", e.what());
-    return (1);
+    Logger::Log(LogLevel::CRITICAL, "Failed to initialize epoll manager.");
+    return EXIT_FAILURE;
   }
+
+  Logger::Log(LogLevel::INFO, "Start listening on the sockets and adding them to epoll...");
+  for (auto& server : servers)
+  {
+    if (!server.RegisterFD(manager))
+      Logger::Log(LogLevel::ERROR, "Failed to register one server socket.");
+  }
+
+  Logger::Log(LogLevel::INFO, "(⌒ω⌒)ﾉ Webserv is now running!");
+
+  EpollManager::Result loopResult = manager.EventLoop();
+  if (loopResult != EpollManager::Result::kOk)
+  {
+    Logger::Log(LogLevel::CRITICAL, "ヽ(°〇°)ﾉ Webserv event loop stopped: {}",
+                EpollManager::ToString(loopResult));
+    return EXIT_FAILURE;
+  }
+
   Logger::Log(LogLevel::INFO, "(´ ▽ ` )ﾉ Goodbye!");
-  return (EXIT_SUCCESS);
+  return EXIT_SUCCESS;
 }

@@ -39,7 +39,7 @@ class Server
     Server& operator=(const Server& rhs) = delete;
     Server& operator=(Server&& rhs) noexcept = delete;
 
-    void RegisterFD(EpollManager& manager);
+    bool RegisterFD(EpollManager& manager);
 
   private:
     using addrinfo_t = struct addrinfo;

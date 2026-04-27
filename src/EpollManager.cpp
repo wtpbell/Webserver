@@ -15,72 +15,93 @@
 #include <sys/epoll.h>
 
 #include <csignal>
-#include <system_error>
 
-#include "exception/EPollManagerException.hpp"
 #include "webserv.hpp"
 
-EpollManager::EpollManager(void) : SharedFD()
+EpollManager::EpollManager(void) : SharedFD() {}
+
+EpollManager::Result EpollManager::Init(void)
 {
+  if (fd_ != -1)
+    return Result::kInvalidState;
+
   int fd = epoll_create1(O_CLOEXEC);
   if (fd == -1)
-    throw EPollManagerException("epoll_create1", errno);
+    return Result::kSyscallError;
 
   Initialize(fd);
+  return Result::kOk;
 }
 
+
 /// @brief Add the fd (or modify if already present) to the poll
-void EpollManager::AddFd(int fd, uint32_t events, EventCallback cb)
+EpollManager::Result EpollManager::AddFd(int fd, uint32_t events, EventCallback cb)
 {
   struct epoll_event ev{};
-
   ev.data.fd = fd;
   ev.events = events;
+
   if (epoll_ctl(fd_, EPOLL_CTL_ADD, fd, &ev) < 0)
   {
     if (errno == EEXIST)
-      ModifyFd(fd, events, cb);
-    else
-      throw EPollManagerException("AddFd", errno);
+      return ModifyFd(fd, events, cb);
+    return Result::kSyscallError;
   }
+
   callbacks_[fd] = cb;
+  return Result::kOk;
 }
 
-void EpollManager::ModifyFd(int fd, uint32_t events)
+EpollManager::Result EpollManager::ModifyFd(int fd, uint32_t events)
 {
   struct epoll_event ev{};
-
   ev.data.fd = fd;
   ev.events = events;
+
   if (epoll_ctl(fd_, EPOLL_CTL_MOD, fd, &ev) < 0)
   {
     if (errno == ENOENT)  // fd not registered
-      throw NotRegisteredInEPollException("ModifyFd", errno);
-    else
-      throw EPollManagerException("ModifyFd", errno);
+      return Result::kNotFound;
+    return Result::kSyscallError;
   }
+  return Result::kOk;
 }
 
-void EpollManager::ModifyFd(int fd, uint32_t events, EventCallback cb)
+EpollManager::Result EpollManager::ModifyFd(int fd, uint32_t events, EventCallback cb)
 {
-  ModifyFd(fd, events);
-  callbacks_[fd] = std::move(cb);
+  Result result = ModifyFd(fd, events);
+  if (result != Result::kOk)
+    return result;
+
+  callbacks_[fd] = cb;
+  return Result::kOk;
 }
 
-void EpollManager::RemoveFd(int fd)
+EpollManager::Result EpollManager::RemoveFd(int fd)
 {
   if (epoll_ctl(fd_, EPOLL_CTL_DEL, fd, nullptr) < 0)
-    throw EPollManagerException("RemoveFd", errno);
+  {
+    if (errno == ENOENT)
+      return Result::kNotFound;
+    return Result::kSyscallError;
+  }
+
   callbacks_.erase(fd);
+  return Result::kOk;
 }
 
-void EpollManager::EventLoop(void)
+EpollManager::Result EpollManager::EventLoop(void)
 {
+  if (fd_ == -1)
+    return Result::kInvalidState;
+
   constexpr int MAX_EVENTS = 64;
   struct epoll_event events[MAX_EVENTS];
+
   sigset_t waitMask;
   if (sigemptyset(&waitMask) < 0)
-    throw std::system_error(errno, std::system_category(), "sigemptyset");
+    return Result::kSyscallError;
+
   while (!g_shutdown.load())
   {
     int n = epoll_pwait(fd_, events, MAX_EVENTS, -1, &waitMask);
@@ -88,7 +109,7 @@ void EpollManager::EventLoop(void)
     {
       if (errno == EINTR)
         continue;  // EINTR from signal, loop again to check shutdown
-      throw EPollManagerException("EventLoop", errno);
+      return Result::kSyscallError;
     }
     for (int i = 0; i < n; i++)
     {
@@ -96,4 +117,21 @@ void EpollManager::EventLoop(void)
       callbacks_.find(fd)->second(*this, events[i]);
     }
   }
+  return Result::kOk;
+}
+
+const char* EpollManager::ToString(Result result)
+{
+  switch (result)
+  {
+    case Result::kOk:
+      return "Ok";
+    case Result::kNotFound:
+      return "NotFound";
+    case Result::kInvalidState:
+      return "InvalidState";
+    case Result::kSyscallError:
+      return "SyscallError";
+  }
+  __builtin_unreachable();
 }

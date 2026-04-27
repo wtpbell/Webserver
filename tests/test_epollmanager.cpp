@@ -3,21 +3,22 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <cstring>
-#include <stdexcept>
+#include <string>
 #include <thread>
+#include <unordered_map>
 
 #include "EpollManager.hpp"
 #include "catch_amalgamated.hpp"
-#include "exception/EPollManagerException.hpp"
 #include "webserv.hpp"
 
 static void InitPipe(SharedFD& left, SharedFD& right)
 {
   try
   {
-    auto p = SharedFD::Pipe2(O_NONBLOCK);
+    std::pair<SharedFD, SharedFD> p = SharedFD::Pipe2(O_NONBLOCK);
     left = std::move(p.first);
     right = std::move(p.second);
   }
@@ -29,7 +30,7 @@ static void InitPipe(SharedFD& left, SharedFD& right)
 
 static bool waitFor(std::atomic<bool>& flag, int ms = 200)
 {
-  auto start = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
   while (!flag.load() &&
          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() < ms)
   {
@@ -40,53 +41,54 @@ static bool waitFor(std::atomic<bool>& flag, int ms = 200)
 
 TEST_CASE("Basic Operations", "[EpollManager]")
 {
-  /* SETUP */
   std::atomic<int> n{0};
 
   EpollManager manager;
+  REQUIRE(manager.Init() == EpollManager::Result::kOk);
+
   SharedFD read_fd, write_fd;
   InitPipe(read_fd, write_fd);
 
-  auto& callbacks = manager.GetCallbacks();
+  std::unordered_map<int, EpollManager::EventCallback>& callbacks = manager.GetCallbacks();
   REQUIRE(callbacks.size() == 0);
-  /* END SETUP */
 
   SECTION("ADD")
   {
     std::atomic<bool> called{false};
     auto in_callback = [&](EpollManager&, const struct epoll_event& ev)
     {
-      REQUIRE(ev.events & EPOLLIN);
+      REQUIRE((ev.events & EPOLLIN) == EPOLLIN);
       called = true;
       n = 1;
     };
 
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, in_callback));
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, in_callback) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    // check if a new entry has been added
-    auto it = callbacks.find(read_fd.GetFD());
+    std::unordered_map<int, EpollManager::EventCallback>::iterator it = callbacks.find(read_fd.GetFD());
     REQUIRE(it != callbacks.end());
 
     struct epoll_event fake_ev{};
     fake_ev.data.fd = read_fd.GetFD();
     fake_ev.events = EPOLLIN;
 
-    auto& callback = it->second;
+    EpollManager::EventCallback& callback = it->second;
+    REQUIRE(static_cast<bool>(callback) == true);
     callback(manager, fake_ev);
 
     REQUIRE(called.load() == true);
-    REQUIRE(n == 1);
+    REQUIRE(n.load() == 1);
   }
 
-  SECTION("ADD WITH NULLPTR CALLBACK")
+  SECTION("ADD WITH EMPTY CALLBACK")
   {
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, nullptr));
+    EpollManager::EventCallback empty_cb;
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, empty_cb) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    auto it = callbacks.find(read_fd.GetFD());
+    std::unordered_map<int, EpollManager::EventCallback>::iterator it = callbacks.find(read_fd.GetFD());
     REQUIRE(it != callbacks.end());
-    REQUIRE(it->second == nullptr);
+    REQUIRE(static_cast<bool>(it->second) == false);
   }
 
   SECTION("Modify by re-adding fd to poll")
@@ -101,23 +103,23 @@ TEST_CASE("Basic Operations", "[EpollManager]")
       n = 4;
     };
 
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb));
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    auto it = callbacks.find(read_fd.GetFD());
+    std::unordered_map<int, EpollManager::EventCallback>::iterator it = callbacks.find(read_fd.GetFD());
     REQUIRE(it != callbacks.end());
 
     it->second(manager, fake_ev);
-    REQUIRE(n == 1);
+    REQUIRE(n.load() == 1);
 
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLOUT, cb_mod));
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLOUT, cb_mod) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
     it = callbacks.find(read_fd.GetFD());
     REQUIRE(it != callbacks.end());
 
     it->second(manager, fake_ev);
-    REQUIRE(n == 4);
+    REQUIRE(n.load() == 4);
   }
 
   SECTION("MOD FD EVENT")
@@ -131,16 +133,16 @@ TEST_CASE("Basic Operations", "[EpollManager]")
       n = 4;
     };
 
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in));
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
-    REQUIRE_NOTHROW(manager.ModifyFd(read_fd.GetFD(), EPOLLIN, cb_mod));
+    REQUIRE(manager.ModifyFd(read_fd.GetFD(), EPOLLIN, cb_mod) == EpollManager::Result::kOk);
 
-    auto it = callbacks.find(read_fd.GetFD());
+    std::unordered_map<int, EpollManager::EventCallback>::iterator it = callbacks.find(read_fd.GetFD());
     REQUIRE(it != callbacks.end());
 
     struct epoll_event fake_ev{};
     it->second(manager, fake_ev);
-    REQUIRE(n == 4);
+    REQUIRE(n.load() == 4);
   }
 
   SECTION("MOD UNKNOWN FD")
@@ -149,25 +151,37 @@ TEST_CASE("Basic Operations", "[EpollManager]")
     {
       n = 4;
     };
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_mod));
+
+    SharedFD extra_read, extra_write;
+    InitPipe(extra_read, extra_write);
+
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_mod) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    REQUIRE_THROWS_AS(manager.ModifyFd(213, EPOLLIN, cb_mod), EPollManagerException);
+    REQUIRE(manager.ModifyFd(extra_read.GetFD(), EPOLLIN, cb_mod) == EpollManager::Result::kNotFound);
     REQUIRE(callbacks.size() == 1);
   }
 
-  SECTION("MOD WITH NULLPTR CALLBACK")
+  SECTION("MOD WITHOUT REPLACING CALLBACK")
   {
     auto cb_in = [&](EpollManager&, const struct epoll_event&)
     {
       n = 1;
     };
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in));
+
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    // modify with nullptr callback
-    REQUIRE_NOTHROW(manager.ModifyFd(read_fd.GetFD(), EPOLLIN));
+    REQUIRE(manager.ModifyFd(read_fd.GetFD(), EPOLLIN) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
+
+    std::unordered_map<int, EpollManager::EventCallback>::iterator it = callbacks.find(read_fd.GetFD());
+    REQUIRE(it != callbacks.end());
+    REQUIRE(static_cast<bool>(it->second) == true);
+
+    struct epoll_event fake_ev{};
+    it->second(manager, fake_ev);
+    REQUIRE(n.load() == 1);
   }
 
   SECTION("REMOVE FD")
@@ -176,10 +190,11 @@ TEST_CASE("Basic Operations", "[EpollManager]")
     {
       n = 1;
     };
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in));
+
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    REQUIRE_NOTHROW(manager.RemoveFd(read_fd.GetFD()));
+    REQUIRE(manager.RemoveFd(read_fd.GetFD()) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 0);
   }
 
@@ -189,12 +204,34 @@ TEST_CASE("Basic Operations", "[EpollManager]")
     {
       n = 1;
     };
-    REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in));
+
+    SharedFD extra_read, extra_write;
+    InitPipe(extra_read, extra_write);
+
+    REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb_in) == EpollManager::Result::kOk);
     REQUIRE(callbacks.size() == 1);
 
-    REQUIRE_THROWS_AS(manager.RemoveFd(218), EPollManagerException);
+    REQUIRE(manager.RemoveFd(extra_read.GetFD()) == EpollManager::Result::kNotFound);
     REQUIRE(callbacks.size() == 1);
   }
+
+  SECTION("INIT TWICE RETURNS INVALID STATE")
+  {
+    REQUIRE(manager.Init() == EpollManager::Result::kInvalidState);
+  }
+}
+
+TEST_CASE("Init succeeds once", "[EpollManager]")
+{
+  EpollManager manager;
+  REQUIRE(manager.Init() == EpollManager::Result::kOk);
+}
+
+TEST_CASE("Init twice returns invalid state", "[EpollManager]")
+{
+  EpollManager manager;
+  REQUIRE(manager.Init() == EpollManager::Result::kOk);
+  REQUIRE(manager.Init() == EpollManager::Result::kInvalidState);
 }
 
 TEST_CASE("Epoll EventLoop full run", "[EpollManager]")
@@ -203,6 +240,8 @@ TEST_CASE("Epoll EventLoop full run", "[EpollManager]")
   char buf[max_buf_size] = {0};
 
   EpollManager manager;
+  REQUIRE(manager.Init() == EpollManager::Result::kOk);
+
   SharedFD read_fd, write_fd;
   InitPipe(read_fd, write_fd);
 
@@ -211,29 +250,31 @@ TEST_CASE("Epoll EventLoop full run", "[EpollManager]")
 
   auto write_callback = [&](EpollManager&, const struct epoll_event& ev)
   {
-    REQUIRE(ev.events & EPOLLOUT);
+    REQUIRE((ev.events & EPOLLOUT) == EPOLLOUT);
     write_ready = true;
   };
 
   auto read_callback = [&](EpollManager&, const struct epoll_event& ev)
   {
-    REQUIRE(ev.events & EPOLLIN);
-    int n = read(read_fd.GetFD(), buf, max_buf_size);
-    REQUIRE(n > 0);
+    REQUIRE((ev.events & EPOLLIN) == EPOLLIN);
+    ssize_t nread = read(read_fd.GetFD(), buf, max_buf_size);
+    REQUIRE(nread > 0);
     read_ready = true;
     g_shutdown = true;
   };
 
-  REQUIRE_NOTHROW(manager.AddFd(write_fd.GetFD(), EPOLLOUT, write_callback));
-  REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, read_callback));
+  REQUIRE(manager.AddFd(write_fd.GetFD(), EPOLLOUT, write_callback) == EpollManager::Result::kOk);
+  REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, read_callback) == EpollManager::Result::kOk);
 
   SECTION("READ/WRITE USING PIPE")
   {
     g_shutdown = false;
+
+    EpollManager::Result loop_result = EpollManager::Result::kOk;
     std::thread loop_thread(
         [&]()
         {
-          manager.EventLoop();
+          loop_result = manager.EventLoop();
         });
 
     INFO("Waiting for write-ready (EPOLLOUT)...");
@@ -245,8 +286,9 @@ TEST_CASE("Epoll EventLoop full run", "[EpollManager]")
     REQUIRE(waitFor(read_ready));
 
     loop_thread.join();
-    using namespace Catch::Matchers;
 
+    using namespace Catch::Matchers;
+    REQUIRE(loop_result == EpollManager::Result::kOk);
     REQUIRE(write_ready.load() == true);
     REQUIRE(read_ready.load() == true);
     REQUIRE_THAT(std::string(buf), Equals("dummy", Catch::CaseSensitive::Yes));
@@ -256,35 +298,58 @@ TEST_CASE("Epoll EventLoop full run", "[EpollManager]")
 TEST_CASE("Read byte by byte", "[EpollManager]")
 {
   EpollManager manager;
+  REQUIRE(manager.Init() == EpollManager::Result::kOk);
+
   SharedFD read_fd, write_fd;
   InitPipe(read_fd, write_fd);
 
   g_shutdown = false;
-  std::string reveived_message;
+  std::string received_message;
 
   auto write_callback = [&](EpollManager&, const struct epoll_event& ev)
   {
-    REQUIRE(ev.events & EPOLLOUT);
+    REQUIRE((ev.events & EPOLLOUT) == EPOLLOUT);
     REQUIRE(write(write_fd.GetFD(), "Hello", 5) == 5);
   };
 
   auto read_callback = [&](EpollManager&, const struct epoll_event& ev)
   {
-    REQUIRE(ev.events & EPOLLIN);
+    REQUIRE((ev.events & EPOLLIN) == EPOLLIN);
 
     char c;
     REQUIRE(read(read_fd.GetFD(), &c, 1) == 1);
-    reveived_message.append(1, c);
+    received_message.append(1, c);
 
-    if (reveived_message.size() == 5)
+    if (received_message.size() == 5)
       g_shutdown = true;
   };
 
-  REQUIRE_NOTHROW(manager.AddFd(read_fd.GetFD(), EPOLLIN, read_callback));
-  REQUIRE_NOTHROW(manager.AddFd(write_fd.GetFD(), EPOLLOUT, write_callback));
+  REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, read_callback) == EpollManager::Result::kOk);
+  REQUIRE(manager.AddFd(write_fd.GetFD(), EPOLLOUT, write_callback) == EpollManager::Result::kOk);
 
-  REQUIRE_NOTHROW(manager.EventLoop());
-  REQUIRE(reveived_message == "Hello");
+  REQUIRE(manager.EventLoop() == EpollManager::Result::kOk);
+  REQUIRE(received_message == "Hello");
+}
+
+TEST_CASE("EventLoop invalid state before Init", "[EpollManager]")
+{
+  EpollManager manager;
+  REQUIRE(manager.EventLoop() == EpollManager::Result::kInvalidState);
+}
+
+TEST_CASE("Add/Modify/Remove error state before Init", "[EpollManager]")
+{
+  EpollManager manager;
+
+  SharedFD read_fd, write_fd;
+  InitPipe(read_fd, write_fd);
+
+  auto cb = [&](EpollManager&, const struct epoll_event&) {};
+
+  REQUIRE(manager.AddFd(read_fd.GetFD(), EPOLLIN, cb) == EpollManager::Result::kSyscallError);
+  REQUIRE(manager.ModifyFd(read_fd.GetFD(), EPOLLIN) == EpollManager::Result::kSyscallError);
+  REQUIRE(manager.ModifyFd(read_fd.GetFD(), EPOLLIN, cb) == EpollManager::Result::kSyscallError);
+  REQUIRE(manager.RemoveFd(read_fd.GetFD()) == EpollManager::Result::kSyscallError);
 }
 
 TEST_CASE("EpollManager destructor behavior", "[EpollManager]")
@@ -299,28 +364,30 @@ TEST_CASE("EpollManager destructor behavior", "[EpollManager]")
 
       int read_fd = fds[0];
       int write_fd = fds[1];
+
       {
         EpollManager manager;
+        REQUIRE(manager.Init() == EpollManager::Result::kOk);
 
         auto callback = [&](EpollManager&, const struct epoll_event&)
         {
           callback_count++;
         };
-        REQUIRE_NOTHROW(manager.AddFd(read_fd, EPOLLIN, callback));
-        REQUIRE_NOTHROW(manager.AddFd(write_fd, EPOLLOUT, callback));
-      }  // <-- manager destructor runs here
 
-      // Closing FDs would normally produce epoll events
+        REQUIRE(manager.AddFd(read_fd, EPOLLIN, callback) == EpollManager::Result::kOk);
+        REQUIRE(manager.AddFd(write_fd, EPOLLOUT, callback) == EpollManager::Result::kOk);
+      }
+
       REQUIRE(close(read_fd) == 0);
       REQUIRE(close(write_fd) == 0);
 
-      fds[0] = fds[1] = -1;
+      fds[0] = -1;
+      fds[1] = -1;
     }
 
     REQUIRE(callback_count.load() == 0);
   }
 
-  // Safety cleanup in case something failed
   if (fds[0] != -1)
     close(fds[0]);
   if (fds[1] != -1)

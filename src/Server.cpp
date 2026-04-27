@@ -21,7 +21,6 @@
 #include "EpollManager.hpp"
 #include "Logger.hpp"
 #include "config/ServerRegistry.hpp"
-#include "exception/ServerException.hpp"
 #include "io/Socket.hpp"
 #include "string.hpp"
 
@@ -51,22 +50,31 @@ Server::~Server(void)
   Logger::Log(LogLevel::INFO, "Server <{}> shutting down with {} active connections", socket_, connections_.size());
 }
 
-void Server::RegisterFD(EpollManager& manager)
+bool Server::RegisterFD(EpollManager& manager)
 {
-  manager.AddFd(static_cast<int>(socket_), EPOLLIN | EPOLLERR,
-                [this](EpollManager& manager2, const struct epoll_event& event)
-                {
-                  this->Accept(manager2, event);
-                });
+  EpollManager::Result result = manager.AddFd(static_cast<int>(socket_), EPOLLIN | EPOLLERR,
+                                              [this](EpollManager& manager2, const struct epoll_event& event)
+                                              {
+                                                this->Accept(manager2, event);
+                                              });
+
+  if (result != EpollManager::Result::kOk)
+  {
+    Logger::Log(LogLevel::ERROR, "Server <{}> failed to register: {}", socket_, EpollManager::ToString(result));
+    return false;
+  }
+
   Logger::Log(LogLevel::INFO, "Server <{}> registered...", socket_);
+  return true;
 }
 
 void Server::Accept(EpollManager& manager, const struct epoll_event& event)
 {
   if ((event.events & EPOLLERR) == EPOLLERR)
   {
+    Logger::Log(LogLevel::ERROR, "Server <{}>: listener socket error", socket_);
     manager.RemoveFd(socket_.GetFD());
-    throw ServerException("Server", "broken socket");
+    return;
   }
 
   const int max_accept = 100;
@@ -87,23 +95,22 @@ void Server::Accept(EpollManager& manager, const struct epoll_event& event)
       continue;
     }
 
-    try
+    auto callback = [this](EpollManager& manager2, const struct epoll_event& ev)
     {
-      auto callback = [this](EpollManager& manager, const struct epoll_event& event)
-      {
-        HandleConnection(manager, event);
-      };
+      this->HandleConnection(manager2, ev);
+    };
 
-      manager.AddFd(client_fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN, callback);
-      Logger::Log(LogLevel::INFO, "Server <{}> accepted client connection <{}>", socket_, client_fd);
-    }
-    catch (const std::exception& ex)
+    EpollManager::Result result = manager.AddFd(client_fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN, callback);
+
+    if (result != EpollManager::Result::kOk)
     {
+      Logger::Log(LogLevel::ERROR, "Server <{}> unable to register client <{}> into epoll: {}. Dropping connection!",
+                  socket_, client_fd, EpollManager::ToString(result));
       connections_.erase(it);
-      Logger::Log(LogLevel::ERROR,
-                  "Server <{}> unable to register the client <{}> into the poll: {}. Dropping the connection!", socket_,
-                  client_fd, ex.what());
+      continue;
     }
+
+    Logger::Log(LogLevel::INFO, "Server <{}> accepted client connection <{}>", socket_, client_fd);
   }
 }
 
@@ -113,7 +120,12 @@ void Server::HandleConnection(EpollManager& manager, const epoll_event& event)
   if (it == connections_.end())
   {
     Logger::Log(LogLevel::WARNING, "Server <{}>: Connection FD {} not found", socket_, event.data.fd);
-    manager.RemoveFd(event.data.fd);
+    EpollManager::Result removeResult = manager.RemoveFd(event.data.fd);
+    if (removeResult != EpollManager::Result::kOk)
+    {
+      Logger::Log(LogLevel::WARNING, "Server <{}>: failed to remove unknown FD {} from epoll: {}", socket_,
+                  event.data.fd, EpollManager::ToString(removeResult));
+    }
     return;
   }
 
@@ -140,13 +152,22 @@ void Server::HandleConnection(EpollManager& manager, const epoll_event& event)
     connection_state = connection.HandleResponse();
   }
 
+  EpollManager::Result modResult;
   if (connection.HasPendingOutput())
   {
-    manager.ModifyFd(fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN | EPOLLOUT);
+    modResult = manager.ModifyFd(fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN | EPOLLOUT);
   }
   else
   {
-    manager.ModifyFd(fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN);
+    modResult = manager.ModifyFd(fd, EPOLLERR | EPOLLHUP | EPOLLRDHUP | EPOLLIN);
+  }
+
+  if (modResult != EpollManager::Result::kOk)
+  {
+    Logger::Log(LogLevel::ERROR, "Server <{}>: failed to update epoll events for client <{}>: {}", socket_, fd,
+                EpollManager::ToString(modResult));
+    CloseConnection(manager, it);
+    return;
   }
 
   if (connection_state == Connection::State::kError)
@@ -165,6 +186,12 @@ void Server::HandleConnection(EpollManager& manager, const epoll_event& event)
 
 void Server::CloseConnection(EpollManager& manager, ConnectionIterator connection)
 {
-  manager.RemoveFd(connection->first);
+  EpollManager::Result result = manager.RemoveFd(connection->first);
+  if (result != EpollManager::Result::kOk && result != EpollManager::Result::kNotFound)
+  {
+    Logger::Log(LogLevel::WARNING, "Server <{}>: failed to remove client <{}> from epoll: {}", socket_,
+                connection->first, EpollManager::ToString(result));
+  }
+
   connections_.erase(connection);
 }

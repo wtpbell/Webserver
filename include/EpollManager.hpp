@@ -25,6 +25,14 @@ class EpollManager : private SharedFD
   public:
     using EventCallback = std::function<void(EpollManager&, const struct epoll_event&)>;
 
+    enum class Result
+    {
+      kOk,
+      kNotFound,
+      kInvalidState,
+      kSyscallError
+    };
+
     EpollManager(void);
     EpollManager(const EpollManager& other) = delete;
     EpollManager(EpollManager&& other) noexcept = delete;
@@ -32,11 +40,14 @@ class EpollManager : private SharedFD
     EpollManager& operator=(EpollManager&& other) noexcept = delete;
     ~EpollManager(void) = default;
 
-    void AddFd(int fd, uint32_t events, EventCallback cb);
-    void ModifyFd(int fd, uint32_t events);
-    void ModifyFd(int fd, uint32_t events, EventCallback cb);
-    void RemoveFd(int fd);
-    void EventLoop(void);
+    Result Init(void);
+
+    Result AddFd(int fd, uint32_t events, EventCallback cb);
+    Result ModifyFd(int fd, uint32_t events);
+    Result ModifyFd(int fd, uint32_t events, EventCallback cb);
+    Result RemoveFd(int fd);
+    Result EventLoop(void);
+    static const char* ToString(Result result);
 
 #ifdef UNIT_TEST
     auto& GetCallbacks()

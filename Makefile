@@ -11,7 +11,7 @@ MAIN		:= $(BIN)main.o
 
 SRCS		:= Logger.cpp helper.cpp signal.cpp Server.cpp EpollManager.cpp string.cpp Connection.cpp
 SRCS_CONFIG	:= $(addprefix config/, Lexer.cpp Parser.cpp Validator.cpp ValidatorIpPort.cpp Builder.cpp ServerRegistry.cpp loadConfigs.cpp)
-SRCS_EXCEPT	:= $(addprefix exception/, FileDescriptorException.cpp ServerException.cpp EPollManagerException.cpp)
+SRCS_EXCEPT	:= $(addprefix exception/, FileDescriptorException.cpp)
 SRCS_IO		:= $(addprefix io/, SharedFD.cpp Socket.cpp TimerFD.cpp)
 SRCS_HTTP	:= $(addprefix http/, HTTPMessage.cpp HTTPParser.cpp HTTPUtils.cpp HTTPRequest.cpp HTTPResponse.cpp\
 				HTTPValidator.cpp HTTPStatus.cpp ResponseFactory.cpp SessionManager.cpp HTTPCookie.cpp)

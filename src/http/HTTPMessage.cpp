@@ -32,17 +32,17 @@ HTTPMessage::HTTPMessage(std::string ver, HTTP::Headers headers, std::string bod
 }
 
 /************************************************** Getter ***********************************************************/
-std::string_view HTTPMessage::GetVersion(void) const
+std::string_view HTTPMessage::GetVersion() const
 {
   return version_;
 }
 
-const HTTP::Headers& HTTPMessage::GetHeaders(void) const
+const HTTP::Headers& HTTPMessage::GetHeaders() const
 {
   return headers_;
 }
 
-HTTP::Headers& HTTPMessage::GetHeaders(void)
+HTTP::Headers& HTTPMessage::GetHeaders()
 {
   return headers_;
 }
@@ -63,7 +63,7 @@ std::string_view HTTPMessage::GetFirstHeaderValueOf(std::string_view name) const
   return (*vals)[0];
 }
 
-const std::string& HTTPMessage::GetBody(void) const
+const std::string& HTTPMessage::GetBody() const
 {
   return body_;
 }
@@ -116,7 +116,7 @@ bool HTTPMessage::HasHeader(std::string_view name) const
     value, then the recipient MUST either reject the message as invalid or replace the duplicated field-values with a single
     valid Content-Length field containing that decimal value.
 */
-std::optional<std::size_t> HTTPMessage::GetContentLength(void) const
+std::optional<std::size_t> HTTPMessage::GetContentLength() const
 {
   auto vals = GetHeaderValuesOf("content-length");
   if (!vals || vals->empty())
@@ -136,7 +136,7 @@ std::optional<std::size_t> HTTPMessage::GetContentLength(void) const
   return first;
 }
 
-bool HTTPMessage::IsChunked(void) const
+bool HTTPMessage::IsChunked() const
 {
   auto vals = GetHeaderValuesOf("transfer-encoding");
   if (!vals)

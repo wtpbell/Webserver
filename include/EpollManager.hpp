@@ -33,20 +33,20 @@ class EpollManager : private SharedFD
       kSyscallError
     };
 
-    EpollManager(void);
+    EpollManager();
     EpollManager(const EpollManager& other) = delete;
     EpollManager(EpollManager&& other) noexcept = delete;
     EpollManager& operator=(const EpollManager& other) = delete;
     EpollManager& operator=(EpollManager&& other) noexcept = delete;
     ~EpollManager() = default;
 
-    Result Init(void);
+    Result Init();
 
     Result AddFd(int fd, uint32_t events, EventCallback cb);
     Result ModifyFd(int fd, uint32_t events);
     Result ModifyFd(int fd, uint32_t events, EventCallback cb);
     Result RemoveFd(int fd);
-    Result EventLoop(void);
+    Result EventLoop();
     static const char* ToString(Result result);
 
 #ifdef UNIT_TEST

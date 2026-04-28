@@ -11,7 +11,9 @@
 #include "http/HTTPResponse.hpp"
 #include "http/HTTPStatus.hpp"
 #include "http/ResponseFactory.hpp"
+#include "router/RequestHandler.hpp"
 #include "router/Router.hpp"
+
 
 namespace
 {
@@ -86,9 +88,10 @@ TEST_CASE("Router - remainder behavior via DispatchHandler", "[router][remainder
     RouterFixture fx({st});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest&, const RouteView& route, std::string_view rem) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView& route) -> HTTPResponse
         {
           REQUIRE(route.locationPrefix == "/static");
+          const std::string_view rem = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
           REQUIRE(rem == "/");
           return HTTP::response::MakeText(HTTP::Status::kOk, "kOk", "text/plain");
         });
@@ -102,9 +105,10 @@ TEST_CASE("Router - remainder behavior via DispatchHandler", "[router][remainder
     RouterFixture fx({st});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest&, const RouteView& route, std::string_view rem) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView& route) -> HTTPResponse
         {
           REQUIRE(route.locationPrefix == "/static");
+          const std::string_view rem = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
           REQUIRE(rem == "/a/b");
           return HTTP::response::MakeText(HTTP::Status::kOk, "kOk", "text/plain");
         });
@@ -117,9 +121,10 @@ TEST_CASE("Router - remainder behavior via DispatchHandler", "[router][remainder
     RouterFixture fx({root});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest&, const RouteView& route, std::string_view rem) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView& route) -> HTTPResponse
         {
           REQUIRE(route.locationPrefix == "/");
+          const std::string_view rem = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
           REQUIRE(rem == "static/a/b");
           return HTTP::response::MakeText(HTTP::Status::kOk, "kOk", "text/plain");
         });
@@ -185,7 +190,7 @@ TEST_CASE("Router - error_page behavior", "[router][error_page]")
     RouterFixture fx({root});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest& request, const RouteView&, std::string_view) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView&) -> HTTPResponse
         {
           if (request.GetPath() == "/missing")
             return HTTP::response::MakeError(HTTP::Status::kNotFound);
@@ -206,7 +211,7 @@ TEST_CASE("Router - error_page behavior", "[router][error_page]")
     RouterFixture fx({root});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest& request, const RouteView&, std::string_view) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView&) -> HTTPResponse
         {
           if (request.GetPath() == "/missing")
             return HTTP::response::MakeError(HTTP::Status::kNotFound);
@@ -225,7 +230,7 @@ TEST_CASE("Router - error_page behavior", "[router][error_page]")
     RouterFixture fx({root});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest& request, const RouteView&, std::string_view) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView&) -> HTTPResponse
         {
           if (request.GetPath() == "/missing" || request.GetPath() == "/missing_err.html")
             return HTTP::response::MakeError(HTTP::Status::kNotFound);
@@ -244,7 +249,7 @@ TEST_CASE("Router - error_page behavior", "[router][error_page]")
     RouterFixture fx({root});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest& request, const RouteView&, std::string_view) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView&) -> HTTPResponse
         {
           if (request.GetPath() == "/missing")
             return HTTP::response::MakeError(HTTP::Status::kNotFound);
@@ -270,7 +275,7 @@ TEST_CASE("Router - error_page behavior", "[router][error_page]")
     RouterFixture fx({rootRoute, rr});
 
     r.SetDispatchHookForTest(
-        [](const HTTPRequest& request, const RouteView&, std::string_view) -> HTTPResponse
+        [](const HTTPRequest& request, const RouteView&) -> HTTPResponse
         {
           if (request.GetPath() == "/err.html")
             return HTTP::response::MakeText(HTTP::Status::kOk, "ERRORPAGE", "text/plain");
@@ -293,7 +298,7 @@ TEST_CASE("Router - dispatch uses supplied matched route", "[router][dispatch]")
   RouterFixture fx({b});
 
   r.SetDispatchHookForTest(
-      [](const HTTPRequest&, const RouteView& route, std::string_view) -> HTTPResponse
+      [](const HTTPRequest&, const RouteView& route) -> HTTPResponse
       {
         REQUIRE(route.locationPrefix == "/static/images");
         return HTTP::response::MakeText(HTTP::Status::kOk, "ok", "text/plain");

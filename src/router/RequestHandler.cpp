@@ -195,9 +195,9 @@ namespace request_handler
     PathInfo info;
 
     std::error_code ec;
-    fs::file_status file_status = fs::status(path, ec);
+    const fs::file_status status = fs::status(path, ec);
 
-    if (file_status.type() == fs::file_type::not_found)
+    if (status.type() == fs::file_type::not_found)
       return info;
 
     if (ec)
@@ -207,9 +207,14 @@ namespace request_handler
       return info;
     }
 
-    info.exists = fs::exists(file_status);
-    info.isDir = fs::is_directory(file_status);
-    info.isFile = fs::is_regular_file(file_status);
+    info.exists = fs::exists(status);
+    info.isDir = fs::is_directory(status);
+    info.isFile = fs::is_regular_file(status);
+
+    info.canRead = HasAnyPerm(status, fs::perms::owner_read, fs::perms::group_read, fs::perms::others_read);
+    info.canWrite = HasAnyPerm(status, fs::perms::owner_write, fs::perms::group_write, fs::perms::others_write);
+    info.canExecute = HasAnyPerm(status, fs::perms::owner_exec, fs::perms::group_exec, fs::perms::others_exec);
+
     return info;
   }
 
@@ -217,19 +222,26 @@ namespace request_handler
   {
     if (info.statError)
       return Response::MakeError(MapStatError(info.ec));
+
     if (info.exists && info.isDir)
       return Response::MakeError(Status::kBadRequest);
-    if (info.exists && !info.isFile && !info.isDir)
+
+    if ((info.exists && !info.isFile && !info.isDir) || (info.exists && !info.canWrite))
       return Response::MakeError(Status::kForbidden);
 
     const fs::path parent = path.parent_path();
     if (!parent.empty())
     {
       const PathInfo parentInfo = InspectPath(parent);
+
       if (parentInfo.statError)
         return Response::MakeError(MapStatError(parentInfo.ec));
+
       if (!parentInfo.exists || !parentInfo.isDir)
         return Response::MakeError(Status::kNotFound);
+
+      if (!parentInfo.canWrite || !parentInfo.canExecute)
+        return Response::MakeError(Status::kForbidden);
     }
 
     return std::nullopt;
@@ -286,19 +298,19 @@ namespace request_handler
 
     if (idxInfo.statError)
       return Response::MakeError(MapStatError(idxInfo.ec));
+
     if (!idxInfo.exists || !idxInfo.isFile)
       return std::nullopt;
 
+    if (!idxInfo.canRead)
+      return Response::MakeError(Status::kForbidden);
+
     std::string body;
-    switch (ReadFile(idx, body))
-    {
-      case FileStatusResult::kOk:
-        return Response::MakeFile(Status::kOk, idx.string(), std::move(body));
-      case FileStatusResult::kPermissionDenied:
-        return Response::MakeError(Status::kForbidden);
-      default:
-        return Response::MakeError(Status::kInternalServerError);
-    }
+    std::optional<HTTPResponse> errorResponse = FileStatusToHTTP(ReadFile(idx, body));
+    if (errorResponse)
+      return *errorResponse;
+
+    return Response::MakeFile(Status::kOk, idx.string(), std::move(body));
   }
 
   /*
@@ -370,7 +382,7 @@ namespace request_handler
   /************************************************** Dispatch
    * **********************************************************/
 
-  HTTPResponse HandleMethods(const HTTPRequest& request, const RouteView& route, std::string_view remainder)
+  HTTPResponse HandleMethods(const HTTPRequest& request, const RouteView& route)
   {
     const Method method = MethodToMask(request.GetMethod());
 
@@ -389,11 +401,11 @@ namespace request_handler
       return Response::MakeError(Status::kBadRequest);
 
     if (method == Method::kGet)
-      return request_handler::HandleGet(request, route, remainder);
+      return request_handler::HandleGet(request, route);
     if (method == Method::kPost)
-      return request_handler::HandlePost(request, route, remainder);
+      return request_handler::HandlePost(request, route);
     if (method == Method::kDelete)
-      return request_handler::HandleDelete(request, route, remainder);
+      return request_handler::HandleDelete(request, route);
 
     return Response::MakeError(Status::kInternalServerError);
   }
@@ -404,44 +416,64 @@ namespace request_handler
   /*
   There are two mapping modes:
 
-  1. Root location "/"
+  1. root
      - use the full normalized request path
-     - example:
-         request path = /images/logo.png
-         route.root   = /srv/www
-         result       = /srv/www/images/logo.png
-
-  2. Non-root location or alias
-     - use only the matched-location remainder
      - example:
          locationPrefix = /static
          request path   = /static/logo.png
-         remainder      = /logo.png
-         route.root     = /srv/www/static
+         route.root     = /srv/www
          result         = /srv/www/static/logo.png
 
-     - alias behaves the same way: it maps the remainder under the alias base.
-*/
+     This matches nginx-style root semantics:
+       filesystem path = root + request path
 
-  std::optional<fs::path> ResolvePath(const RouteView& route, std::string_view path, std::string_view remainder)
+  2. alias
+     - use only the matched-location tail
+     - example:
+         locationPrefix = /static
+         request path   = /static/logo.png
+         tail           = /logo.png
+         route.alias    = /srv/assets
+         result         = /srv/assets/logo.png
+
+     Alias replaces the matched location prefix with the alias base:
+       filesystem path = alias + tail
+    */
+
+  bool IsInsideBase(const fs::path& base, const fs::path& child)
   {
-    std::string_view tail = route.alias.has_value() ? remainder : path;
+    auto baseIt = base.begin();
+    auto childIt = child.begin();
 
+    for (; baseIt != base.end(); ++baseIt, ++childIt)
+    {
+      if (childIt == child.end() || *baseIt != *childIt)
+        return false;
+    }
+    return true;
+  }
+
+  std::optional<fs::path> ResolvePath(const RouteView& route, std::string_view path)
+  {
+	  
+	  std::string_view tail = route.alias.has_value() ? ComputeRouteTail(path, route.locationPrefix) : path;
+	  if (tail.empty())
+		return std::nullopt;
+	  
     while (!tail.empty() && tail.front() == '/')
       tail.remove_prefix(1);
-
-    const fs::path base = route.alias ? fs::path(*route.alias) : fs::path(route.root);
-
+	
     std::error_code ec;
-    fs::path canonBase = fs::weakly_canonical(base, ec);
+    fs::path base = route.alias ? fs::weakly_canonical(*route.alias, ec) : fs::weakly_canonical(route.root, ec);
+
     if (ec)
       return std::nullopt;
 
-    fs::path joined = fs::weakly_canonical(canonBase / fs::path(tail), ec);
+    fs::path joined = fs::weakly_canonical(base / fs::path(tail), ec);
     if (ec)
       return std::nullopt;
 
-    if (!std::equal(canonBase.begin(), canonBase.end(), joined.begin()))
+    if (!IsInsideBase(base, joined))
       return std::nullopt;
 
     return joined;
@@ -451,11 +483,11 @@ namespace request_handler
    * *************************************************************/
 
   // trailing slash is valid for directories, missing slash for directory gets 301
-  HTTPResponse HandleGet(const HTTPRequest& request, const RouteView& route, std::string_view remainder)
+  HTTPResponse HandleGet(const HTTPRequest& request, const RouteView& route)
   {
     const std::string_view urlPath = request.GetPath();
 
-    std::optional<fs::path> resolved = ResolvePath(route, urlPath, remainder);
+    std::optional<fs::path> resolved = ResolvePath(route, urlPath);
     if (!resolved)
       return Response::MakeError(Status::kForbidden);
 
@@ -472,11 +504,15 @@ namespace request_handler
     {
       if (!urlPath.empty() && urlPath.back() != '/')
         return Response::MakeRedirect(Status::kMovedPermanently, std::string(urlPath) + "/");
+
+      if (!info.canRead || !info.canExecute)
+        return Response::MakeError(Status::kForbidden);
+
       return HandleDirectoryGet(route, path, urlPath);
     }
 
     // ---- file ----
-    if (!info.isFile)
+    if (!info.isFile || !info.canRead)
       return Response::MakeError(Status::kForbidden);
 
     std::string body;
@@ -495,7 +531,7 @@ namespace request_handler
   // test with : curl -i -X POST http://127.0.0.1:8080/b \ --data-binary @./www/a
   // for overwrite : printf "B" > ./www/a  curl - i -X POST http://127.0.0.1:8080/a --data-binary @./www/a
 
-  HTTPResponse HandlePost(const HTTPRequest& request, const RouteView& route, std::string_view remainder)
+  HTTPResponse HandlePost(const HTTPRequest& request, const RouteView& route)
   {
     const std::string_view urlPath = request.GetPath();
 
@@ -505,7 +541,7 @@ namespace request_handler
     if (urlPath == "/")
       return Response::MakeError(Status::kBadRequest);
 
-    std::optional<fs::path> resolved = ResolvePath(route, urlPath, remainder);
+    std::optional<fs::path> resolved = ResolvePath(route, urlPath);
     if (!resolved)
       return Response::MakeError(Status::kForbidden);
 
@@ -536,14 +572,14 @@ namespace request_handler
   /*************************************************** DELETE
    * ***********************************************************/
 
-  HTTPResponse HandleDelete(const HTTPRequest& request, const RouteView& route, std::string_view remainder)
+  HTTPResponse HandleDelete(const HTTPRequest& request, const RouteView& route)
   {
-    std::optional<fs::path> resolved = ResolvePath(route, request.GetPath(), remainder);
+    std::optional<fs::path> resolved = ResolvePath(route, request.GetPath());
     if (!resolved)
       return Response::MakeError(Status::kForbidden);
 
     const fs::path& path = *resolved;
-    PathInfo info = InspectPath(path);
+    const PathInfo info = InspectPath(path);
 
     if (info.statError)
       return Response::MakeError(MapStatError(info.ec));
@@ -558,11 +594,7 @@ namespace request_handler
     const bool removed = fs::remove(path, ec);
 
     if (ec)
-    {
-      if (IsPermDenied(ec))
-        return Response::MakeError(Status::kForbidden);
-      return Response::MakeError(Status::kInternalServerError);
-    }
+      return Response::MakeError(IsPermDenied(ec) ? Status::kForbidden : Status::kInternalServerError);
 
     if (!removed)
       return Response::MakeError(Status::kNotFound);
@@ -572,7 +604,7 @@ namespace request_handler
 
   /*************************************************** CGI ***********************************************************/
 
-  HTTPResponse HandleCgi(const HTTPRequest& request, const RouteView& route, std::string_view /*remainder*/)
+  HTTPResponse HandleCgi(const HTTPRequest& request, const RouteView& route)
   {
     if (request.GetBody().size() > route.clientMaxBody)
       return Response::MakeError(Status::kPayloadTooLarge);

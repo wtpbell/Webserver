@@ -42,7 +42,7 @@ TEST_CASE("RequestHandler - DELETE not allowed => 405", "[delete][methods]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 405);
   REQUIRE(res.GetFirstHeaderValueOf("Allow") == "GET");
@@ -61,7 +61,7 @@ TEST_CASE("RequestHandler - DELETE allowed => 204", "[delete][methods]")
   HTTPRequest request;
   SetupDeleteRequest(request, "/delete.txt");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 204);
   REQUIRE(!fs::exists(base / "delete.txt"));
@@ -76,7 +76,7 @@ TEST_CASE("RequestHandler - DELETE non-existent file", "[delete][non-existent]")
   SetupRoute(route);
   route.allowedMask = RouteView::MethodMask::kDelete;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 404);
 }
@@ -93,7 +93,7 @@ TEST_CASE("RequestHandler - DELETE with trailing slash => 400", "[delete][method
   HTTPRequest request;
   SetupDeleteRequest(request, "/slash.txt/");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 400);
   REQUIRE(!fs::exists(base / "delete.txt"));
@@ -111,7 +111,7 @@ TEST_CASE("RequestHandler - DELETE / => 403", "[delete][root]")
   HTTPRequest request;
   SetupDeleteRequest(request, "/");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 }
@@ -129,7 +129,7 @@ TEST_CASE("RequestHandler - DELETE directory => 403", "[delete][dir]")
   HTTPRequest request;
   SetupDeleteRequest(request, "/dir");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 }
@@ -147,7 +147,7 @@ TEST_CASE("RequestHandler - DELETE path traversal => 403", "[delete][path-traver
   HTTPRequest request;
   SetupDeleteRequest(request, "../../dir");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 }
@@ -163,28 +163,37 @@ TEST_CASE("RequestHandler - DELETE with alias removes file under alias base", "[
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet | RouteView::MethodMask::kDelete;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/dead.txt");  // remainder
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 204);
   REQUIRE_FALSE(fs::exists(aliasBase / "dead.txt"));
 }
 
-TEST_CASE("RequestHandler - DELETE alias blocks traversal escape", "[delete][alias][security]")
+TEST_CASE("RequestHandler - DELETE alias blocks symlink escape", "[delete][alias][security]")
 {
   const fs::path aliasBase = MakeDeleteSandbox("alias_delete_escape");
+  const fs::path outside = MakeDeleteSandbox("alias_delete_outside");
+  std::ofstream(outside / "secret.txt") << "secret";
+
+  std::error_code ec;
+  fs::create_directory_symlink(fs::weakly_canonical(outside, ec), aliasBase / "escape", ec);
+  REQUIRE_FALSE(ec);
 
   HTTPRequest request;
-  SetupDeleteRequest(request, "/static/../secret.txt");
+  SetupDeleteRequest(request, "/static/escape/secret.txt");
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet | RouteView::MethodMask::kDelete;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/../secret.txt");  // remainder
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
+  REQUIRE(fs::exists(outside / "secret.txt"));
 }

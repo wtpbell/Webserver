@@ -14,13 +14,14 @@
 
 #include <sys/epoll.h>
 
+#include <cassert>
 #include <csignal>
 
 #include "webserv.hpp"
 
-EpollManager::EpollManager(void) : SharedFD() {}
+EpollManager::EpollManager() : SharedFD() {}
 
-EpollManager::Result EpollManager::Init(void)
+EpollManager::Result EpollManager::Init()
 {
   if (fd_ != -1)
     return Result::kInvalidState;
@@ -32,7 +33,6 @@ EpollManager::Result EpollManager::Init(void)
   Initialize(fd);
   return Result::kOk;
 }
-
 
 /// @brief Add the fd (or modify if already present) to the poll
 EpollManager::Result EpollManager::AddFd(int fd, uint32_t events, EventCallback cb)
@@ -90,7 +90,7 @@ EpollManager::Result EpollManager::RemoveFd(int fd)
   return Result::kOk;
 }
 
-EpollManager::Result EpollManager::EventLoop(void)
+EpollManager::Result EpollManager::EventLoop()
 {
   if (fd_ == -1)
     return Result::kInvalidState;
@@ -133,5 +133,6 @@ const char* EpollManager::ToString(Result result)
     case Result::kSyscallError:
       return "SyscallError";
   }
+  assert(false && "invalid result enum in EpollManager::ToString");
   __builtin_unreachable();
 }

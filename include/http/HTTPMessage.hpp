@@ -47,7 +47,7 @@ class HTTPMessage
 
     std::size_t GetHeaderValueCountOf(std::string_view name) const;
     bool HasHeader(std::string_view name) const;
-    std::optional<std::size_t> GetContentLength(void) const;
+    std::optional<std::size_t> GetContentLength() const;
     bool IsChunked() const;
     const HTTP::Headers& GetHeaders() const;
     HTTP::Headers& GetHeaders();

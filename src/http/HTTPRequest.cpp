@@ -73,37 +73,37 @@ bool HTTPRequest::NormalizePath(std::string_view in, std::string& out)
 
 /************************************************** Getter ***********************************************************/
 
-HTTP::Method HTTPRequest::GetMethod(void) const
+HTTP::Method HTTPRequest::GetMethod() const
 {
   return method_;
 }
 
-std::string_view HTTPRequest::GetMethodString(void) const
+std::string_view HTTPRequest::GetMethodString() const
 {
   return HTTP::MethodToString(GetMethod());
 }
 
-std::string_view HTTPRequest::GetTarget(void) const
+std::string_view HTTPRequest::GetTarget() const
 {
   return target_;
 }
 
-std::string_view HTTPRequest::GetRawPath(void) const
+std::string_view HTTPRequest::GetRawPath() const
 {
   return uri_;
 }
 
-std::string_view HTTPRequest::GetQuery(void) const
+std::string_view HTTPRequest::GetQuery() const
 {
   return query_;
 }
 
-std::string_view HTTPRequest::GetPath(void) const
+std::string_view HTTPRequest::GetPath() const
 {
   return path_;
 }
 
-std::string_view HTTPRequest::GetHost(void) const
+std::string_view HTTPRequest::GetHost() const
 {
   std::string_view host = GetFirstHeaderValueOf("host");
   if (host.empty())
@@ -119,11 +119,12 @@ std::string_view HTTPRequest::GetHost(void) const
   return colon == std::string_view::npos ? host : host.substr(0, colon);
 }
 
-const std::optional<HTTPRequest::Path>& HTTPRequest::GetBodyFilePath(void) const
+const std::optional<HTTPRequest::Path>& HTTPRequest::GetBodyFilePath() const
 {
   return bodyFilePath_;
 }
-const HTTPRequest::CookieMap& HTTPRequest::GetCookies(void) const
+
+const HTTPRequest::CookieMap& HTTPRequest::GetCookies() const
 {
   return cookies_;
 }
@@ -183,7 +184,7 @@ void HTTPRequest::SetCookies(CookieMap&& cookies)
   cookies_ = std::move(cookies);
 }
 
-bool HTTPRequest::IsComplete(void) const
+bool HTTPRequest::IsComplete() const
 {
   return isComplete_;
 }
@@ -193,7 +194,7 @@ bool HTTPRequest::HasCookie(std::string_view name) const
   return cookies_.find(name) != cookies_.end();
 }
 
-void HTTPRequest::Clear(void)
+void HTTPRequest::Clear()
 {
   method_ = HTTP::Method::kUnsupported;
   target_.clear();

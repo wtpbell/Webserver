@@ -20,7 +20,7 @@ static void SetupRoute(RouteView& route)
 static void SetupPostRequest(HTTPRequest& request, const std::string& target, std::string body)
 {
   request.SetMethod("POST");
-  request.SetTarget(target);
+  REQUIRE(request.SetTarget(target));
   request.SetVersion("HTTP/1.1");
   request.AddHeader("Host", "localhost");
   request.SetBody(std::move(body));
@@ -43,7 +43,7 @@ TEST_CASE("RequestHandler - POST not allowed returns 405", "[post][methods]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 405);
   REQUIRE(res.GetFirstHeaderValueOf("Allow") == "GET");
@@ -61,7 +61,7 @@ TEST_CASE("RequestHandler - POST creates new file => 201", "[post][fs]")
   HTTPRequest request;
   SetupPostRequest(request, "/new.txt", "hello");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 201);
   REQUIRE(fs::exists(base / "new.txt"));
@@ -83,7 +83,7 @@ TEST_CASE("RequestHandler - POST / => 400", "[post][root]")
   HTTPRequest request;
   SetupPostRequest(request, "/", "data");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 400);
 }
@@ -102,7 +102,7 @@ TEST_CASE("RequestHandler - POST overwrites existing file => 204", "[post][fs]")
   HTTPRequest request;
   SetupPostRequest(request, "/a.txt", "new");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 204);
   REQUIRE(res.GetBody().empty());
@@ -124,7 +124,7 @@ TEST_CASE("RequestHandler - POST with trailing slash => 400", "[post]")
   HTTPRequest request;
   SetupPostRequest(request, "/trailing.txt/", "/");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 400);
 }
@@ -142,7 +142,7 @@ TEST_CASE("RequestHandler - POST body too large => 413", "[post][limit]")
   HTTPRequest request;
   SetupPostRequest(request, "/large.txt", "Dont expect me less than 3");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 413);
 }
@@ -160,7 +160,7 @@ TEST_CASE("RequestHandler - POST into missing parent => 404", "[post][fs]")
   HTTPRequest request;
   SetupPostRequest(request, "/no_such_dir/file.txt", "hi");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 404);
   REQUIRE_FALSE(fs::exists(base / "no_such_dir" / "file.txt"));
@@ -179,7 +179,7 @@ TEST_CASE("RequestHandler - POST to existing directory => 400", "[post][fs]")
   HTTPRequest request;
   SetupPostRequest(request, "/dir", "hi");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 400);
 }
@@ -194,47 +194,58 @@ TEST_CASE("RequestHandler - POST with alias writes under alias base", "[post][al
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet | RouteView::MethodMask::kPost;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/x.txt");  // remainder
+  HTTPResponse res = request_handler::HandleMethods(request, route);
   REQUIRE(res.GetStatusCode() == 201);
   REQUIRE(fs::exists(aliasBase / "x.txt"));
 }
 
-TEST_CASE("RequestHandler - POST path traversal => 400", "[post][security]")
+TEST_CASE("RequestHandler - POST normalized dot-dot stays inside root", "[post][security]")
 {
   const fs::path base = MakePostSandbox("post_traversal");
 
   RouteView route;
   SetupRoute(route);
   route.root = base.string();
+  route.locationPrefix = "/";
   route.allowedMask = RouteView::MethodMask::kPost;
 
   HTTPRequest request;
-  SetupPostRequest(request, "/../escape.txt", "evil");
+  SetupPostRequest(request, "/a/../escape.txt", "evil");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  REQUIRE(request.GetPath() == "/escape.txt");
 
-  REQUIRE(res.GetStatusCode() == 400);
-  REQUIRE_FALSE(fs::exists(base / "escape.txt"));
+  HTTPResponse res = request_handler::HandleMethods(request, route);
+
+  REQUIRE(res.GetStatusCode() == 201);
+  REQUIRE(fs::exists(base / "escape.txt"));
 }
 
-TEST_CASE("RequestHandler - POST alias blocks traversal escape", "[post][alias][security]")
+TEST_CASE("RequestHandler - POST alias blocks symlink escape", "[post][alias][security]")
 {
   const fs::path aliasBase = MakePostSandbox("alias_post_escape");
+  const fs::path outside = MakePostSandbox("alias_post_outside");
+
+  std::error_code ec;
+  fs::create_directory_symlink(fs::weakly_canonical(outside, ec), aliasBase / "escape", ec);
+  REQUIRE_FALSE(ec);
 
   HTTPRequest request;
-  SetupPostRequest(request, "/static/../secret.txt", "hi");
+  SetupPostRequest(request, "/static/escape/created.txt", "hi");
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet | RouteView::MethodMask::kPost;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/../secret.txt");
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
+  REQUIRE_FALSE(fs::exists(outside / "created.txt"));
 }
 
 TEST_CASE("RequestHandler - POST empty body creates empty file", "[post][fs]")
@@ -249,7 +260,7 @@ TEST_CASE("RequestHandler - POST empty body creates empty file", "[post][fs]")
   HTTPRequest request;
   SetupPostRequest(request, "/empty.txt", "");
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 201);
   REQUIRE(fs::exists(base / "empty.txt"));

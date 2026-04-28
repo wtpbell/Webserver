@@ -47,6 +47,11 @@ namespace request_handler
       bool exists = false;
       bool isDir = false;
       bool isFile = false;
+
+      bool canRead = false;
+      bool canWrite = false;
+      bool canExecute = false;
+
       bool statError = false;
       std::error_code ec{};
   };
@@ -72,15 +77,14 @@ namespace request_handler
   HTTPResponse MakeAutoIndex(const RouteView& route, const fs::path& dirFsPath, std::string_view urlPath);
   HTTPResponse HandleDirectoryGet(const RouteView& route, const fs::path& dirFsPath, std::string_view urlPath);
 
-  HTTPResponse HandleMethods(const HTTPRequest& request, const RouteView& route, std::string_view remainder);
-  HTTPResponse HandleCgi(const HTTPRequest& request, const RouteView& route, std::string_view remainder);
+  HTTPResponse HandleMethods(const HTTPRequest& request, const RouteView& route);
+  HTTPResponse HandleCgi(const HTTPRequest& request, const RouteView& route);
 
-  HTTPResponse HandleGet(const HTTPRequest& request, const RouteView& route, std::string_view remainder);
-  HTTPResponse HandlePost(const HTTPRequest& request, const RouteView& route, std::string_view remainder);
-  HTTPResponse HandleDelete(const HTTPRequest& request, const RouteView& route, std::string_view remainder);
+  HTTPResponse HandleGet(const HTTPRequest& request, const RouteView& route);
+  HTTPResponse HandlePost(const HTTPRequest& request, const RouteView& route);
+  HTTPResponse HandleDelete(const HTTPRequest& request, const RouteView& route);
 
-  std::optional<fs::path> ResolvePath(const RouteView& route, const std::string_view path,
-                                                   std::string_view remainder);
+  std::optional<fs::path> ResolvePath(const RouteView& route, std::string_view requestPath);
 
 };  // namespace request_handler
 

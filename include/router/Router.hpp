@@ -47,7 +47,7 @@ class Router
 
 #ifdef UNIT_TEST
   public:
-    using DispatchHook = std::function<HTTPResponse(const HTTPRequest&, const RouteView&, std::string_view)>;
+    using DispatchHook = std::function<HTTPResponse(const HTTPRequest&, const RouteView&)>;
 
     void SetDispatchHookForTest(DispatchHook hook)
     {

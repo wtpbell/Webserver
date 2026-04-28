@@ -52,12 +52,12 @@ namespace
 
 /************************************************ Validation *********************************************************/
 
-bool HTTPParser::IsComplete(void) const
+bool HTTPParser::IsComplete() const
 {
   return state_ == ParserState::kDone;
 }
 
-bool HTTPParser::HasError(void) const
+bool HTTPParser::HasError() const
 {
   return state_ == ParserState::kError;
 }
@@ -70,22 +70,22 @@ void HTTPParser::Fail(ValidationResult vr)
 
 /************************************************** Getter ***********************************************************/
 
-const HTTPRequest& HTTPParser::GetRequest(void) const
+const HTTPRequest& HTTPParser::GetRequest() const
 {
   return req_;
 }
 
-ValidationResult HTTPParser::GetError(void) const
+ValidationResult HTTPParser::GetError() const
 {
   return error_;
 }
 
-HTTPRequest& HTTPParser::GetRequestMutable(void)
+HTTPRequest& HTTPParser::GetRequestMutable()
 {
   return req_;
 }
 
-void HTTPParser::Reset(void)
+void HTTPParser::Reset()
 {
   req_ = HTTPRequest();
   state_ = ParserState::kStartLine;
@@ -102,7 +102,7 @@ void HTTPParser::Reset(void)
   bodyBytes_ = 0;
 }
 
-HTTPRequest HTTPParser::TakeRequest(void)
+HTTPRequest HTTPParser::TakeRequest()
 {
   HTTPRequest request = std::move(req_);
   state_ = ParserState::kDone;
@@ -111,12 +111,12 @@ HTTPRequest HTTPParser::TakeRequest(void)
 
 /************************************************** Setter ***********************************************************/
 
-bool HTTPParser::NeedsBodyDecision(void) const
+bool HTTPParser::NeedsBodyDecision() const
 {
   return state_ == ParserState::kAwaitBodyDecision;
 }
 
-void HTTPParser::SetNoBody(void)
+void HTTPParser::SetNoBody()
 {
   // only valid after headers end
   if (state_ != ParserState::kAwaitBodyDecision)
@@ -138,7 +138,7 @@ void HTTPParser::SetContentLength(std::size_t n)
   state_ = (contentLength_ > 0) ? ParserState::kBody : ParserState::kDone;
 }
 
-void HTTPParser::SetChunked(void)
+void HTTPParser::SetChunked()
 {
   if (state_ != ParserState::kAwaitBodyDecision)
     return (Fail(ValidationResult::kBadRequest), void());
@@ -231,7 +231,7 @@ am\r\n
 \r\n trailer section
 we get Codam at the end
 */
-bool HTTPParser::ParseChunkSize(void)
+bool HTTPParser::ParseChunkSize()
 {
   std::size_t lineEnd;
   std::size_t start = pos_;
@@ -257,7 +257,7 @@ bool HTTPParser::ParseChunkSize(void)
   return true;
 }
 
-bool HTTPParser::ParseChunkData(void)
+bool HTTPParser::ParseChunkData()
 {
   if (buffer_.size() - pos_ < chunk_.remaining)
     return false;
@@ -271,7 +271,7 @@ bool HTTPParser::ParseChunkData(void)
   return true;
 }
 
-bool HTTPParser::ParseChunkCRLF(void)
+bool HTTPParser::ParseChunkCRLF()
 {
   if (buffer_.size() - pos_ < 2)
     return false;
@@ -282,7 +282,7 @@ bool HTTPParser::ParseChunkCRLF(void)
   return true;
 }
 
-bool HTTPParser::ParseChunkTrailer(void)
+bool HTTPParser::ParseChunkTrailer()
 {
   // We are at the start of trailer section after "0\r\n".
   // Trailer section ends with an empty line "\r\n".
@@ -317,7 +317,7 @@ bool HTTPParser::ParseChunkTrailer(void)
     @note nginx default is ~8k–16k depending on build
     @note if there is no kCRLF, check if the request line is too long
 */
-bool HTTPParser::ParseStartLine(void)
+bool HTTPParser::ParseStartLine()
 {
   while (true)
   {
@@ -351,7 +351,7 @@ bool HTTPParser::ParseStartLine(void)
     @note A server MUST reject any received request message that contains
     whitespace between a header field-name and colon with a response code of 400 (Bad Request).
 */
-bool HTTPParser::ParseHeaders(void)
+bool HTTPParser::ParseHeaders()
 {
   while (true)
   {
@@ -401,7 +401,7 @@ bool HTTPParser::WriteBodyChunk(std::string_view chunk)
 }
 
 // read exactly contentLength bytes from the stream
-bool HTTPParser::ParseBody(void)
+bool HTTPParser::ParseBody()
 {
   const std::size_t available = buffer_.size() - pos_;
   const std::size_t remaining = contentLength_ - bodyRead_;
@@ -427,7 +427,7 @@ bool HTTPParser::ParseBody(void)
   return true;
 }
 
-bool HTTPParser::ParseChunked(void)
+bool HTTPParser::ParseChunked()
 {
   while (true)
   {
@@ -461,7 +461,7 @@ bool HTTPParser::ParseChunked(void)
   }
 }
 
-HTTPParser::ParseResult HTTPParser::ExitResult(void)
+HTTPParser::ParseResult HTTPParser::ExitResult()
 {
   if (state_ == ParserState::kDone)
   {
@@ -506,7 +506,7 @@ HTTPParser::ParseResult HTTPParser::Parse(std::string_view input)
   return ExitResult();
 }
 
-void HTTPParser::ResetNextRequest(void)
+void HTTPParser::ResetNextRequest()
 {
   if (pos_ > 0)
     buffer_.erase(0, pos_);

@@ -29,12 +29,12 @@ HTTPResponse::HTTPResponse(HTTP::Status status, HTTP::Headers headers, std::stri
   SetStatus(status);
 }
 
-std::uint16_t HTTPResponse::GetStatusCode(void) const
+std::uint16_t HTTPResponse::GetStatusCode() const
 {
   return static_cast<std::uint16_t>(status_);
 }
 
-const std::string& HTTPResponse::GetReason(void) const
+const std::string& HTTPResponse::GetReason() const
 {
   return reason_;
 }

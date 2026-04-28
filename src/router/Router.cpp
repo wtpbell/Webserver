@@ -82,19 +82,14 @@ HTTPResponse Router::DispatchHandler(const HTTPRequest& request, const RouteView
 #ifdef UNIT_TEST
   if (dispatchHook_)
   {
-    const std::string_view remainder = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
-    return dispatchHook_(request, route, remainder);
+    return dispatchHook_(request, route);
   }
 #endif
 
-  const std::string_view remainder = request_handler::ComputeRouteTail(request.GetPath(), route.locationPrefix);
-  if (remainder.empty())
-    return Response::MakeError(Status::kInternalServerError);
-
   if (ShouldUseCgi(request, route))
-    return request_handler::HandleCgi(request, route, remainder);
+    return request_handler::HandleCgi(request, route);
 
-  return request_handler::HandleMethods(request, route, remainder);
+  return request_handler::HandleMethods(request, route);
 }
 
 HTTPResponse Router::Dispatch(const HTTPRequest& request, const RouteView& route, const ServerRegistry& serverRegistry,

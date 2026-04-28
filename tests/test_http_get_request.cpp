@@ -114,7 +114,7 @@ TEST_CASE("RequestHandler - GET / uses index", "[HandleGet]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
   REQUIRE(res.GetStatusCode() == 200);
 }
 
@@ -129,7 +129,7 @@ TEST_CASE("RequestHandler - GET / serves index when present", "[HandleGet]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 200);
   REQUIRE(res.GetBody().find("home") != std::string::npos);
@@ -143,7 +143,7 @@ TEST_CASE("RequestHandler - GET non-existent file", "[InspectPath]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 404);
 }
@@ -159,7 +159,7 @@ TEST_CASE("RequestHandler - GET permission denied file", "[ReadFile]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
   REQUIRE(res.GetStatusCode() == 403);
 
   fs::permissions(file, fs::perms::owner_read | fs::perms::owner_write, fs::perm_options::add);
@@ -174,7 +174,7 @@ TEST_CASE("RequestHandler - GET directory without trailing slash redirects to sl
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 301);
   REQUIRE(res.GetFirstHeaderValueOf("Location") == "/dir/");
@@ -191,7 +191,7 @@ TEST_CASE("RequestHandler - GET directory with trailing slash (no index, autoind
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 }
@@ -205,7 +205,7 @@ TEST_CASE("RequestHandler - GET autoindex", "[HandleDirectoryGet]")
   SetupRoute(route);
   route.autoindex = true;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 200);
 }
@@ -221,7 +221,7 @@ TEST_CASE("RequestHandler - GET autoindex lists files and dirs", "[HandleDirecto
   SetupRoute(route);
   route.autoindex = true;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 200);
 
@@ -249,7 +249,7 @@ TEST_CASE("RequestHandler - GET directory with index serves index", "[HandleDire
   SetupRoute(route);
   route.autoindex = true;  // doesn’t matter; index should win
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 200);
   REQUIRE(res.GetBody().find("IDX") != std::string::npos);
@@ -269,7 +269,7 @@ TEST_CASE("RequestHandler - Default route allows GET only - POST => 405", "[Hand
   route.root = "./tests/test_files";
   route.allowedMask = RouteView::MethodMask::kGet;  // explicit default
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 405);
   REQUIRE(res.GetFirstHeaderValueOf("Allow") == "GET");
@@ -303,7 +303,7 @@ TEST_CASE("RequestHandler - blocks symlink escape outside root", "[security][sym
   SetupRoute(route);
   route.root = "./tests/test_files/root";
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 }
@@ -322,7 +322,7 @@ TEST_CASE("RequestHandler - allowed_methods enables POST - POST succeeds", "[Han
   route.root = "./tests/test_files";
   route.allowedMask = RouteView::MethodMask::kGet | RouteView::MethodMask::kPost;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 204);  // or assert exact expected POST status
 }
@@ -336,12 +336,12 @@ TEST_CASE("RequestHandler - Unsupported method => 501", "[HandleMethods]")
   RouteView route;
   SetupRoute(route);
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, /*remainder=*/request.GetPath());
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 501);
 }
 
-// These tests hard-code remainder, so they validate handler + ResolvePath(alias) behavior.
+// These tests validate that ResolvePath computes the route remainder internally.
 
 TEST_CASE("RequestHandler - alias maps remainder to alias file", "[alias][handler]")
 {
@@ -353,11 +353,11 @@ TEST_CASE("RequestHandler - alias maps remainder to alias file", "[alias][handle
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet;
 
-  // For alias routes, ResolvePath uses remainder (not full path).
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/hello.txt");
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 200);
   REQUIRE(res.GetBody().find("hi") != std::string::npos);
@@ -373,29 +373,36 @@ TEST_CASE("RequestHandler - alias directory without trailing slash redirects", "
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/dir");
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 301);
   REQUIRE(res.GetFirstHeaderValueOf("Location") == "/static/dir/");
 }
 
-TEST_CASE("RequestHandler - alias blocks .. escape (ResolvePath containment)", "[alias][handler][security]")
+TEST_CASE("RequestHandler - alias blocks symlink escape (ResolvePath containment)", "[alias][handler][security]")
 {
-  const fs::path aliasBase = MakeAliasSandbox("_ut_handler_escape");
+  const fs::path aliasBase = MakeAliasSandbox("_ut_handler_symlink_escape");
+  const fs::path outside = MakeAliasSandbox("_ut_handler_symlink_outside");
+  WriteTextFile(outside / "secret.txt", "secret");
+
+  std::error_code ec;
+  fs::create_directory_symlink(fs::weakly_canonical(outside, ec), aliasBase / "escape", ec);
+  REQUIRE_FALSE(ec);
 
   HTTPRequest request;
-  SetupGetRequest(request, "/static/anything");
+  SetupGetRequest(request, "/static/escape/secret.txt");
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet;
 
-  // Remainder tries to escape alias root
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/../secret.txt");
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 }
@@ -511,22 +518,6 @@ TEST_CASE("Router::Dispatch - normalized .. escapes alias match", "[alias][route
   REQUIRE(res.GetStatusCode() == 404);
 }
 
-TEST_CASE("RequestHandler - alias containment blocks .. escape even if remainder contains ..",
-          "[alias][handler][security]")
-{
-  const fs::path aliasBase = MakeAliasSandbox("_ut_handler_escape");
-  RouteView route;
-  SetupRoute(route);
-  route.alias = aliasBase;
-  route.allowedMask = RouteView::MethodMask::kGet;
-
-  HTTPRequest request;
-  SetupGetRequest(request, "/static/anything");
-
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/../secret.txt");
-  REQUIRE(res.GetStatusCode() == 403);
-}
-
 TEST_CASE("RequestHandler - GET alias permission denied file => 403", "[alias][handler][security]")
 {
   const fs::path aliasBase = MakeAliasSandbox("_ut_alias_perm_denied");
@@ -538,10 +529,11 @@ TEST_CASE("RequestHandler - GET alias permission denied file => 403", "[alias][h
 
   RouteView route;
   SetupRoute(route);
+  route.locationPrefix = "/static";
   route.alias = aliasBase;
   route.allowedMask = RouteView::MethodMask::kGet;
 
-  HTTPResponse res = request_handler::HandleMethods(request, route, "/secret.txt");
+  HTTPResponse res = request_handler::HandleMethods(request, route);
 
   REQUIRE(res.GetStatusCode() == 403);
 

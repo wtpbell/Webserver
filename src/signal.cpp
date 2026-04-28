@@ -31,7 +31,7 @@ IPC channel. See Section 44.2 for further details.
 Keep ignoring SIGPIPE (prevent crashes on closed sockets)
 https://stackoverflow.com/questions/21687695/getting-sigpipe-with-non-blocking-sockets-is-this-normal
 */
-void setupSignals(void)
+void setupSignals()
 {
   struct sigaction sa{};
   sa.sa_handler = signalHandler;

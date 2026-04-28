@@ -3,7 +3,7 @@
 /*                                                        ::::::::            */
 /*   Builder.cpp                                        :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/12 10:14:00 by jstuhrin      #+#    #+#                 */
 /*   Updated: 2026/04/24 15:57:50 by bewong        ########   odam.nl         */
@@ -72,15 +72,286 @@ ServerRegistry Builder::BuildServerRegistry()
 
 //////////////////// PRIVATE ////////////////////
 
-void Builder::SetErrorMessage(std::size_t line, std::size_t col, std::string_view lexeme, std::string_view message,
-                              std::size_t tokenIndex)
+////////// traverse tree and extract //////////
+
+void Builder::ExtractHttpData()
 {
-  std::stringstream ss;
-  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme
-     << kReset_ << "` " << message << "\n";
-  lexer_.SetTokenErrorMessage(tokenIndex, ss.str());
-  lexer_.SetTokenErrorTrue(tokenIndex);
+  RouteView routeView;
+  Node& http = parser_.GetAst().nestedBlocks[0];
+  for (Node& dir : http.directives)
+  {
+    switch (dir.name)
+    {
+      case Identifier::kIndex:
+        ExtractIndex(dir, routeView);
+        break;
+      case Identifier::kClientMaxBodySize:
+        ExtractClientMaxBodySize(dir, routeView);
+        break;
+      case Identifier::kErrorPage:
+        ExtractErrorPage(dir, routeView);
+        break;
+      case Identifier::kAutoindex:
+        ExtractAutoindex(dir, routeView);
+        break;
+      default:
+        assert(false && "invalid directive in http block");
+        __builtin_unreachable();
+    }
+  }
+  ExtractServerBlockData(http, routeView);
 }
+
+void Builder::ExtractServerBlockData(Node& http, RouteView& routeView)
+{
+  std::size_t currentServerBlockIdx = 0;
+  const std::size_t lastServerBlockIdx = http.nestedBlocks.size() - 1;
+  for (Node& serverBlock : http.nestedBlocks)
+  {
+    ServerView serverView;
+    std::set<std::filesystem::path> locationPrefixSet;
+    if (currentServerBlockIdx == lastServerBlockIdx)
+    {
+      ExtractServerBlockDirectivesRouteView(serverBlock, routeView);
+      ExtractLocationData(serverBlock, serverView, routeView, locationPrefixSet);
+    }
+    else
+    {
+      RouteView routeViewCopy(routeView);
+      ExtractServerBlockDirectivesRouteView(serverBlock, routeViewCopy);
+      ExtractLocationData(serverBlock, serverView, routeViewCopy, locationPrefixSet);
+    }
+    ExtractServerBlockDirectivesServerView(serverBlock, serverView);
+    ++currentServerBlockIdx;
+  }
+}
+
+void Builder::ExtractServerBlockDirectivesRouteView(const Node& serverBlock, RouteView& routeView)
+{
+  for (const Node& dir : serverBlock.directives)
+  {
+    switch (dir.name)
+    {
+      case Identifier::kListen:
+        break;
+      case Identifier::kServerName:
+        break;
+      case Identifier::kAllowedMethods:
+        ExtractAllowedMethods(dir, routeView);
+        break;
+      case Identifier::kReturn:
+        ExtractReturn(dir, routeView);
+        break;
+      case Identifier::kRoot:
+        ExtractRoot(dir, routeView);
+        break;
+      case Identifier::kIndex:
+        ExtractIndex(dir, routeView);
+        break;
+      case Identifier::kAutoindex:
+        ExtractAutoindex(dir, routeView);
+        break;
+      case Identifier::kClientMaxBodySize:
+        ExtractClientMaxBodySize(dir, routeView);
+        break;
+      case Identifier::kErrorPage:
+        ExtractErrorPage(dir, routeView);
+        break;
+      case Identifier::kCgiExtension:
+        ExtractCgiExtension(dir, routeView);
+        break;
+      default:
+        assert(false && "invalid directive in server block");
+        __builtin_unreachable();
+    }
+  }
+}
+
+void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView,
+                                  std::set<std::filesystem::path>& locationPrefixSet)
+{
+  if (serverBlock.nestedBlocks.empty())
+  {
+    serverView.routes.emplace_back(routeView);
+    return;
+  }
+  std::size_t currentRouteIdx = 0;
+  const std::size_t lastRouteIdx = serverBlock.nestedBlocks.size() - 1;
+  for (Node& location : serverBlock.nestedBlocks)
+  {
+    if (currentRouteIdx == lastRouteIdx)
+    {
+      ValidateAndExtractLocationPrefix(location, routeView, locationPrefixSet);
+      ExtractLocationDirectives(location, routeView);
+      serverView.routes.emplace_back(routeView);
+    }
+    else
+    {
+      RouteView routeViewCopy(routeView);
+      ValidateAndExtractLocationPrefix(location, routeViewCopy, locationPrefixSet);
+      ExtractLocationDirectives(location, routeViewCopy);
+      serverView.routes.emplace_back(routeViewCopy);
+    }
+    ++currentRouteIdx;
+  }
+}
+
+void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView,
+                                               std::set<std::filesystem::path>& locationPrefixSet)
+{
+  std::filesystem::path locationPrefixPath(location.params[0].lexeme);
+  locationPrefixPath = locationPrefixPath.lexically_normal();
+  const auto result = locationPrefixSet.insert(locationPrefixPath);
+  if (result.second == false)
+  {
+    Error(location.params[0], "duplicate location prefix in server");
+  }
+  routeView.locationPrefix = locationPrefixPath;
+}
+
+void Builder::ExtractLocationDirectives(const Node& location, RouteView& routeView)
+{
+  for (const Node& dir : location.directives)
+  {
+    switch (dir.name)
+    {
+      case Identifier::kAllowedMethods:
+        ExtractAllowedMethods(dir, routeView);
+        break;
+      case Identifier::kReturn:
+        ExtractReturn(dir, routeView);
+        break;
+      case Identifier::kRoot:
+        ExtractRoot(dir, routeView);
+        break;
+      case Identifier::kAlias:
+        ExtractAlias(dir, routeView);
+        break;
+      case Identifier::kIndex:
+        ExtractIndex(dir, routeView);
+        break;
+      case Identifier::kAutoindex:
+        ExtractAutoindex(dir, routeView);
+        break;
+      case Identifier::kClientMaxBodySize:
+        ExtractClientMaxBodySize(dir, routeView);
+        break;
+      case Identifier::kErrorPage:
+        ExtractErrorPage(dir, routeView);
+        break;
+      case Identifier::kCgi:
+        ExtractCgi(dir, routeView);
+        break;
+      case Identifier::kCgiExtension:
+        ExtractCgiExtension(dir, routeView);
+        break;
+      default:
+        assert(false && "invalid directive in location block");
+        __builtin_unreachable();
+    }
+  }
+}
+
+void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView)
+{
+  std::vector<Node*> currentServerNameNodes;
+  ValidateAndExtractServerNames(serverBlock, serverView, currentServerNameNodes);
+  const std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
+  CopyServerNameNodes(numListenDirectives, currentServerNameNodes);
+  if (numListenDirectives == 0)
+  {
+    SetServerViewDefaults(serverBlock, serverView);
+    serverViews_.emplace_back(serverView);
+    return;
+  }
+  std::size_t currentListenDirective = 1;
+  for (Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kListen)
+    {
+      if (currentListenDirective == numListenDirectives)
+      {
+        ValidateAndExtractListen(dir, serverView);
+        SetServerViewDefaults(serverBlock, serverView);
+        serverViews_.emplace_back(serverView);
+        break;
+      }
+      else
+      {
+        ServerView serverViewCopy(serverView);
+        ValidateAndExtractListen(dir, serverViewCopy);
+        SetServerViewDefaults(serverBlock, serverViewCopy);
+        serverViews_.emplace_back(serverViewCopy);
+      }
+      ++currentListenDirective;
+    }
+  }
+}
+
+void Builder::ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView,
+                                            std::vector<Node*>& currentServerNameNodes)
+{
+  std::set<std::string> serverNamesSet;
+  for (Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kServerName)
+    {
+      for (Node& param : dir.params)
+      {
+        const auto result = serverNamesSet.insert(param.lexeme);
+        if (result.second == false)
+        {
+          Error(param, "- duplicate hostname in server");
+        }
+        serverView.hostNames.emplace_back(param.lexeme);
+        currentServerNameNodes.emplace_back(&param);
+      }
+    }
+  }
+}
+
+std::size_t Builder::GetNumListenDirectives(const Node& serverBlock) const
+{
+  std::size_t numListenDirectives = 0;
+  for (const Node& dir : serverBlock.directives)
+  {
+    if (dir.name == Identifier::kListen)
+    {
+      ++numListenDirectives;
+    }
+  }
+  return numListenDirectives;
+}
+
+void Builder::CopyServerNameNodes(const std::size_t numListenDirectives,
+                                  const std::vector<Node*>& currentServerNameNodes)
+{
+  for (std::size_t num = 0; num < numListenDirectives; ++num)
+  {
+    for (Node* node : currentServerNameNodes)
+    {
+      serverNameNodes_.emplace_back(node);
+    }
+  }
+}
+
+void Builder::SetServerViewDefaults(Node& serverBlock, ServerView& serverView)
+{
+  if (serverView.hostNames.empty())
+  {
+    serverView.hostNames.emplace_back("");
+    serverNameNodes_.emplace_back(&serverBlock);
+  }
+  if (serverView.ipPort.ip.empty())
+  {
+    serverView.ipPort.ip = defaultIp_;
+    serverView.ipPort.port = defaultPort_;
+    ipPortNodes_.emplace_back(&serverBlock);
+    hasDefaultServerFlagVector_.push_back(false);
+  }
+}
+
+////////// handle error //////////
 
 void Builder::Error(Node& node, std::string_view message)
 {
@@ -106,6 +377,18 @@ void Builder::Error(Node& node, std::string_view message)
   node.error = true;
   error_ = true;
 }
+
+void Builder::SetErrorMessage(const std::size_t line, const std::size_t col, std::string_view lexeme,
+                              std::string_view message, const std::size_t tokenIndex)
+{
+  std::stringstream ss;
+  ss << line << ":" << col << ": " << kRed_ << "error:" << kReset_ << " unexpected token: `" << kRed_ << lexeme
+     << kReset_ << "` " << message << "\n";
+  lexer_.SetTokenErrorMessage(tokenIndex, ss.str());
+  lexer_.SetTokenErrorTrue(tokenIndex);
+}
+
+////////// extract individual directives //////////
 
 void Builder::ValidateAndExtractListen(Node& dir, ServerView& serverView)
 {
@@ -272,284 +555,6 @@ void Builder::ExtractErrorPage(const Node& dir, RouteView& routeView)
   }
 }
 
-void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView,
-                                               std::set<std::string>& locationPrefixSet)
-{
-  const std::string& locationPrefix = location.params[0].lexeme;
-  auto result = locationPrefixSet.insert(locationPrefix);
-  if (result.second == false)
-  {
-    Error(location.params[0], "duplicate location prefix in server");
-  }
-  routeView.locationPrefix = locationPrefix;
-}
-
-void Builder::ExtractHttpData()
-{
-  RouteView routeView;
-  Node& http = parser_.GetAst().nestedBlocks[0];
-  for (Node& dir : http.directives)
-  {
-    switch (dir.name)
-    {
-      case Identifier::kIndex:
-        ExtractIndex(dir, routeView);
-        break;
-      case Identifier::kClientMaxBodySize:
-        ExtractClientMaxBodySize(dir, routeView);
-        break;
-      case Identifier::kErrorPage:
-        ExtractErrorPage(dir, routeView);
-        break;
-      case Identifier::kAutoindex:
-        ExtractAutoindex(dir, routeView);
-        break;
-      default:
-        assert(false && "invalid directive in http block");
-        __builtin_unreachable();
-    }
-  }
-  ExtractServerBlockData(http, routeView);
-}
-
-void Builder::ExtractServerBlockDirectivesRouteView(const Node& serverBlock, RouteView& routeView)
-{
-  for (const Node& dir : serverBlock.directives)
-  {
-    switch (dir.name)
-    {
-      case Identifier::kListen:
-        break;
-      case Identifier::kServerName:
-        break;
-      case Identifier::kAllowedMethods:
-        ExtractAllowedMethods(dir, routeView);
-        break;
-      case Identifier::kReturn:
-        ExtractReturn(dir, routeView);
-        break;
-      case Identifier::kRoot:
-        ExtractRoot(dir, routeView);
-        break;
-      case Identifier::kIndex:
-        ExtractIndex(dir, routeView);
-        break;
-      case Identifier::kAutoindex:
-        ExtractAutoindex(dir, routeView);
-        break;
-      case Identifier::kClientMaxBodySize:
-        ExtractClientMaxBodySize(dir, routeView);
-        break;
-      case Identifier::kErrorPage:
-        ExtractErrorPage(dir, routeView);
-        break;
-      case Identifier::kCgiExtension:
-        ExtractCgiExtension(dir, routeView);
-        break;
-      default:
-        assert(false && "invalid directive in server block");
-        __builtin_unreachable();
-    }
-  }
-}
-
-std::size_t Builder::GetNumListenDirectives(const Node& serverBlock)
-{
-  std::size_t numListenDirectives = 0;
-  for (const Node& dir : serverBlock.directives)
-  {
-    if (dir.name == Identifier::kListen)
-    {
-      ++numListenDirectives;
-    }
-  }
-  return numListenDirectives;
-}
-
-void Builder::ValidateServerNames(Node& serverBlock)
-{
-  std::set<std::string> serverNamesSet;
-  for (Node& dir : serverBlock.directives)
-  {
-    if (dir.name == Identifier::kServerName)
-    {
-      for (Node& param : dir.params)
-      {
-        auto result = serverNamesSet.insert(param.lexeme);
-        if (result.second == false)
-        {
-          Error(param, "- duplicate hostname in server");
-        }
-      }
-    }
-  }
-}
-
-void Builder::ExtractServerNames(Node& serverBlock, ServerView& serverView)
-{
-  std::set<std::string> serverNamesSet;
-  for (Node& dir : serverBlock.directives)
-  {
-    if (dir.name == Identifier::kServerName)
-    {
-      for (Node& param : dir.params)
-      {
-        serverView.hostNames.emplace_back(param.lexeme);
-        serverNameNodes_.emplace_back(&param);
-      }
-    }
-  }
-}
-
-void Builder::ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView)
-{
-  ValidateServerNames(serverBlock);
-  std::size_t numListenDirectives = GetNumListenDirectives(serverBlock);
-  if (numListenDirectives == 0)
-  {
-    ExtractServerNames(serverBlock, serverView);
-    SetServerViewDefaults(serverBlock, serverView);
-    serverViews_.emplace_back(serverView);
-    return;
-  }
-  std::size_t currentListenDirective = 1;
-  for (Node& dir : serverBlock.directives)
-  {
-    if (dir.name == Identifier::kListen)
-    {
-      if (currentListenDirective == numListenDirectives)
-      {
-        ExtractServerNames(serverBlock, serverView);
-        ValidateAndExtractListen(dir, serverView);
-        SetServerViewDefaults(serverBlock, serverView);
-        serverViews_.emplace_back(serverView);
-        break;
-      }
-      else
-      {
-        ServerView serverViewCopy(serverView);
-        ExtractServerNames(serverBlock, serverViewCopy);
-        ValidateAndExtractListen(dir, serverViewCopy);
-        SetServerViewDefaults(serverBlock, serverViewCopy);
-        serverViews_.emplace_back(serverViewCopy);
-      }
-      ++currentListenDirective;
-    }
-  }
-}
-
-void Builder::ExtractServerBlockData(Node& http, RouteView& routeView)
-{
-  std::size_t currentServerBlockIdx = 0;
-  std::size_t lastServerBlockIdx = http.nestedBlocks.size() - 1;
-  for (Node& serverBlock : http.nestedBlocks)
-  {
-    ServerView serverView;
-    std::set<std::string> locationPrefixSet;
-    if (currentServerBlockIdx == lastServerBlockIdx)
-    {
-      ExtractServerBlockDirectivesRouteView(serverBlock, routeView);
-      ExtractLocationData(serverBlock, serverView, routeView, locationPrefixSet);
-    }
-    else
-    {
-      RouteView routeViewCopy(routeView);
-      ExtractServerBlockDirectivesRouteView(serverBlock, routeViewCopy);
-      ExtractLocationData(serverBlock, serverView, routeViewCopy, locationPrefixSet);
-    }
-    ExtractServerBlockDirectivesServerView(serverBlock, serverView);
-    ++currentServerBlockIdx;
-  }
-}
-
-void Builder::ExtractLocationDirectives(const Node& location, RouteView& routeView)
-{
-  for (const Node& dir : location.directives)
-  {
-    switch (dir.name)
-    {
-      case Identifier::kAllowedMethods:
-        ExtractAllowedMethods(dir, routeView);
-        break;
-      case Identifier::kReturn:
-        ExtractReturn(dir, routeView);
-        break;
-      case Identifier::kRoot:
-        ExtractRoot(dir, routeView);
-        break;
-      case Identifier::kAlias:
-        ExtractAlias(dir, routeView);
-        break;
-      case Identifier::kIndex:
-        ExtractIndex(dir, routeView);
-        break;
-      case Identifier::kAutoindex:
-        ExtractAutoindex(dir, routeView);
-        break;
-      case Identifier::kClientMaxBodySize:
-        ExtractClientMaxBodySize(dir, routeView);
-        break;
-      case Identifier::kErrorPage:
-        ExtractErrorPage(dir, routeView);
-        break;
-      case Identifier::kCgi:
-        ExtractCgi(dir, routeView);
-        break;
-      case Identifier::kCgiExtension:
-        ExtractCgiExtension(dir, routeView);
-        break;
-      default:
-        assert(false && "invalid directive in location block");
-        __builtin_unreachable();
-    }
-  }
-}
-
-void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView,
-                                  std::set<std::string>& locationPrefixSet)
-{
-  if (serverBlock.nestedBlocks.empty())
-  {
-    serverView.routes.emplace_back(routeView);
-    return;
-  }
-  std::size_t currentRouteIdx = 0;
-  std::size_t lastRouteIdx = serverBlock.nestedBlocks.size() - 1;
-  for (Node& location : serverBlock.nestedBlocks)
-  {
-    if (currentRouteIdx == lastRouteIdx)
-    {
-      ValidateAndExtractLocationPrefix(location, routeView, locationPrefixSet);
-      ExtractLocationDirectives(location, routeView);
-      serverView.routes.emplace_back(routeView);
-    }
-    else
-    {
-      RouteView routeViewCopy(routeView);
-      ValidateAndExtractLocationPrefix(location, routeViewCopy, locationPrefixSet);
-      ExtractLocationDirectives(location, routeViewCopy);
-      serverView.routes.emplace_back(routeViewCopy);
-    }
-    ++currentRouteIdx;
-  }
-}
-
-void Builder::SetServerViewDefaults(Node& serverBlock, ServerView& serverView)
-{
-  if (serverView.hostNames.empty())
-  {
-    serverView.hostNames.emplace_back("");
-    serverNameNodes_.emplace_back(&serverBlock);
-  }
-  if (serverView.ipPort.ip.empty())
-  {
-    serverView.ipPort.ip = defaultIp_;
-    serverView.ipPort.port = defaultPort_;
-    ipPortNodes_.emplace_back(&serverBlock);
-    hasDefaultServerFlagVector_.push_back(false);
-  }
-}
-
 void Builder::ValidateIpPortHostName()
 {
   std::size_t serverNameNodesIdx = 0;
@@ -586,6 +591,8 @@ void Builder::ValidateIpPortHostName()
   }
 }
 
+////////// populate data structures //////////
+
 void Builder::PopulateServerViewMap()
 {
   for (ServerView& serverView : serverViews_)
@@ -601,7 +608,7 @@ void Builder::PopulateRouteViewMap()
     ServerView::IpPort& ipPort = serverView.ipPort;
     for (const std::string& hostName : serverView.hostNames)
     {
-      std::map<std::string, RouteView*>& routes = routeViewMap_[ipPort][hostName];
+      std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>& routes = routeViewMap_[ipPort][hostName];
       for (RouteView& routeView : serverView.routes)
       {
         routes.emplace(routeView.locationPrefix, &routeView);
@@ -619,7 +626,7 @@ void Builder::PopulateDefaultServerRouteViewMap()
     if (defaultServerRouteViewMap_.count(ipPort) == 0 || hasDefaultServerFlagVector_[idx] == true)
     {
       defaultServerRouteViewMap_.erase(ipPort);
-      std::map<std::string, RouteView*>& routes = defaultServerRouteViewMap_[ipPort];
+      std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>& routes = defaultServerRouteViewMap_[ipPort];
       for (RouteView& routeView : serverView.routes)
       {
         routes.emplace(routeView.locationPrefix, &routeView);

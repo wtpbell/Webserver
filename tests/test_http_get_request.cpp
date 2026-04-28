@@ -86,8 +86,8 @@ static ServerRegistry MakeRouterRegistry(const ServerView::IpPort& ipPort, const
   serverViews[0].routes = std::move(routes);
 
   std::map<ServerView::IpPort, std::vector<ServerView*>> serverViewMap;
-  std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> routeViewMap;
-  std::map<ServerView::IpPort, std::map<std::string, RouteView*>> defaultServerRouteViewMap;
+  std::map<ServerView::IpPort, std::map<std::string_view, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>> routeViewMap;
+  std::map<ServerView::IpPort, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>> defaultServerRouteViewMap;
 
   serverViewMap[ipPort].push_back(&serverViews[0]);
 

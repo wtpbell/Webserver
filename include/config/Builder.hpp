@@ -3,7 +3,7 @@
 /*                                                        ::::::::            */
 /*   Builder.hpp                                        :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jstuhrin <jstuhrin@student.codam.nl>         +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/12 10:14:00 by jstuhrin      #+#    #+#                 */
 /*   Updated: 2026/04/24 15:52:03 by bewong        ########   odam.nl         */
@@ -19,7 +19,9 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
+#include <filesystem>
 
 #include "Lexer.hpp"
 #include "Parser.hpp"
@@ -42,7 +44,9 @@ class Builder
     ServerRegistry BuildServerRegistry();
 
   private:
-    std::size_t GetNumListenDirectives(const Node& serverBlock);
+    std::size_t GetNumListenDirectives(const Node& serverBlock) const;
+    void CopyServerNameNodes(const std::size_t numListenDirectives,
+                             const std::vector<Node*>& currentServerNameNodes);
     void ValidateIpPortHostName();
     void PopulateServerViewMap();
     void PopulateRouteViewMap();
@@ -51,8 +55,8 @@ class Builder
                          std::size_t tokenIndex);
     void Error(Node& dir, std::string_view message);
     void ValidateAndExtractListen(Node& serverBlock, ServerView& serverView);
-    void ValidateServerNames(Node& serverBlock);
-    void ExtractServerNames(Node& serverBlock, ServerView& serverView);
+    void ValidateAndExtractServerNames(Node& serverBlock, ServerView& serverView,
+                                       std::vector<Node*>& currentServerNameNodes);
     void ExtractCgi(const Node& httpBlock, RouteView& routeView);
     void ExtractCgiExtension(const Node& httpBlock, RouteView& routeView);
     void ExtractIndex(const Node& node, RouteView& routeView);
@@ -64,14 +68,14 @@ class Builder
     void ExtractAlias(const Node& node, RouteView& routeView);
     void ExtractErrorPage(const Node& node, RouteView& routeView);
     void ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView,
-                                          std::set<std::string>& locationPrefixSet);
+                                          std::set<std::filesystem::path>& locationPrefixSet);
     void ExtractHttpData();
     void ExtractServerBlockDirectivesRouteView(const Node& serverBlock, RouteView& routeView);
     void ExtractServerBlockDirectivesServerView(Node& serverBlock, ServerView& serverView);
     void ExtractServerBlockData(Node& http, RouteView& routeView);
     void ExtractLocationDirectives(const Node& location, RouteView& routeView);
     void ExtractLocationData(Node& serverBlock, ServerView& serverView, RouteView& routeView,
-                             std::set<std::string>& locationPrefixSet);
+                             std::set<std::filesystem::path>& locationPrefixSet);
     void SetServerViewDefaults(Node& serverBlock, ServerView& serverView);
 
     Lexer& lexer_;
@@ -84,8 +88,8 @@ class Builder
 
     std::vector<ServerView> serverViews_;
     std::map<ServerView::IpPort, std::vector<ServerView*>> serverViewMap_;
-    std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> routeViewMap_;
-    std::map<ServerView::IpPort, std::map<std::string, RouteView*>> defaultServerRouteViewMap_;
+    std::map<ServerView::IpPort, std::map<std::string_view, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>> routeViewMap_;
+    std::map<ServerView::IpPort, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>> defaultServerRouteViewMap_;
 
     std::vector<Node*> serverNameNodes_;
     std::vector<Node*> ipPortNodes_;
@@ -101,7 +105,7 @@ class Builder
     {
       return serverViews_.data();
     }
-    const std::map<std::string, std::map<std::string, RouteView*>>* GetAddressValue(const ServerView::IpPort& key) const
+    const std::map<std::string_view, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>* GetAddressValue(const ServerView::IpPort& key) const
     {
       return &routeViewMap_.at(key);
     }

@@ -969,6 +969,202 @@ TEST_CASE("GetRouteView() explicit default server 3", "[ServerRegistry]")
   REQUIRE(routeView == nullptr);
 }
 
+TEST_CASE("GetRouteView() location prefixes of same length", "[ServerRegistry]")
+{
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    location /samelength0 {\n"
+      "      root root0;\n"
+      "    }\n"
+      "    location /samelength1 {\n"
+      "      root root1;\n"
+      "    }\n"
+      "    location /samelength2 {\n"
+      "      root root2;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "}\n";
+
+  Lexer lexer(raw);
+  Parser parser(lexer);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  Builder builder(lexer, parser, validatorIpPort);
+  ServerRegistry serverRegistry(builder.BuildServerRegistry());
+
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
+  REQUIRE(serverRegistry.GetServerCount() == 1);
+
+  // name matches
+  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "", "/samelength0");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/samelength1");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/samelength2");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root2");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/samelength11");
+  REQUIRE(routeView == nullptr);
+
+  // name does not match
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/samelength0");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/samelength1");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/samelength2");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root2");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/samelength22");
+  REQUIRE(routeView == nullptr);
+}
+
+TEST_CASE("GetRouteView() location prefixes defined in ascending order", "[ServerRegistry]")
+{
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    location /one {\n"
+      "      root root0;\n"
+      "    }\n"
+      "    location /one/two {\n"
+      "      root root1;\n"
+      "    }\n"
+      "    location /one/two/three {\n"
+      "      root root2;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "}\n";
+
+  Lexer lexer(raw);
+  Parser parser(lexer);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  Builder builder(lexer, parser, validatorIpPort);
+  ServerRegistry serverRegistry(builder.BuildServerRegistry());
+
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
+  REQUIRE(serverRegistry.GetServerCount() == 1);
+
+  // name matches
+  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "", "/one");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/one/two");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/one/two/three");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root2");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/one/two/threee");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  // name does not match
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/one");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/one/two");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/one/two/three");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root2");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/one/two/threee");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+}
+
+TEST_CASE("GetRouteView() location prefix normalization", "[ServerRegistry]")
+{
+  std::string raw =
+      "\n"
+      "http {\n"
+      "\n"
+      "  server {\n"
+      "    listen 8080;\n"
+      "    location a////b/c {\n"
+      "      root root0;\n"
+      "    }\n"
+      "    location d/./././e {\n"
+      "      root root1;\n"
+      "    }\n"
+      "    location f////g////h/../////////////////////////////////////////////////////////////////../ {\n"
+      "      root root2;\n"
+      "    }\n"
+      "\n"
+      "  }\n"
+      "}\n";
+
+  Lexer lexer(raw);
+  Parser parser(lexer);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  Builder builder(lexer, parser, validatorIpPort);
+  ServerRegistry serverRegistry(builder.BuildServerRegistry());
+
+  REQUIRE(serverRegistry.GetServerViewCount() == 1);
+  REQUIRE(serverRegistry.GetServerCount() == 1);
+
+  // name matches
+  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "", "a/b/c");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "a/b/c");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "d/e");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "f/g/h");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root2");
+
+  // name does not match
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "a/b/c");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "a/b/c");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root0");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "d/e/f/g");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root1");
+
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "f/");
+  REQUIRE(routeView != nullptr);
+  REQUIRE(routeView->root == "root2");
+}
+
 TEST_CASE("ServerRegistry move constructor", "[ServerRegistry]")
 {
   std::string raw =

@@ -36,8 +36,8 @@ namespace
     serverViews[0].routes = std::move(routes);
 
     std::map<ServerView::IpPort, std::vector<ServerView*>> serverViewMap;
-    std::map<ServerView::IpPort, std::map<std::string, std::map<std::string, RouteView*>>> routeViewMap;
-    std::map<ServerView::IpPort, std::map<std::string, RouteView*>> defaultServerRouteViewMap;
+    std::map<ServerView::IpPort, std::map<std::string_view, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>> routeViewMap;
+    std::map<ServerView::IpPort, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>> defaultServerRouteViewMap;
 
     ServerView& sv = serverViews[0];
     serverViewMap[ipPort].push_back(&sv);

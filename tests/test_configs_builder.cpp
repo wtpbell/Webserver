@@ -182,7 +182,10 @@ TEST_CASE("GetError() -> true - duplicate location Prefix in server block", "[Bu
                     "    location /server0path0 {\n"
                     "      root server0root0;\n"
                     "    }\n"
-                    "    location /server0path1 {\n"
+                    "    location /////////////////////////server0path0 {\n"
+                    "      root server0root1;\n"
+                    "    }\n"
+                    "    location //./////////./////././././/////server0path0 {\n"
                     "      root server0root1;\n"
                     "    }\n"
                     "\n"
@@ -190,7 +193,10 @@ TEST_CASE("GetError() -> true - duplicate location Prefix in server block", "[Bu
                     "  server {\n"
                     "    listen 8080;\n"
                     "    server_name server1;\n"
-                    "    location /server1path0 {\n"
+                    "    location /server1path0/ {\n"
+                    "      root server1root0;\n"
+                    "    }\n"
+                    "    location /server1path0/server1path0/server1path0/../.. {\n"
                     "      root server1root0;\n"
                     "    }\n"
                     "\n"
@@ -225,11 +231,32 @@ TEST_CASE("GetError() -> true - duplicate location Prefix in server block", "[Bu
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
+  lexer.PrintErrorMessages();
+  lexer.PrintConfigsDebug();
+  lexer.PrintErrorIdxs();
+
   REQUIRE(output.empty() == false);
   REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);
   REQUIRE(validator.GetError() == false);
   REQUIRE(builder.GetError() == true);
+
+  std::set<std::size_t> errorsIdx{18, 25, 48, 85};
+  for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
+  {
+    if (errorsIdx.count(i) != 0)
+    {
+      CAPTURE(i);
+      REQUIRE(lexer.GetTokenError(i) == true);
+      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == false);
+    }
+    else
+    {
+      CAPTURE(i);
+      REQUIRE(lexer.GetTokenError(i) == false);
+      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == true);
+    }
+  }
 }
 
 TEST_CASE("builder.BuildServerRegistry() moves data out of builder (no deep copy)", "[ServerRegistry]")

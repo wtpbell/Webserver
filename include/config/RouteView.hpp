@@ -27,8 +27,7 @@ struct RouteView
       kNone = 0,
       kGet = 1u << 0,
       kPost = 1u << 1,
-      kDelete = 1u << 2,
-      kAll = kGet | kPost | kDelete,
+      kDelete = 1u << 2
     };
 
     struct ReturnRule
@@ -53,8 +52,6 @@ struct RouteView
     bool cgi = false;
     std::optional<std::map<std::string, std::filesystem::path>> cgiExePaths;
 };
-
-// Do we need Has() ?
 
 constexpr RouteView::MethodMask operator|(RouteView::MethodMask a, RouteView::MethodMask b)
 {

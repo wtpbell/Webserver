@@ -231,10 +231,6 @@ TEST_CASE("GetError() -> true - duplicate location Prefix in server block", "[Bu
   std::string output = buffer.str();
   std::cerr.rdbuf(oldBuf);
 
-  lexer.PrintErrorMessages();
-  lexer.PrintConfigsDebug();
-  lexer.PrintErrorIdxs();
-
   REQUIRE(output.empty() == false);
   REQUIRE(lexer.GetError() == false);
   REQUIRE(parser.GetError() == false);

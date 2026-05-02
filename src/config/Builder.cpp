@@ -199,6 +199,10 @@ void Builder::ExtractLocationData(Node& serverBlock, ServerView& serverView, Rou
 void Builder::ValidateAndExtractLocationPrefix(Node& location, RouteView& routeView,
                                                std::set<std::filesystem::path>& locationPrefixSet)
 {
+  if (location.params[0].lexeme[0] != '/')
+  {
+    Error(location.params[0], "location prefix must begin with `/`");
+  }
   std::filesystem::path locationPrefixPath(location.params[0].lexeme);
   locationPrefixPath = locationPrefixPath.lexically_normal();
   const auto result = locationPrefixSet.insert(locationPrefixPath);

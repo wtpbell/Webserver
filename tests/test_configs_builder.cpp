@@ -255,6 +255,58 @@ TEST_CASE("GetError() -> true - duplicate location Prefix in server block", "[Bu
   }
 }
 
+TEST_CASE("GetError() -> true - missing slash in location prefix", "[Builder]")
+{
+  std::string raw = "\n"
+                    "http {\n"
+                    "\n"
+                    "  server {\n"
+                    "    listen 8080;\n"
+                    "    server_name example0.com;\n"
+                    "  }\n"
+                    "  server {\n"
+                    "    listen 8080;\n"
+                    "    server_name example0.com;\n"
+                    "    location noSlash {\n"
+                    "      }\n"
+                    "  }\n"
+                    "}\n";
+
+  std::stringstream buffer;
+  auto* oldBuf = std::cerr.rdbuf(buffer.rdbuf());
+  Lexer lexer(raw);
+  Parser parser(lexer);
+  ValidatorIpPort validatorIpPort;
+  Validator validator(lexer, parser, validatorIpPort);
+  Builder builder(lexer, parser, validatorIpPort);
+  lexer.PrintErrorMessages();
+  std::string output = buffer.str();
+  std::cerr.rdbuf(oldBuf);
+
+  REQUIRE(output.empty() == false);
+  REQUIRE(lexer.GetError() == false);
+  REQUIRE(parser.GetError() == false);
+  REQUIRE(validator.GetError() == false);
+  REQUIRE(builder.GetError() == true);
+
+  std::set<std::size_t> errorsIdx{20};
+  for (size_t i = 0; i < lexer.GetSizeTokenList(); ++i)
+  {
+    if (errorsIdx.count(i) != 0)
+    {
+      CAPTURE(i);
+      REQUIRE(lexer.GetTokenError(i) == true);
+      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == false);
+    }
+    else
+    {
+      CAPTURE(i);
+      REQUIRE(lexer.GetTokenError(i) == false);
+      REQUIRE(lexer.GetTokenErrorMessage(i).empty() == true);
+    }
+  }
+}
+
 TEST_CASE("builder.BuildServerRegistry() moves data out of builder (no deep copy)", "[ServerRegistry]")
 {
   std::string raw = "\n"

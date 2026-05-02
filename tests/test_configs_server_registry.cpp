@@ -345,7 +345,7 @@ TEST_CASE("GetRouteView()", "[ServerRegistry]")
       "      index index.html;\n"
       "      autoindex off;\n"
       "    }\n"
-      "    location t {\n"
+      "    location /t {\n"
       "\n"
       "    }\n"
       "\n"
@@ -471,14 +471,14 @@ TEST_CASE("GetRouteView()", "[ServerRegistry]")
   REQUIRE(routeView->locationPrefix == "/");
 
   // minimal match location parameter and request URI (one char): 't': valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "t/test");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "/t/test");
   REQUIRE(routeView != nullptr);
-  REQUIRE(routeView->locationPrefix == "t");
+  REQUIRE(routeView->locationPrefix == "/t");
 
   // minimal match location parameter and request URI (both one char): 't': valid
-  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "t");
+  routeView = serverRegistry.GetRouteView("127.0.0.35", "8084", "ex1.com", "/t");
   REQUIRE(routeView != nullptr);
-  REQUIRE(routeView->locationPrefix == "t");
+  REQUIRE(routeView->locationPrefix == "/t");
 
   // anonymous server, match in first anonymous server: valid
   routeView = serverRegistry.GetRouteView("::", "8081", "", "/test2");
@@ -1107,13 +1107,13 @@ TEST_CASE("GetRouteView() location prefix normalization", "[ServerRegistry]")
       "\n"
       "  server {\n"
       "    listen 8080;\n"
-      "    location a////b/c {\n"
+      "    location /a////b/c {\n"
       "      root root0;\n"
       "    }\n"
-      "    location d/./././e {\n"
+      "    location /d/./././e {\n"
       "      root root1;\n"
       "    }\n"
-      "    location f////g////h/../////////////////////////////////////////////////////////////////../ {\n"
+      "    location /f////g////h/../////////////////////////////////////////////////////////////////../ {\n"
       "      root root2;\n"
       "    }\n"
       "\n"
@@ -1131,36 +1131,36 @@ TEST_CASE("GetRouteView() location prefix normalization", "[ServerRegistry]")
   REQUIRE(serverRegistry.GetServerCount() == 1);
 
   // name matches
-  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "", "a/b/c");
+  const RouteView* routeView = serverRegistry.GetRouteView("::", "8080", "", "/a/b/c");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root0");
 
-  routeView = serverRegistry.GetRouteView("::", "8080", "", "a/b/c");
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/a/b/c");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root0");
 
-  routeView = serverRegistry.GetRouteView("::", "8080", "", "d/e");
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/d/e");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root1");
 
-  routeView = serverRegistry.GetRouteView("::", "8080", "", "f/g/h");
+  routeView = serverRegistry.GetRouteView("::", "8080", "", "/f/g/h");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root2");
 
   // name does not match
-  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "a/b/c");
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/a/b/c");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root0");
 
-  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "a/b/c");
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/a/b/c");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root0");
 
-  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "d/e/f/g");
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/d/e/f/g");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root1");
 
-  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "f/");
+  routeView = serverRegistry.GetRouteView("::", "8080", "noMatch", "/f/");
   REQUIRE(routeView != nullptr);
   REQUIRE(routeView->root == "root2");
 }
@@ -1735,9 +1735,9 @@ TEST_CASE("root", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0 name1 name2;\n"
       "    root serverRoot0;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        root locationRoot01;\n"
       "      }\n"
       "  }\n"
@@ -1745,7 +1745,7 @@ TEST_CASE("root", "[ServerRegistry]")
       "    listen 8081;\n"
       "    server_name name3 name4 name5;\n"
       "    root serverRoot1;\n"
-      "    location locPref1 {\n"
+      "    location /locPref1 {\n"
       "      root locationRoot1;\n"
       "    }\n"
       "  }\n"
@@ -1775,11 +1775,11 @@ TEST_CASE("root", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).root == "serverRoot0");
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).root == "locationRoot01");
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref1");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref1");
   REQUIRE(serverView1.routes.at(0).root == "locationRoot1");
 }
 
@@ -1794,16 +1794,16 @@ TEST_CASE("index", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0;\n"
       "    index serverIndex0;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        index locationIndex01;\n"
       "      }\n"
       "  }\n"
       "  server {\n"
       "    listen 8081;\n"
       "    server_name name1;\n"
-      "    location locPref1 {\n"
+      "    location /locPref1 {\n"
       "    }\n"
       "  }\n"
       "\n"
@@ -1832,11 +1832,11 @@ TEST_CASE("index", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).index == "serverIndex0");
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).index == "locationIndex01");
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref1");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref1");
   REQUIRE(serverView1.routes.at(0).index == "httpIndex");
 }
 
@@ -1849,9 +1849,9 @@ TEST_CASE("alias", "[ServerRegistry]")
       "  server {\n"
       "    listen 8080;\n"
       "    server_name name0;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        alias locationAlias01;\n"
       "      }\n"
       "  }\n"
@@ -1880,9 +1880,9 @@ TEST_CASE("alias", "[ServerRegistry]")
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).alias.has_value() == false);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).alias == "locationAlias01");
 }
 
@@ -1897,16 +1897,16 @@ TEST_CASE("client_max_body_size", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0;\n"
       "    client_max_body_size 32K;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        client_max_body_size 1G;\n"
       "      }\n"
       "  }\n"
       "  server {\n"
       "    listen 8081;\n"
       "    server_name name1;\n"
-      "    location locPref1 {\n"
+      "    location /locPref1 {\n"
       "    }\n"
       "  }\n"
       "\n"
@@ -1935,11 +1935,11 @@ TEST_CASE("client_max_body_size", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).clientMaxBody == 32 * 1024);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).clientMaxBody == 1 * 1024 * 1024 * 1024);
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref1");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref1");
   REQUIRE(serverView1.routes.at(0).clientMaxBody == 8 * 1024 * 1024);
 }
 
@@ -1954,16 +1954,16 @@ TEST_CASE("error_page", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0;\n"
       "    error_page 401 /serverErrorPage;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        error_page 500 http://locationErrorPage;\n"
       "      }\n"
       "  }\n"
       "  server {\n"
       "    listen 8081;\n"
       "    server_name name1;\n"
-      "    location locPref1 {\n"
+      "    location /locPref1 {\n"
       "      error_page 301 https://locationErrorPage;\n"
       "    }\n"
       "  }\n"
@@ -1993,16 +1993,16 @@ TEST_CASE("error_page", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).errorPages.size() == 2);
   REQUIRE(serverView0.routes.at(0).errorPages.at(301) == "/httpErrorPage");
   REQUIRE(serverView0.routes.at(0).errorPages.at(401) == "/serverErrorPage");
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).errorPages.size() == 3);
   REQUIRE(serverView0.routes.at(1).errorPages.at(301) == "/httpErrorPage");
   REQUIRE(serverView0.routes.at(1).errorPages.at(401) == "/serverErrorPage");
   REQUIRE(serverView0.routes.at(1).errorPages.at(500) == "http://locationErrorPage");
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref1");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref1");
   REQUIRE(serverView1.routes.at(0).errorPages.size() == 1);
   REQUIRE(serverView1.routes.at(0).errorPages.at(301) == "https://locationErrorPage");
 }
@@ -2018,19 +2018,19 @@ TEST_CASE("return", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0;\n"
       "    return 301 /new.com;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        return 301 http://new01.com;\n"
       "      }\n"
       "  }\n"
       "  server {\n"
       "    listen 8081;\n"
       "    server_name name1;\n"
-      "    location locPref10 {\n"
+      "    location /locPref10 {\n"
       "      return http://temporary.com;\n"
       "    }\n"
-      "    location locPref11 {\n"
+      "    location /locPref11 {\n"
       "    }\n"
       "  }\n"
       "\n"
@@ -2059,19 +2059,19 @@ TEST_CASE("return", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).returnRule.has_value() == true);
   REQUIRE(serverView0.routes.at(0).returnRule->code == 301);
   REQUIRE(serverView0.routes.at(0).returnRule->target == "/new.com");
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).returnRule.has_value() == true);
   REQUIRE(serverView0.routes.at(1).returnRule->code == 301);
   REQUIRE(serverView0.routes.at(1).returnRule->target == "http://new01.com");
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref10");
   REQUIRE(serverView1.routes.at(0).returnRule.has_value() == true);
   REQUIRE(serverView1.routes.at(0).returnRule->code == 302);
   REQUIRE(serverView1.routes.at(0).returnRule->target == "http://temporary.com");
-  REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
+  REQUIRE(serverView1.routes.at(1).locationPrefix == "/locPref11");
   REQUIRE(serverView1.routes.at(1).returnRule.has_value() == false);
 }
 
@@ -2086,19 +2086,19 @@ TEST_CASE("allowed_methods", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0;\n"
       "    allowed_methods POST;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        allowed_methods DELETE;\n"
       "      }\n"
       "  }\n"
       "  server {\n"
       "    listen 8081;\n"
       "    server_name name1;\n"
-      "    location locPref10 {\n"
+      "    location /locPref10 {\n"
       "      allowed_methods GET POST DELETE;\n"
       "    }\n"
-      "    location locPref11 {\n"
+      "    location /locPref11 {\n"
       "    }\n"
       "  }\n"
       "\n"
@@ -2127,14 +2127,14 @@ TEST_CASE("allowed_methods", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).allowedMask == RouteView::MethodMask::kPost);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).allowedMask == RouteView::MethodMask::kDelete);
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref10");
   REQUIRE(serverView1.routes.at(0).allowedMask ==
           (RouteView::MethodMask::kGet | RouteView::MethodMask::kPost | RouteView::MethodMask::kDelete));
-  REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
+  REQUIRE(serverView1.routes.at(1).locationPrefix == "/locPref11");
   REQUIRE(serverView1.routes.at(1).allowedMask == RouteView::MethodMask::kGet);
 }
 
@@ -2149,18 +2149,18 @@ TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
       "    listen 8080;\n"
       "    server_name name0;\n"
       "    autoindex on;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        autoindex off;\n"
       "      }\n"
       "  }\n"
       "  server {\n"
       "    listen 8081;\n"
       "    server_name name1;\n"
-      "    location locPref10 {\n"
+      "    location /locPref10 {\n"
       "    }\n"
-      "    location locPref11 {\n"
+      "    location /locPref11 {\n"
       "      autoindex on;\n"
       "    }\n"
       "  }\n"
@@ -2190,13 +2190,13 @@ TEST_CASE("autoindex http default (off)", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).autoindex == true);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).autoindex == false);
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref10");
   REQUIRE(serverView1.routes.at(0).autoindex == false);
-  REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
+  REQUIRE(serverView1.routes.at(1).locationPrefix == "/locPref11");
   REQUIRE(serverView1.routes.at(1).autoindex == true);
 }
 
@@ -2210,9 +2210,9 @@ TEST_CASE("autoindex http on", "[ServerRegistry]")
       "  server {\n"
       "    listen 8080;\n"
       "    server_name name0;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        autoindex off;\n"
       "      }\n"
       "  }\n"
@@ -2220,9 +2220,9 @@ TEST_CASE("autoindex http on", "[ServerRegistry]")
       "    listen 8081;\n"
       "    server_name name1;\n"
       "    autoindex off;\n"
-      "    location locPref10 {\n"
+      "    location /locPref10 {\n"
       "    }\n"
-      "    location locPref11 {\n"
+      "    location /locPref11 {\n"
       "      autoindex on;\n"
       "    }\n"
       "  }\n"
@@ -2252,13 +2252,13 @@ TEST_CASE("autoindex http on", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).autoindex == true);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).autoindex == false);
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref10");
   REQUIRE(serverView1.routes.at(0).autoindex == false);
-  REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
+  REQUIRE(serverView1.routes.at(1).locationPrefix == "/locPref11");
   REQUIRE(serverView1.routes.at(1).autoindex == true);
 }
 
@@ -2271,9 +2271,9 @@ TEST_CASE("cgi", "[ServerRegistry]")
       "  server {\n"
       "    listen 8080;\n"
       "    server_name name0;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        cgi on;\n"
       "      }\n"
       "  }\n"
@@ -2302,9 +2302,9 @@ TEST_CASE("cgi", "[ServerRegistry]")
 
   const ServerView& serverView0(serverRegistry.GetServerView(0));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).cgi == false);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).cgi == true);
 }
 
@@ -2317,9 +2317,9 @@ TEST_CASE("cgi_extension", "[ServerRegistry]")
       "  server {\n"
       "    listen 8080;\n"
       "    server_name name0;\n"
-      "      location locPref00 {\n"
+      "      location /locPref00 {\n"
       "      }\n"
-      "      location locPref01 {\n"
+      "      location /locPref01 {\n"
       "        cgi_extension php /usr/bin/location-php-cgi;\n"
       "      }\n"
       "  }\n"
@@ -2328,9 +2328,9 @@ TEST_CASE("cgi_extension", "[ServerRegistry]")
       "    server_name name1;\n"
       "    cgi_extension php /usr/bin/server-php-cgi;\n"
       "    cgi_extension perl /usr/bin/server-perl;\n"
-      "    location locPref10 {\n"
+      "    location /locPref10 {\n"
       "    }\n"
-      "    location locPref11 {\n"
+      "    location /locPref11 {\n"
       "      cgi_extension py /usr/bin/location-python3;\n"
       "      cgi_extension php /usr/bin/location-php-cgi;\n"
       "    }\n"
@@ -2361,16 +2361,16 @@ TEST_CASE("cgi_extension", "[ServerRegistry]")
   const ServerView& serverView0(serverRegistry.GetServerView(0));
   const ServerView& serverView1(serverRegistry.GetServerView(1));
 
-  REQUIRE(serverView0.routes.at(0).locationPrefix == "locPref00");
+  REQUIRE(serverView0.routes.at(0).locationPrefix == "/locPref00");
   REQUIRE(serverView0.routes.at(0).cgiExePaths.has_value() == false);
-  REQUIRE(serverView0.routes.at(1).locationPrefix == "locPref01");
+  REQUIRE(serverView0.routes.at(1).locationPrefix == "/locPref01");
   REQUIRE(serverView0.routes.at(1).cgiExePaths->size() == 1);
   REQUIRE(serverView0.routes.at(1).cgiExePaths->at("php") == "/usr/bin/location-php-cgi");
-  REQUIRE(serverView1.routes.at(0).locationPrefix == "locPref10");
+  REQUIRE(serverView1.routes.at(0).locationPrefix == "/locPref10");
   REQUIRE(serverView1.routes.at(0).cgiExePaths->size() == 2);
   REQUIRE(serverView1.routes.at(0).cgiExePaths->at("php") == "/usr/bin/server-php-cgi");
   REQUIRE(serverView1.routes.at(0).cgiExePaths->at("perl") == "/usr/bin/server-perl");
-  REQUIRE(serverView1.routes.at(1).locationPrefix == "locPref11");
+  REQUIRE(serverView1.routes.at(1).locationPrefix == "/locPref11");
   REQUIRE(serverView1.routes.at(1).cgiExePaths->size() == 3);
   REQUIRE(serverView1.routes.at(1).cgiExePaths->at("perl") == "/usr/bin/server-perl");
   REQUIRE(serverView1.routes.at(1).cgiExePaths->at("py") == "/usr/bin/location-python3");

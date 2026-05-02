@@ -22,7 +22,9 @@
 
 #include "Logger.hpp"
 #include "config/RouteView.hpp"
+#include "http/HTTPUtils.hpp"
 #include "http/ResponseFactory.hpp"
+
 
 /*************************************************** Helpers **********************************************************/
 namespace request_handler
@@ -363,7 +365,7 @@ namespace request_handler
       href += name;
       if (isDir)
         href.push_back('/');
-      html << "<li><a href='" << href << "'>" << name << (isDir ? "/" : "") << "</a></li>";
+      html << "<li><a href='" << HTTP::wire::URLEncode(href) << "'>" << name << (isDir ? "/" : "") << "</a></li>";
     }
     if (ec)
       return Response::MakeError(IsPermDenied(ec) ? Status::kForbidden : Status::kInternalServerError);
@@ -455,14 +457,13 @@ namespace request_handler
 
   std::optional<fs::path> ResolvePath(const RouteView& route, std::string_view path)
   {
-	  
-	  std::string_view tail = route.alias.has_value() ? ComputeRouteTail(path, route.locationPrefix) : path;
-	  if (tail.empty())
-		return std::nullopt;
-	  
+    std::string_view tail = route.alias.has_value() ? ComputeRouteTail(path, route.locationPrefix) : path;
+    if (tail.empty())
+      return std::nullopt;
+
     while (!tail.empty() && tail.front() == '/')
       tail.remove_prefix(1);
-	
+
     std::error_code ec;
     fs::path base = route.alias ? fs::weakly_canonical(*route.alias, ec) : fs::weakly_canonical(route.root, ec);
 
@@ -503,7 +504,11 @@ namespace request_handler
     if (info.isDir)
     {
       if (!urlPath.empty() && urlPath.back() != '/')
-        return Response::MakeRedirect(Status::kMovedPermanently, std::string(urlPath) + "/");
+      {
+        std::string location(urlPath);
+        location.push_back('/');
+        return Response::MakeRedirect(Status::kMovedPermanently, HTTP::wire::URLEncode(location));
+      }
 
       if (!info.canRead || !info.canExecute)
         return Response::MakeError(Status::kForbidden);

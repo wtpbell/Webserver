@@ -39,7 +39,7 @@ namespace HTTP
 
       for (unsigned char c : str)
       {
-        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~' || c == '/')
           result.push_back(static_cast<char>(c));
         else
           String::AppendHex(result, c);
@@ -56,20 +56,16 @@ namespace HTTP
       {
         if (str[i] == '%' && i + 2 < str.size())
         {
-          unsigned int byte{0};
-          const char* start = str.data() + i + 1;
+          std::size_t byte = 0;
 
-          if (String::ConvertToNumber(std::string_view(start, 2), reinterpret_cast<std::size_t&>(byte), 16) &&
-              byte <= 0xFF)
+          if (String::ConvertToNumber(str.substr(i + 1, 2), byte, 16) && byte <= 0xFF)
           {
             result.push_back(static_cast<char>(byte));
             i += 2;
+            continue;
           }
         }
-        if (str[i] == '+')
-          result.push_back(' ');
-        else
-          result.push_back(str[i]);
+        result.push_back(str[i]);
       }
       return result;
     }

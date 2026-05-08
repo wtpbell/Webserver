@@ -27,6 +27,7 @@
 #include <string_view>
 #include <utility>
 
+#include "Logger.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "io/SharedFD.hpp"
 #include "string.hpp"

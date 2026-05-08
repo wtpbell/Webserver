@@ -43,7 +43,7 @@ timespec GetNow(void)
 TEST_CASE("Create TimerFD with 1500ms duration", "[TimerFD]")
 {
   int delay = 1500;
-  Expected<TimerFD, int> timerfd = TimerFD::CreateRealtimeClock(delay, 0);
+  Expected<TimerFD, int> timerfd = TimerFD::CreateMonotonicClock(delay, 0);
 
   if (!timerfd.HasValue())
   {
@@ -64,7 +64,7 @@ TEST_CASE("Create TimerFD with 1500ms duration", "[TimerFD]")
 TEST_CASE("Create TimerFD with 250ms duration", "[TimerFD]")
 {
   int delay = 250;
-  Expected<TimerFD, int> timerfd = TimerFD::CreateRealtimeClock(delay, 0);
+  Expected<TimerFD, int> timerfd = TimerFD::CreateMonotonicClock(delay, 0);
 
   if (!timerfd.HasValue())
   {
@@ -85,7 +85,7 @@ TEST_CASE("Create TimerFD with 250ms duration", "[TimerFD]")
 TEST_CASE("Create TimerFD with 25847ms duration", "[TimerFD]")
 {
   int delay = 25847;
-  Expected<TimerFD, int> timerfd = TimerFD::CreateRealtimeClock(delay, 0);
+  Expected<TimerFD, int> timerfd = TimerFD::CreateMonotonicClock(delay, 0);
 
   if (!timerfd.HasValue())
   {
@@ -106,7 +106,7 @@ TEST_CASE("Create TimerFD with 25847ms duration", "[TimerFD]")
 TEST_CASE("Create TimerFD with 0ms duration", "[TimerFD]")
 {
   int delay = 0;
-  Expected<TimerFD, int> timerfd = TimerFD::CreateRealtimeClock(delay, 0);
+  Expected<TimerFD, int> timerfd = TimerFD::CreateMonotonicClock(delay, 0);
 
   if (!timerfd.HasValue())
   {
@@ -127,7 +127,7 @@ TEST_CASE("Create TimerFD with 12435ms duration and 11734ms interval", "[TimerFD
 {
   int delay = 12435;
   int interval = 11734;
-  Expected<TimerFD, int> timerfd = TimerFD::CreateRealtimeClock(delay, interval);
+  Expected<TimerFD, int> timerfd = TimerFD::CreateMonotonicClock(delay, interval);
 
   if (!timerfd.HasValue())
   {
@@ -149,7 +149,7 @@ TEST_CASE("SetTime multiple times", "[TimerFD]")
 {
   int delay = 12435;
   int interval = 11734;
-  Expected<TimerFD, int> timerfd = TimerFD::CreateRealtimeClock(delay, interval);
+  Expected<TimerFD, int> timerfd = TimerFD::CreateMonotonicClock(delay, interval);
 
   if (!timerfd.HasValue())
   {

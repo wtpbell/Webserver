@@ -10,7 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <chrono>
+#include <sys/epoll.h>
+
+#include <cerrno>
 #include <csignal>
 #include <cstdlib>
 #include <filesystem>
@@ -18,175 +20,240 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <thread>
 
+#include "EpollManager.hpp"
+#include "Logger.hpp"
 #include "cgi/CGI.hpp"
+#include "cgi/CGIError.hpp"
 #include "cgi/CGIProcess.hpp"
+#include "cgi/CGIRequest.hpp"
+#include "config/RouteView.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
+#include "io/TimerFD.hpp"
+#include "webserv.hpp"
 
 #define BUF_SIZE 1024
 
 namespace FileSystem = std::filesystem;
 
-enum ExitCode
+namespace  // Exit
 {
-  kSuccess = EXIT_SUCCESS,
-  kFailure = EXIT_FAILURE,
-  kFailedToCreateHTTPRequest = 3,  // safe exit code range is from 3-125
-  kCGIScriptNotFound = 4,
-  kCGIScriptIsSymlink,
-  kCGIScriptIsDirectory,
-  kCGIScriptMissingPermission,
-  kCGIForkFailure,
-  kCGIRedirectionFailure,
-  kCGIScriptFailureToExec,
-  kCGISocketPairFailure,
-  kCGIScriptTimeOut,
-  kCGIInvalidResponse,
-};
-
-class StopWatch
-{
-  public:
-    void Start(std::chrono::milliseconds max_duration)
-    {
-      timed_out = false;
-      max_duration_ = max_duration;
-      start_ = std::chrono::high_resolution_clock::now();
-    }
-
-    bool Tick(void)
-    {
-      clock end = std::chrono::high_resolution_clock::now();
-      timed_out = (end - start_) >= max_duration_;
-      return !timed_out;
-    }
-
-    bool TimedOut(void) const noexcept
-    {
-      return timed_out;
-    }
-
-    using clock = std::chrono::time_point<std::chrono::system_clock>;
-    using milliseconds = std::chrono::milliseconds;
-
-  private:
-    milliseconds max_duration_;
-    clock start_;
-    bool timed_out;
-};
-
-FileSystem::path GetRootPathTo(std::string_view dir)
-{
-  return {FileSystem::current_path() / dir};
-}
-
-std::string GetRawRequest(void)
-{
-  char buffer[BUF_SIZE];
-  std::string message;
-
-  while (std::cin.good() && std::cin.get(buffer, BUF_SIZE, '\0'))
-    message.append(buffer);
-  return message;
-}
-
-std::optional<HTTPRequest> CreateHTTPRequest(std::string_view message)
-{
-  HTTPParser parser;
-
-  auto result = parser.Parse(message);
-  if (result == HTTPParser::ParseResult::kError || result == HTTPParser::ParseResult::kNeedMoreData)
-    return std::nullopt;
-
-  const HTTPRequest& request = parser.GetRequest();
-  if (parser.NeedsBodyDecision())
+  enum ExitCode  // TODO: compare with cgi error
   {
-    if (request.HasHeader("transfer-encoding"))
-      parser.SetChunked();
-    else if (request.GetContentLength())
-      parser.SetContentLength(request.GetContentLength().value());
-    else
-      parser.SetNoBody();
-    parser.Parse("");
+    kSuccess = EXIT_SUCCESS,
+    kFailure = EXIT_FAILURE,
+    kFailedToCreateHTTPRequest = 3,  // safe exit code range is from 3-125
+    kFailedToCreateTimerFd,
+    kFailedToRegisterFd,
+    kFailedEventLoop,
+    kCGIScriptNotFound = 7,
+    kCGIScriptMissingPermission,
+    kCGIForkFailure,
+    kCGIScriptFailureToExec,
+    kCGISocketPairFailure,
+    kScriptForbidden,
+    kInvalidResponse,
+    kCGIScriptTimeOut
+  };
+
+  ExitCode ToExitCode(cgi::CGIErrorCode cgiErrorCode)
+  {
+    return static_cast<ExitCode>(ExitCode::kCGIScriptNotFound + (static_cast<int>(cgiErrorCode) - 1));
   }
 
-  if (parser.HasError())
-    return std::nullopt;
-  return request;
-}
+  std::atomic<int> g_exitCode;
+}  // namespace
 
-int HandleProcess(cgi::CGIProcess& process)
+namespace  // HELPERS
 {
-  using namespace std::chrono_literals;
-  StopWatch stop_watch;
-
-  stop_watch.Start(2000ms);
-  while (stop_watch.Tick() && !process.IsError() && !process.IsCompleted())
+  FileSystem::path GetRootPathTo(std::string_view dir)
   {
-    switch (process.GetState())
+    return {FileSystem::current_path() / dir};
+  }
+
+  std::string GetRawRequest(void)
+  {
+    char buffer[BUF_SIZE];
+    std::string message;
+
+    while (std::cin.good() && std::cin.get(buffer, BUF_SIZE, '\0'))
     {
-      case cgi::CGIProcess::CGIState::kSendRequest:
-        process.SendRequest();
-        break;
-      case cgi::CGIProcess::CGIState::kAwaitResponse:
-        process.AwaitResponse();
-        break;
-      case cgi::CGIProcess::CGIState::kWaitPid:
-        process.WaitPid();
-        break;
-      default:
-        return ExitCode::kCGIScriptTimeOut;
-        break;
+      message.append(buffer);
     }
-    std::this_thread::sleep_for(50ms);
+    return message;
   }
 
-  if (stop_watch.TimedOut())
+  std::optional<HTTPRequest> CreateHTTPRequest(std::string_view message)
   {
-    return ExitCode::kCGIScriptTimeOut;
-  }
+    HTTPParser parser;
 
-  if (process.IsError())
-  {
-    return ExitCode::kFailure;
-  }
+    auto result = parser.Parse(message);
+    if (result == HTTPParser::ParseResult::kError || result == HTTPParser::ParseResult::kNeedMoreData)
+      return std::nullopt;
 
-  if (process.GetWaitStatus() == 0)
-  {
-    if (process.GetResponse().GetStatus().status_code >= 500)
+    const HTTPRequest& request = parser.GetRequest();
+    if (parser.NeedsBodyDecision())
     {
-      return ExitCode::kCGIInvalidResponse;
+      if (request.HasHeader("transfer-encoding"))
+        parser.SetChunked();
+      else if (request.GetContentLength())
+        parser.SetContentLength(request.GetContentLength().value());
+      else
+        parser.SetNoBody();
+      parser.Parse("");
     }
-    std::cout << process.GetResponse() << std::endl;
-    return 0;
+
+    if (parser.HasError())
+      return std::nullopt;
+    return request;
+  }
+}  // namespace
+
+namespace  // EVENT HANDLERS
+{
+  void HandleTimeout(EpollManager& epollManager, const epoll_event& event)
+  {
+    (void)epollManager, (void)event;
+    std::cerr << "HandleTimeout: Time out occcured!" << std::endl;
+    g_shutdown.store(true);
+    g_exitCode.store(ExitCode::kCGIScriptTimeOut);
   }
 
-  return process.GetWaitStatus();
-}
+  void HandleProcess(cgi::CGIProcess& cgiProcess, EpollManager& epollManager, const epoll_event& event)
+  {
+    using CGIState = cgi::CGIProcess::CGIState;
+    using ReturnState = cgi::CGIProcess::ReturnState;
+
+    Logger::SetLogFilter(LogLevel::NONE);
+
+    (void)epollManager;
+    if (event.events & EPOLLERR)
+    {
+      g_shutdown.store(true);
+      g_exitCode.store(ExitCode::kFailure);
+      std::cerr << "HandleProcess: event error!" << std::endl;
+      return;
+    }
+
+    if (event.events & EPOLLOUT && cgiProcess.GetState() == CGIState::kRunning)
+    {
+      if (cgiProcess.SendRequest() == ReturnState::kFail)
+      {
+        std::cerr << "HandleProcess: SendRequest error!" << errno << std::endl;
+      }
+    }
+    if (event.events & EPOLLIN && cgiProcess.GetState() == CGIState::kRunning)
+    {
+      if (cgiProcess.AwaitResponse() == ReturnState::kFail)
+      {
+        std::cerr << "HandleProcess: AwaitResponse error!" << errno << std::endl;
+      }
+    }
+
+    if (cgiProcess.GetState() == CGIState::kWaitPid)
+    {
+      cgiProcess.WaitPid();
+    }
+
+    if (cgiProcess.IsCompleted())
+    {
+      const int waitStatus = cgiProcess.GetWaitStatus();
+      auto cgiResponse = cgiProcess.ParseCGIResponse();
+      if (waitStatus != 0)
+      {
+        g_exitCode.store(waitStatus);
+      }
+      else if (!cgiResponse.has_value())
+      {
+        g_exitCode.store(ExitCode::kInvalidResponse);
+      }
+      else
+      {
+        std::cout << *cgiResponse << std::endl;
+      }
+      g_shutdown.store(true);
+    }
+    else if (cgiProcess.IsError())
+    {
+      g_shutdown.store(true);
+      g_exitCode.store(ExitCode::kFailure);
+      std::cerr << "HandleProcess: process error!" << std::endl;
+    }
+  }
+}  // namespace
 
 int main(void)
 {
   // Read in the request
-  std::string raw_request{GetRawRequest()};
-  if (raw_request.empty() || std::cin.fail())
+  std::string rawRequest{GetRawRequest()};
+  if (rawRequest.empty() || std::cin.fail())
     return ExitCode::kFailure;
 
-  // Parse the request
-  auto http_request = CreateHTTPRequest(raw_request);
-  if (!http_request.has_value())
-    return ExitCode::kFailedToCreateHTTPRequest;
-
-  // Start up the CGI process
-  auto process =
-      cgi::ExecuteCGI(http_request.value(), {GetRootPathTo("tests/cgi-bin")}, "127.0.0.1:8080", "127.0.0.2:8080");
-  if (!process.HasValue())
+  setupSignals();
+  EpollManager epollManager;
+  if (epollManager.Init() != EpollManager::Result::kOk)
   {
-    return ExitCode::kCGIScriptNotFound + (static_cast<int>(process.GetError()) - 1);
+    return ExitCode::kFailure;
   }
 
-  // Process the cgi
-  std::signal(SIGPIPE, SIG_IGN);
-  return HandleProcess(process.GetValue());
+  // Parse the request
+  auto httpRequest = CreateHTTPRequest(rawRequest);
+  if (!httpRequest.has_value())
+    return ExitCode::kFailedToCreateHTTPRequest;
+
+  const cgi::IpPort ipPort{"127.0.0.1", "8080"};
+  RouteView route;
+  route.locationPrefix = "/cgi-bin";
+  route.alias.emplace(GetRootPathTo("tests/cgi-bin"));
+  route.cgi = true;
+
+  auto cgiRoute = cgi::SetupCGIRoute(httpRequest->GetPath(), route);
+  if (!cgiRoute.HasValue())
+  {
+    return ToExitCode(cgiRoute.GetError());
+  }
+
+  // Start up the CGI process
+  cgi::CGIRequest cgiRequest{httpRequest.value(), cgiRoute.GetValue(), ipPort, "127.0.0.2:8080", route};
+  auto expCgiProcess = cgi::ExecuteCGI(std::move(cgiRequest));
+  if (!expCgiProcess.HasValue())
+  {
+    return ToExitCode(expCgiProcess.GetError());
+  }
+
+  cgi::CGIProcess cgiProcess{expCgiProcess.ExtractValue()};
+  auto callbackHandleProcess = [&cgiProcess](EpollManager& epollManager, const epoll_event& event)
+  {
+    HandleProcess(cgiProcess, epollManager, event);
+  };
+
+  auto callbackTimeOut = [](EpollManager& epollManager, const epoll_event& event)
+  {
+    HandleTimeout(epollManager, event);
+  };
+
+  auto timerFd = TimerFD::CreateMonotonicClock(2000, 500);
+  if (!timerFd.HasValue())
+  {
+    return ExitCode::kFailedToCreateTimerFd;
+  }
+
+  if (epollManager.AddFd(timerFd->GetFD(), EPOLLIN, callbackTimeOut) != EpollManager::Result::kOk)
+  {
+    return ExitCode::kFailedToRegisterFd;
+  }
+
+  if (epollManager.AddFd(cgiProcess.GetSocket().GetFD(), EPOLLIN | EPOLLOUT, callbackHandleProcess) !=
+      EpollManager::Result::kOk)
+  {
+    return ExitCode::kFailedToRegisterFd;
+  }
+
+  g_exitCode.store(ExitCode::kSuccess);
+  if (epollManager.EventLoop() != EpollManager::Result::kOk)
+  {
+    return ExitCode::kFailedEventLoop;
+  }
+  return g_exitCode;
 }

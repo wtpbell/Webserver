@@ -10,6 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#ifndef TIMERFD_H_
+#define TIMERFD_H_
+
 #include <time.h>
 
 #include "Expected.hpp"
@@ -26,7 +29,7 @@ class TimerFD : public SharedFD
     TimerFD& operator=(const TimerFD& rhs) = default;
     TimerFD& operator=(TimerFD&& rhs) noexcept = default;
 
-    static Expected<TimerFD, int> CreateRealtimeClock(time_t ms_duration, time_t ms_interval);
+    static Expected<TimerFD, int> CreateMonotonicClock(time_t ms_duration, time_t ms_interval);
     bool SetTime(void);
 
   private:
@@ -36,3 +39,4 @@ class TimerFD : public SharedFD
     time_t ms_duration_;
     time_t ms_interval_;
 };
+#endif  //  TIMERFD_H_

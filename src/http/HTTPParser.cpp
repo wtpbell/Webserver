@@ -17,7 +17,6 @@
 #include <string>
 #include <string_view>
 
-#include "Logger.hpp"
 #include "http/BodySink.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPTypes.hpp"
@@ -189,8 +188,6 @@ bool HTTPParser::ParseRequestLine(const std::size_t lineStart, std::size_t lineE
   std::string_view version(buffer_.data() + i, lineEnd - i);
   if (version.find(' ') != std::string::npos)
     return (Fail(), false);
-  // TODO(VALIDATE): method support checks (501 vs 400)
-  // if (!HTTPValidation::Method(method)) return Fail();
   req_.SetMethod(method);
   if (!req_.SetTarget(target))
     return (Fail(), false);
@@ -464,10 +461,7 @@ bool HTTPParser::ParseChunked()
 HTTPParser::ParseResult HTTPParser::ExitResult()
 {
   if (state_ == ParserState::kDone)
-  {
-    req_.SetComplete(true);
     return ParseResult::kDone;
-  }
   if (state_ == ParserState::kError)
     return ParseResult::kError;
   if (state_ == ParserState::kAwaitBodyDecision)

@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/24 17:21:57 by jboon         #+#    #+#                 */
-/*   Updated: 2026/03/17 00:26:53 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/26 15:21:41 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include "catch_amalgamated.hpp"
 #include "cgi/CGIParser.hpp"
+#include "cgi/CGIResponse.hpp"
 
 namespace
 {
@@ -262,7 +263,7 @@ TEST_CASE("CGI parse without status field", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Connection: Keep-Alive\n"
       "X-CGI-Type: Some custom data here\n"
       "\n"
@@ -270,19 +271,19 @@ TEST_CASE("CGI parse without status field", "[cgi][CGIParser]")
 
   std::string_view raw_body{"hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 200);
-  REQUIRE(cgi_response->GetStatus().reason == "OK");
-  REQUIRE(cgi_response->GetBody() == raw_body);
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 200);
+  REQUIRE(cgiResponse->GetStatus().reason == "OK");
+  REQUIRE(cgiResponse->GetBody() == raw_body);
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain; charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
-  REQUIRE(cgi_response->GetCookies().empty());
+  REQUIRE(cgiResponse->GetCookies().empty());
 }
 
 TEST_CASE("CGI parse with status field", "[cgi][CGIParser]")
@@ -290,7 +291,7 @@ TEST_CASE("CGI parse with status field", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 404 Page not found\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Connection: Keep-Alive\n"
       "X-CGI-Type: Some custom data here\n"
       "\n"
@@ -298,19 +299,19 @@ TEST_CASE("CGI parse with status field", "[cgi][CGIParser]")
 
   std::string_view raw_body{"hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 404);
-  REQUIRE(cgi_response->GetStatus().reason == "Page not found");
-  REQUIRE(cgi_response->GetBody() == raw_body);
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE(cgiResponse->GetStatus().reason == "Page not found");
+  REQUIRE(cgiResponse->GetBody() == raw_body);
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain; charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
-  REQUIRE(cgi_response->GetCookies().empty());
+  REQUIRE(cgiResponse->GetCookies().empty());
 }
 
 TEST_CASE("CGI parse with status (code, no reason) field", "[cgi][CGIParser]")
@@ -318,7 +319,7 @@ TEST_CASE("CGI parse with status (code, no reason) field", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 403\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Connection: Keep-Alive\n"
       "X-CGI-Type: Some custom data here\n"
       "\n"
@@ -326,44 +327,45 @@ TEST_CASE("CGI parse with status (code, no reason) field", "[cgi][CGIParser]")
 
   std::string_view raw_body{"hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 403);
-  REQUIRE(cgi_response->GetStatus().reason == "");
-  REQUIRE(cgi_response->GetBody() == raw_body);
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 403);
+  REQUIRE(cgiResponse->GetStatus().reason == "");
+  REQUIRE(cgiResponse->GetBody() == raw_body);
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain; charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
-  REQUIRE(cgi_response->GetCookies().empty());
+  REQUIRE(cgiResponse->GetCookies().empty());
 }
 
 TEST_CASE("CGI parse weirdly formatted", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
-      "Server: \t   webserve/cgi\n"
+      "Server: \t   webserv/cgi\n"
       "Status:  302 Redirect Me                 \n"
       "Connection: Keep-Alive  \n"
       "Content-Type:\ttext/plain;     \t   charset=utf-8\t\t\n"
       "X-CGI-Type:   Some custom data here \t\t\t\t\n"
-      "\n"};
+      "\n"
+      "Redirecting...\n"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 302);
-  REQUIRE(cgi_response->GetStatus().reason == "Redirect Me");
-  REQUIRE(cgi_response->GetBody() == "");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 302);
+  REQUIRE(cgiResponse->GetStatus().reason == "Redirect Me");
+  REQUIRE(cgiResponse->GetBody() == "Redirecting...\n");
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain;     \t   charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
-  REQUIRE(cgi_response->GetCookies().empty());
+  REQUIRE(cgiResponse->GetCookies().empty());
 }
 
 TEST_CASE("CGI parse response with multi value", "[cgi][CGIParser]")
@@ -375,22 +377,22 @@ TEST_CASE("CGI parse response with multi value", "[cgi][CGIParser]")
 
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Connection: Keep-Alive\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "X-CGI-Type: Some custom data here\n"
       "\n"
       "hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 200);
-  REQUIRE(cgi_response->GetStatus().reason == "OK");
-  REQUIRE(cgi_response->GetBody() == "hello, world! What a beautiful day it is for some unit tests!");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 200);
+  REQUIRE(cgiResponse->GetStatus().reason == "OK");
+  REQUIRE(cgiResponse->GetBody() == "hello, world! What a beautiful day it is for some unit tests!");
 
-  const auto& headers = cgi_response->GetHeaders();
-  REQUIRE(has_header_entry(headers, "Server", "webserve/cgi, webserve/cgi"));
-  REQUIRE(cgi_response->GetCookies().empty());
+  const auto& headers = cgiResponse->GetHeaders();
+  REQUIRE(has_header_entry(headers, "Server", "webserv/cgi, webserv/cgi"));
+  REQUIRE(cgiResponse->GetCookies().empty());
 }
 
 TEST_CASE("CGI parse empty raw response", "[cgi][CGIParser]")
@@ -398,8 +400,8 @@ TEST_CASE("CGI parse empty raw response", "[cgi][CGIParser]")
   auto raw_response =
       GENERATE(as<std::string_view>{}, "", "\n", "\n\n  \n                \n", " ", "                            ");
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("Status header mispelled", "[cgi][CGIParser]")
@@ -407,14 +409,14 @@ TEST_CASE("Status header mispelled", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Stetus: 404 Page not found\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE_FALSE(cgi_response->GetStatus().status_code == 404);
-  REQUIRE_FALSE(cgi_response->GetStatus().reason == "Page not found");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE_FALSE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE_FALSE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("Status header lowercase", "[cgi][CGIParser]")
@@ -422,14 +424,14 @@ TEST_CASE("Status header lowercase", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "status: 404 Page not found\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE_FALSE(cgi_response->GetStatus().status_code == 404);
-  REQUIRE_FALSE(cgi_response->GetStatus().reason == "Page not found");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE_FALSE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE_FALSE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("Status header uppercase", "[cgi][CGIParser]")
@@ -437,29 +439,29 @@ TEST_CASE("Status header uppercase", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "STATUS: 404 Page not found\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE_FALSE(cgi_response->GetStatus().status_code == 404);
-  REQUIRE_FALSE(cgi_response->GetStatus().reason == "Page not found");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE_FALSE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE_FALSE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("Status header as final header field", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Status: 404 Page not found\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 404);
-  REQUIRE(cgi_response->GetStatus().reason == "Page not found");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("Status header as first header field", "[cgi][CGIParser]")
@@ -467,14 +469,14 @@ TEST_CASE("Status header as first header field", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Status: 404 Page not found\n"
       "Content-Type: text/plain; charset=utf-8\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 404);
-  REQUIRE(cgi_response->GetStatus().reason == "Page not found");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("CGI parse ill formed - Lowercase content-type", "[cgi][CGIParser]")
@@ -485,8 +487,8 @@ TEST_CASE("CGI parse ill formed - Lowercase content-type", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Content-[t]ype", "[cgi][CGIParser]")
@@ -497,8 +499,8 @@ TEST_CASE("CGI parse ill formed - Content-[t]ype", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Content-Type misspelled", "[cgi][CGIParser]")
@@ -509,8 +511,8 @@ TEST_CASE("CGI parse ill formed - Content-Type misspelled", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Content-[type]:", "[cgi][CGIParser]")
@@ -521,8 +523,8 @@ TEST_CASE("CGI parse ill formed - Content-[type]:", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Leading whitespace at header", "[cgi][CGIParser]")
@@ -530,12 +532,12 @@ TEST_CASE("CGI parse ill formed - Leading whitespace at header", "[cgi][CGIParse
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 200 KO\n"
-      "   Server: webserve/cgi\n"
+      "   Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Trailing whitespace at header", "[cgi][CGIParser]")
@@ -543,25 +545,25 @@ TEST_CASE("CGI parse ill formed - Trailing whitespace at header", "[cgi][CGIPars
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 200 KO\n"
-      "Server   : webserve/cgi\n"
+      "Server   : webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - No newline between headers", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
-      "Server: webserve/cgi "
+      "Server: webserv/cgi "
       "Content-Type: text/plain; charset=utf-8 "
       "Status: 204 KO"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Status with no digits", "[cgi][CGIParser]")
@@ -569,12 +571,12 @@ TEST_CASE("CGI parse ill formed - Status with no digits", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: xxx KO\n"
-      "Server   : webserve/cgi\n"
+      "Server   : webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Missing digits for status", "[cgi][CGIParser]")
@@ -585,8 +587,8 @@ TEST_CASE("CGI parse ill formed - Missing digits for status", "[cgi][CGIParser]"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Single digit for status", "[cgi][CGIParser]")
@@ -597,8 +599,8 @@ TEST_CASE("CGI parse ill formed - Single digit for status", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - double digit for status", "[cgi][CGIParser]")
@@ -609,8 +611,8 @@ TEST_CASE("CGI parse ill formed - double digit for status", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - quad digits for status", "[cgi][CGIParser]")
@@ -621,8 +623,8 @@ TEST_CASE("CGI parse ill formed - quad digits for status", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Status without separator", "[cgi][CGIParser]")
@@ -633,8 +635,8 @@ TEST_CASE("CGI parse ill formed - Status without separator", "[cgi][CGIParser]")
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Status with non-printables", "[cgi][CGIParser]")
@@ -645,8 +647,8 @@ TEST_CASE("CGI parse ill formed - Status with non-printables", "[cgi][CGIParser]
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - No header-value separator", "[cgi][CGIParser]")
@@ -654,12 +656,12 @@ TEST_CASE("CGI parse ill formed - No header-value separator", "[cgi][CGIParser]"
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 200 KO\n"
-      "Server webserve/cgi\n"
+      "Server webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Missing newline separator", "[cgi][CGIParser]")
@@ -667,24 +669,24 @@ TEST_CASE("CGI parse ill formed - Missing newline separator", "[cgi][CGIParser]"
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8"
       "Status: 204 KO\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - No Content-Type or Location header", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Status: 201 KO\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Duplicate Content-Type", "[cgi][CGIParser]")
@@ -692,27 +694,27 @@ TEST_CASE("CGI parse ill formed - Duplicate Content-Type", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 201 KO\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Content-Type: text/plain; charset=utf-8\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Duplicate Status", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Status: 201 KO\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Content-Type: text/plain; charset=utf-8\n"
       "Status: 404 Page not found\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Duplicate Location", "[cgi][CGIParser]")
@@ -720,14 +722,14 @@ TEST_CASE("CGI parse ill formed - Duplicate Location", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Status: 201 KO\n"
       "Location: /index.html\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Content-Type: text/plain; charset=utf-8\n"
       "Location: http://localhost\n"
       "\n"
       "SOMEBODY ONCE TOLD ME ..."};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Missing ending newline", "[cgi][CGIParser]")
@@ -735,11 +737,11 @@ TEST_CASE("CGI parse ill formed - Missing ending newline", "[cgi][CGIParser]")
   std::string_view raw_response{
       "Status: 201 KO\n"
       "Location: /index.html\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Content-Type: text/plain; charset=utf-8\n"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Ending newline is not empty", "[cgi][CGIParser]")
@@ -747,12 +749,12 @@ TEST_CASE("CGI parse ill formed - Ending newline is not empty", "[cgi][CGIParser
   std::string_view raw_response{
       "Status: 201 KO\n"
       "Location: /index.html\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Content-Type: text/plain; charset=utf-8\n"
       " \n"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgi_response.has_value());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE_FALSE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse with empty body", "[cgi][CGIParser]")
@@ -762,12 +764,13 @@ TEST_CASE("CGI parse with empty body", "[cgi][CGIParser]")
       "Status: 202 Awesome\n"
       "\n"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetBody().empty());
-  REQUIRE(HasHeaderEntry(cgi_response->GetHeaders(), "Content-Type", "text/plain; charset=utf-8"));
-  REQUIRE(cgi_response->GetStatus().status_code == 202);
-  REQUIRE(cgi_response->GetStatus().reason == "Awesome");
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  CAPTURE(cgiResponse.value());
+  REQUIRE(cgiResponse->GetBody().empty());
+  REQUIRE(HasHeaderEntry(cgiResponse->GetHeaders(), "Content-Type", "text/plain; charset=utf-8"));
+  REQUIRE(cgiResponse->GetStatus().status_code == 202);
+  REQUIRE(cgiResponse->GetStatus().reason == "Awesome");
 }
 
 TEST_CASE("CGI parse with relative Location", "[cgi][CGIParser]")
@@ -776,14 +779,16 @@ TEST_CASE("CGI parse with relative Location", "[cgi][CGIParser]")
       "Location: /index.html\n"
       "\n"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetBody().empty());
-  REQUIRE(HasHeaderEntry(cgi_response->GetHeaders(), "Location", "/index.html"));
-  REQUIRE(cgi_response->GetStatus().status_code == 302);
-  REQUIRE(cgi_response->GetStatus().reason == "Found");
-  REQUIRE(cgi_response->IsLocalRedirect());
-  REQUIRE(cgi_response->LocalTarget() == "/index.html");
+  std::optional<cgi::CGIResponse> cgiResponse{cgi::CGIParser::Parse(raw_response)};
+  REQUIRE(cgiResponse.has_value());
+  CAPTURE(cgiResponse.value());
+  REQUIRE(cgiResponse->GetBody() == "Moved Permanently\n");
+  REQUIRE(HasHeaderEntry(cgiResponse->GetHeaders(), "Location", "/index.html"));
+  REQUIRE(HasHeaderEntry(cgiResponse->GetHeaders(), "Content-Type", "text/plain; charset=utf-8"));
+  REQUIRE(cgiResponse->GetStatus().status_code == 301);
+  REQUIRE(cgiResponse->GetStatus().reason == "Moved Permanently");
+  REQUIRE(cgiResponse->LocalRedirectTarget().has_value());
+  REQUIRE(cgiResponse->LocalRedirectTarget() == "/index.html");
 }
 
 TEST_CASE("CGI parse with absolute-uri Location", "[cgi][CGIParser]")
@@ -792,20 +797,22 @@ TEST_CASE("CGI parse with absolute-uri Location", "[cgi][CGIParser]")
       "Location: https://google.com\n"
       "\n"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetBody().empty());
-  REQUIRE(HasHeaderEntry(cgi_response->GetHeaders(), "Location", "https://google.com"));
-  REQUIRE(cgi_response->GetStatus().status_code == 302);
-  REQUIRE(cgi_response->GetStatus().reason == "Found");
-  REQUIRE_FALSE(cgi_response->IsLocalRedirect());
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  CAPTURE(cgiResponse.value());
+  REQUIRE(HasHeaderEntry(cgiResponse->GetHeaders(), "Location", "https://google.com"));
+  REQUIRE(cgiResponse->GetBody() == "Found\n");
+  REQUIRE(HasHeaderEntry(cgiResponse->GetHeaders(), "Content-Type", "text/plain; charset=utf-8"));
+  REQUIRE(cgiResponse->GetStatus().status_code == 302);
+  REQUIRE(cgiResponse->GetStatus().reason == "Found");
+  REQUIRE_FALSE(cgiResponse->LocalRedirectTarget().has_value());
 }
 
 TEST_CASE("CGI parse with \\r\\n", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\r\n"
-      "Server: webserve/cgi\r\n"
+      "Server: webserv/cgi\r\n"
       "Connection: Keep-Alive\r\n"
       "X-CGI-Type: Some custom data here\r\n"
       "\r\n"
@@ -813,16 +820,17 @@ TEST_CASE("CGI parse with \\r\\n", "[cgi][CGIParser]")
 
   std::string_view raw_body{"hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 200);
-  REQUIRE(cgi_response->GetStatus().reason == "OK");
-  REQUIRE(cgi_response->GetBody() == raw_body);
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  CAPTURE(cgiResponse.value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 200);
+  REQUIRE(cgiResponse->GetStatus().reason == "OK");
+  REQUIRE(cgiResponse->GetBody() == raw_body);
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain; charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
 }
@@ -831,7 +839,7 @@ TEST_CASE("CGI parse with mixed \\r\\n", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
-      "Server: webserve/cgi\r\n"
+      "Server: webserv/cgi\r\n"
       "Connection: Keep-Alive\n"
       "X-CGI-Type: Some custom data here\r\n"
       "\n"
@@ -839,16 +847,17 @@ TEST_CASE("CGI parse with mixed \\r\\n", "[cgi][CGIParser]")
 
   std::string_view raw_body{"hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 200);
-  REQUIRE(cgi_response->GetStatus().reason == "OK");
-  REQUIRE(cgi_response->GetBody() == raw_body);
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  CAPTURE(cgiResponse.value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 200);
+  REQUIRE(cgiResponse->GetStatus().reason == "OK");
+  REQUIRE(cgiResponse->GetBody() == raw_body);
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain; charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
 }
@@ -857,7 +866,7 @@ TEST_CASE("CGI parse with cookies", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Content-Type: text/plain; charset=utf-8\n"
-      "Server: webserve/cgi\n"
+      "Server: webserv/cgi\n"
       "Connection: Keep-Alive\n"
       "X-CGI-Type: Some custom data here\n"
       "Set-Cookie: cookie1=value1\n"
@@ -867,19 +876,20 @@ TEST_CASE("CGI parse with cookies", "[cgi][CGIParser]")
 
   std::string_view raw_body{"hello, world! What a beautiful day it is for some unit tests!"};
 
-  auto cgi_response = cgi::CGIParser::Parse(raw_response);
-  REQUIRE(cgi_response.has_value());
-  REQUIRE(cgi_response->GetStatus().status_code == 200);
-  REQUIRE(cgi_response->GetStatus().reason == "OK");
-  REQUIRE(cgi_response->GetBody() == raw_body);
+  auto cgiResponse = cgi::CGIParser::Parse(raw_response);
+  REQUIRE(cgiResponse.has_value());
+  CAPTURE(cgiResponse.value());
+  REQUIRE(cgiResponse->GetStatus().status_code == 200);
+  REQUIRE(cgiResponse->GetStatus().reason == "OK");
+  REQUIRE(cgiResponse->GetBody() == raw_body);
 
-  const auto& headers = cgi_response->GetHeaders();
+  const auto& headers = cgiResponse->GetHeaders();
   REQUIRE(HasHeaderEntry(headers, "Content-Type", "text/plain; charset=utf-8"));
   REQUIRE(headers.count("Status") == 0);
-  REQUIRE(HasHeaderEntry(headers, "Server", "webserve/cgi"));
+  REQUIRE(HasHeaderEntry(headers, "Server", "webserv/cgi"));
   REQUIRE(HasHeaderEntry(headers, "Connection", "Keep-Alive"));
   REQUIRE(HasHeaderEntry(headers, "X-CGI-Type", "Some custom data here"));
-  REQUIRE(cgi_response->GetCookies().size() == 2);
-  REQUIRE(cgi_response->GetCookies()[0] == "cookie1=value1");
-  REQUIRE(cgi_response->GetCookies()[1] == "cookie2=value2");
+  REQUIRE(cgiResponse->GetCookies().size() == 2);
+  REQUIRE(cgiResponse->GetCookies()[0] == "cookie1=value1");
+  REQUIRE(cgiResponse->GetCookies()[1] == "cookie2=value2");
 }

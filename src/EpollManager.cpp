@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   EpollManager.cpp                                   :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/06 14:03:27 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/06 17:35:03 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/27 12:29:12 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,7 @@ EpollManager::Result EpollManager::Init()
 EpollManager::Result EpollManager::AddFd(int fd, uint32_t events, EventCallback cb)
 {
   struct epoll_event ev{};
+
   ev.data.fd = fd;
   ev.events = events;
 
@@ -55,6 +56,7 @@ EpollManager::Result EpollManager::AddFd(int fd, uint32_t events, EventCallback 
 EpollManager::Result EpollManager::ModifyFd(int fd, uint32_t events)
 {
   struct epoll_event ev{};
+
   ev.data.fd = fd;
   ev.events = events;
 
@@ -114,7 +116,12 @@ EpollManager::Result EpollManager::EventLoop()
     for (int i = 0; i < n; i++)
     {
       int fd = events[i].data.fd;
-      callbacks_.find(fd)->second(*this, events[i]);
+      auto callback = callbacks_.find(fd);
+      if (callback == callbacks_.end())
+      {
+        continue;
+      }
+      callback->second(*this, events[i]);
     }
   }
   return Result::kOk;

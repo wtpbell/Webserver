@@ -6,7 +6,7 @@
 /*   By: bewong <bewong@student.codam.nl>             +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:12:54 by bewong        #+#    #+#                 */
-/*   Updated: 2026/04/28 12:43:15 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/28 15:41:23 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,21 +53,14 @@ class HTTPRequest : public HTTPMessage
     void SetMethod(HTTP::Method method);
     bool SetTarget(std::string_view target);
     void SetMethod(std::string_view method);
-
-    bool IsComplete() const;
-    void SetComplete(bool complete);
     void Clear();
 
   private:
-    bool NormalizePath(std::string_view in, std::string& out);
-    bool ValidateRequest(const HTTPRequest& request);
-
     std::optional<Path> bodyFilePath_;
     HTTP::Method method_ = HTTP::Method::kUnsupported;
     std::string target_;  // "/path/file?x=1&y=2"
     std::string uri_;     // "/path/file"
     std::string query_;   // "x=1&y=2"
-    bool isComplete_ = false;
     std::string path_;
     CookieMap cookies_;
 };

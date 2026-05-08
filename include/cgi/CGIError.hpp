@@ -18,15 +18,12 @@ namespace cgi
   enum class CGIErrorCode
   {
     kNone,
-    kScriptNotFoundError,
-    kScriptIsSymlinkError,
-    kScriptIsDirectoryError,
-    kScriptMissingPermissionsError,
+    kNotFoundError,
+    kMissingPermissionsError,
     kForkError,
-    kRedirectionError,
-    kScriptExecveError,
+    kExecveError,
     kSocketPairError,
-    kScriptTimeOutError,
+    kForbidden,
   };
 }
 

@@ -13,6 +13,7 @@
 #ifndef EXPECTED_H_
 #define EXPECTED_H_
 
+#include <cassert>
 #include <utility>
 
 /*
@@ -137,7 +138,14 @@ class Expected
 
     Val&& ExtractValue(void)
     {
+      assert(has_value_ && "ExtractValue has no value");
       return std::move(value_);
+    }
+
+    Unex&& ExtractError(void)
+    {
+      assert(has_value_ == false && "ExtractError has no error");
+      return std::move(error_);
     }
 
     bool HasValue(void)
@@ -153,5 +161,4 @@ class Expected
     };
     bool has_value_;
 };
-
 #endif

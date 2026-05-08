@@ -23,7 +23,8 @@
 #include "io/Socket.hpp"
 #include "webserv.hpp"
 
-static void ConstructServers(std::vector<Server>& servers, const ServerRegistry& serverRegistry)
+static void ConstructServers(std::vector<Server>& servers, const ServerRegistry& serverRegistry,
+                             EpollManager& epollManager)
 {
   assert(serverRegistry.GetServerCount() > 0);
   servers.reserve(serverRegistry.GetServerCount());
@@ -36,11 +37,11 @@ static void ConstructServers(std::vector<Server>& servers, const ServerRegistry&
     {
       if (serverData.first.ip.find_first_of(':') != std::string::npos)
       {
-        servers.emplace_back(serverData.first, Socket::Type::kIPv6, serverRegistry);
+        servers.emplace_back(serverData.first, Socket::Type::kIPv6, serverRegistry, epollManager);
       }
       else
       {
-        servers.emplace_back(serverData.first, Socket::Type::kIPv4, serverRegistry);
+        servers.emplace_back(serverData.first, Socket::Type::kIPv4, serverRegistry, epollManager);
       }
     }
     catch (const FileDescriptorException& ex)
@@ -68,16 +69,6 @@ int main(int argc, char* argv[])
   Logger::Log(LogLevel::INFO, "Setting up signals...");
   setupSignals();
 
-  Logger::Log(LogLevel::INFO, "Constructing the servers...");
-  std::vector<Server> servers;
-  ConstructServers(servers, *serverRegistry);
-
-  if (servers.empty())
-  {
-    Logger::Log(LogLevel::CRITICAL, "No valid servers could be constructed.");
-    return EXIT_FAILURE;
-  }
-
   EpollManager manager;
   if (manager.Init() != EpollManager::Result::kOk)
   {
@@ -85,20 +76,20 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  Logger::Log(LogLevel::INFO, "Start listening on the sockets and adding them to epoll...");
-  for (auto& server : servers)
+  Logger::Log(LogLevel::INFO, "Constructing the servers...");
+  std::vector<Server> servers;
+  ConstructServers(servers, *serverRegistry, manager);
+  if (servers.empty())
   {
-    if (!server.RegisterFD(manager))
-      Logger::Log(LogLevel::ERROR, "Failed to register one server socket.");
+    Logger::Log(LogLevel::CRITICAL, "No valid servers could be constructed.");
+    return EXIT_FAILURE;
   }
 
   Logger::Log(LogLevel::INFO, "(⌒ω⌒)ﾉ Webserv is now running!");
-
   EpollManager::Result loopResult = manager.EventLoop();
   if (loopResult != EpollManager::Result::kOk)
   {
-    Logger::Log(LogLevel::CRITICAL, "ヽ(°〇°)ﾉ Webserv event loop stopped: {}",
-                EpollManager::ToString(loopResult));
+    Logger::Log(LogLevel::CRITICAL, "ヽ(°〇°)ﾉ Webserv event loop stopped: {}", EpollManager::ToString(loopResult));
     return EXIT_FAILURE;
   }
 

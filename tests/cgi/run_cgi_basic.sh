@@ -64,9 +64,9 @@ assert_exit_code()
 	SUCCESS=$3
 
 	if [ $EXCODE -eq $SUCCESS ]; then
-		printf " Test: %-25s ${OK}\n" "$MSG"
+		printf " Test: %-35s ${OK}\n" "$MSG"
 	else
-		printf " Test: %-25s ${KO}; got %s and expected %s\n" \
+		printf " Test: %-35s ${KO}; got %s and expected %s\n" \
 			"$MSG" "$EXCODE" "$SUCCESS"
 		if [ $EXIT_FAILURE -eq 0 ]; then
 			EXIT_FAILURE=1
@@ -116,43 +116,43 @@ test_case_with_body()
 # ALL TEST CASE
 
 GOOD=0
-NOSCRIPT=4
-ISSYM=5
-ISDIR=6
-NOPERMS=7
-NOFORK=8
-NOREDIR=9
+FAIL=1
+NOSCRIPT=7
+NOPERMS=8
+NOFORK=9
 NOEXEC=10
 NOPAIR=11
-TIMEOUT=12
+FORBID=12
 INVALID=13
+TIMEOUT=14
 CUSTOM=99
 
 clean_cgi && make_cgi 10 10 10
 printf "${BLD}CGI Integration Tests: ${CLR}\n"
-test_case_get "valid target"					$GOOD				"/cgi-bin/cgi_direct_response.sh"
-test_case_get "with querystring"			$GOOD				"/cgi-bin/cgi_direct_response.sh?hello=world&john=doe"
-test_case_get "with resource"					$GOOD				"/cgi-bin/cgi_direct_response.sh/some/random/page.html"
-test_case_get "all combined"					$GOOD				"/cgi-bin/cgi_direct_response.sh/some/random/page.html?hello=world&john=doe"
-test_case_get "script not found"			$NOSCRIPT		"/cgi-bin/do-not-add-me-as-a-file-please.sh"
-test_case_get "no exec perms"					$NOPERMS		"/cgi-bin/no_exec_perms.sh"
-test_case_get "script timed out"			$TIMEOUT		"/cgi-bin/put_in_timeout.sh"
-test_case_get "invalid repsonse"			$INVALID		"/cgi-bin/invalid_response.sh"
-test_case_get "execute directory"			$NOSCRIPT		"/cgi-bin/exec_me.sh"
-test_case_get "execute symlink"				$ISSYM			"/cgi-bin/exec_me.sh/sym_direct_response"
-test_case_get "script exit non zero"	$CUSTOM			"/cgi-bin/exit_non_zero.sh"
+test_case_get "valid target"										$GOOD			"/cgi-bin/cgi_direct_response.sh"
+test_case_get "with querystring"								$GOOD			"/cgi-bin/cgi_direct_response.sh?hello=world&john=doe"
+test_case_get "with resource"										$GOOD			"/cgi-bin/cgi_direct_response.sh/some/random/page.html"
+test_case_get "all combined"										$GOOD			"/cgi-bin/cgi_direct_response.sh/some/random/page.html?hello=world&john=doe"
+test_case_get "script not found"								$NOSCRIPT	"/cgi-bin/do-not-add-me-as-a-file-please.sh"
+test_case_get "no exec perms"										$NOPERMS	"/cgi-bin/no_exec_perms.sh"
+test_case_get "script timed out"								$TIMEOUT	"/cgi-bin/put_in_timeout.sh"
+test_case_get "invalid repsonse"								$INVALID	"/cgi-bin/invalid_response.sh"
+test_case_get "execute directory"								$NOSCRIPT	"/cgi-bin/exec_me.sh"
+test_case_get "execute symlink (within root)"		$GOOD			"/cgi-bin/exec_me.sh/sym_direct_response"
+test_case_get "execute symlink (outside root)"	$FORBID		"/cgi-bin/level_1/ping.sh"
+test_case_get "script exit non zero"						$CUSTOM		"/cgi-bin/exit_non_zero.sh"
 
 printf "\n${BLD}CGI body and response Tests: ${CLR}\n"
-test_case_with_body "valid cgi post"	$GOOD				"/cgi-bin/run.cgi"
+test_case_with_body "valid cgi post"						$GOOD			"/cgi-bin/run.cgi"
 
 printf "\n${BLD}Specialized Tests: ${CLR}\n"
 clean_cgi && make_cgi 0 10 10
-test_case_get "unable to fork"				$NOFORK			"/cgi-bin/cgi_direct_response.sh"
+test_case_get "unable to fork"									$NOFORK		"/cgi-bin/cgi_direct_response.sh"
 
 clean_cgi && make_cgi 10 0 10
-test_case_get "unable to socketpair"	$NOPAIR			"/cgi-bin/cgi_direct_response.sh"
+test_case_get "unable to socketpair"						$NOPAIR		"/cgi-bin/cgi_direct_response.sh"
 
 clean_cgi && make_cgi 10 10 0
-test_case_get "unable to dup2"				$NOREDIR		"/cgi-bin/cgi_direct_response.sh"
+test_case_get "unable to dup2"									$FAIL			"/cgi-bin/cgi_direct_response.sh"
 
 exit $EXIT_FAILURE

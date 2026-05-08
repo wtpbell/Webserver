@@ -6,14 +6,17 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/08 19:15:05 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/24 10:54:44 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/03 22:06:50 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "cgi/CGI.hpp"
 
 #include <cerrno>
+#include <cmath>
+#include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -23,14 +26,13 @@
 #include "cgi/CGIError.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "cgi/CGIRequest.hpp"
+#include "config/RouteView.hpp"
+#include "config/ServerRegistry.hpp"
 #include "http/HTTPRequest.hpp"
+#include "http/HTTPStatus.hpp"
+#include "router/RequestHandler.hpp"
 #include "string.hpp"
 #include "webserv.hpp"
-
-/*
-  Currently any url that starts with cgi-bin is considered a cgi request
-  if the cgi does not resolve to a valid script than HTTP 404 should be returned.
-*/
 
 /* =============================== PUBLIC =================================== */
 namespace cgi
@@ -67,118 +69,217 @@ namespace cgi
         return CGIErrorCode::kForkError;
       return process;
     }
+
+    std::filesystem::path GetExtensionScript(
+        const std::map<std::string, std::filesystem::path, std::less<>>& extensionPaths, std::string_view target)
+    {
+      std::size_t delim{target.rfind(".")};
+      if (delim == target.npos)
+      {
+        return {};
+      }
+      target.remove_prefix(delim);
+
+      auto it = extensionPaths.find(target);
+      if (it == extensionPaths.end())
+      {
+        return {};
+      }
+      return it->second;
+    }
+
+    Expected<CGIProcess, CGIErrorCode> ExecuteCgiExtension(const HTTPRequest& httpRequest, const RouteView& route,
+                                                           const IpPort& ipPort, std::string_view clientInfo)
+    {
+      std::filesystem::path executablePath{GetExtensionScript(route.cgiExePaths.value(), httpRequest.GetPath())};
+      if (executablePath.empty())
+      {
+        return CGIErrorCode::kNone;
+      }
+
+      std::optional<std::filesystem::path> fullPath = request_handler::ResolvePath(route, httpRequest.GetPath());
+      if (!fullPath.has_value())
+      {
+        return CGIErrorCode::kForbidden;
+      }
+      request_handler::PathInfo pathInfo = request_handler::InspectPath(*fullPath);
+      if (pathInfo.statError)
+      {
+        return CGIErrorCode::kForbidden;
+      }
+      else if (!pathInfo.exists)
+      {
+        return CGIErrorCode::kNotFoundError;
+      }
+      else if (!pathInfo.isFile || !pathInfo.canRead || !pathInfo.canExecute)
+      {
+        return CGIErrorCode::kForbidden;
+      }
+      CGIRoute cgiRoute{executablePath.generic_string(), *fullPath, "", ""};
+      return ExecuteCGI(CGIRequest(httpRequest, cgiRoute, ipPort, clientInfo, route));
+    }
+
+    Expected<std::string, CGIErrorCode> GetFullResourcePath(const std::string& resource, const IpPort& ipPort,
+                                                            const std::string_view hostname,
+                                                            const ServerRegistry& serverRegistery) noexcept
+    {
+      const RouteView* route = serverRegistery.GetRouteView(ipPort.ip, ipPort.port, hostname, resource);
+      if (route == nullptr)
+      {
+        return CGIErrorCode::kNotFoundError;
+      }
+
+      std::optional<Path> fullResourcePath = request_handler::ResolvePath(*route, resource);
+      if (!fullResourcePath.has_value())
+      {
+        return CGIErrorCode::kForbidden;
+      }
+      return fullResourcePath->generic_string();
+    }
+
+    Expected<CGIProcess, CGIErrorCode> ExecuteCgiEnabled(const HTTPRequest& httpRequest, const RouteView& route,
+                                                         const ServerRegistry& serverRegistry, const IpPort& ipPort,
+                                                         std::string_view clientInfo)
+    {
+      auto expCgiRoute = SetupCGIRoute(httpRequest.GetPath(), route);
+      if (!expCgiRoute.HasValue())
+      {
+        return expCgiRoute.ExtractError();
+      }
+      if (!expCgiRoute->resource_.empty() && expCgiRoute->resource_ != "/")
+      {
+        auto fullResourcePath =
+            GetFullResourcePath(expCgiRoute->resource_, ipPort, httpRequest.GetHost(), serverRegistry);
+        if (!fullResourcePath.HasValue())
+        {
+          return fullResourcePath.ExtractError();
+        }
+        expCgiRoute->fullResource_ = fullResourcePath.GetValue();
+      }
+      return ExecuteCGI(CGIRequest(httpRequest, expCgiRoute.GetValue(), ipPort, clientInfo, route));
+    }
   }  // namespace
 
-  Path ReplaceScriptRoot(std::string_view script, std::string_view mapping, const Path& root) noexcept
+  HTTP::Status CGIErrorCodeToHTTPCode(const CGIErrorCode errorCode) noexcept
   {
-    if (!mapping.empty())
-      mapping.remove_prefix(mapping[0] == '/');
-    if (!script.empty())
-      script.remove_prefix(script[0] == '/');
-
-    if (script.compare(0, mapping.length(), mapping) != 0)
-      return {};
-
-    if (script.length() > mapping.length())
-      script.remove_prefix(mapping.length() + (script[mapping.length()] == '/'));
-    else
-      script.remove_prefix(mapping.length());
-    return root / script;
+    switch (errorCode)
+    {
+      case CGIErrorCode::kForkError:
+      case CGIErrorCode::kExecveError:
+      case CGIErrorCode::kSocketPairError:
+        return HTTP::Status::kInternalServerError;
+      case CGIErrorCode::kForbidden:
+      case CGIErrorCode::kMissingPermissionsError:
+        return HTTP::Status::kForbidden;
+      case CGIErrorCode::kNotFoundError:
+        return HTTP::Status::kNotFound;
+      case CGIErrorCode::kNone:
+        return HTTP::Status::kOk;
+    }
+    assert(false && "Invalid CGI error code");
+    __builtin_unreachable();
   }
 
-  Path ExtractResourcePath(std::string_view script, std::string_view target) noexcept
-  {
-    if (script.empty() || target.empty())
-    {
-      return {};
-    }
-
-    script.remove_prefix(script[0] == '/');
-    target.remove_prefix(target[0] == '/');
-    while (!script.empty() && target.compare(0, script.length(), script) != 0)
-    {
-      std::size_t slash = script.find_first_of('/');
-      if (slash == std::string_view::npos)
-      {
-        slash = script.length();
-      }
-      else
-      {
-        slash += 1;
-      }
-      script.remove_prefix(slash);
-    }
-
-    if (!script.empty())
-    {
-      target.remove_prefix(script.length());
-      return Path{target};
-    }
-    return {};
-  }
-
-  Expected<CGIRoute, CGIErrorCode> SetupCGIRoute(const Path& target, const Path& root,
-                                                 std::string_view mapping) noexcept
+  Expected<CGIRoute, CGIErrorCode> SetupCGIRoute(std::string_view target, const RouteView& route) noexcept
   {
     namespace fs = std::filesystem;
+    namespace reqHandler = request_handler;
 
-    Path script{ReplaceScriptRoot(target.generic_string(), mapping, root)};
-    std::error_code error_code;
-    while (script != "/" && !script.empty())
+    std::optional<Path> fullScriptPath = reqHandler::ResolvePath(route, target);
+    if (!fullScriptPath.has_value())
     {
-      if (fs::is_symlink(script, error_code))
-      {
-        return CGIErrorCode::kScriptIsSymlinkError;  // TODO: allow for symlinks that are still within the root
-      }
+      return CGIErrorCode::kForbidden;
+    }
 
-      fs::file_status script_status{fs::status(script, error_code)};
-      if (!error_code && fs::exists(script_status))
+    std::error_code errorCode;
+    const Path root = route.alias ? fs::weakly_canonical(*route.alias, errorCode)
+                                  : fs::weakly_canonical(route.root, errorCode).concat(route.locationPrefix);
+    if (errorCode)
+    {
+      return CGIErrorCode::kForbidden;
+    }
+    errorCode.clear();
+
+    const fs::perms readExecuteOwnerPerms = (fs::perms::owner_exec | fs::perms::owner_read);
+    const fs::perms readExecuteGroupPerms = (fs::perms::group_exec | fs::perms::group_read);
+    Path script = *fullScriptPath;
+    while (script != root && script.has_parent_path())
+    {
+      fs::file_status scriptStatus{fs::symlink_status(script, errorCode)};
+      if (!errorCode && fs::exists(scriptStatus) && fs::is_regular_file(scriptStatus))
       {
-        if (fs::is_regular_file(script_status))
+        if ((scriptStatus.permissions() & readExecuteOwnerPerms) == readExecuteOwnerPerms ||
+            (scriptStatus.permissions() & readExecuteGroupPerms) == readExecuteGroupPerms)
         {
-          if ((script_status.permissions() & fs::perms::owner_exec) == fs::perms::owner_exec)
-          {
-            return CGIRoute{script, ExtractResourcePath(script.generic_string(), target.generic_string()), ""};
-          }
-          return CGIErrorCode::kScriptMissingPermissionsError;
+          std::string scriptTarget = script.generic_string();
+          std::string fullScriptTarget = fullScriptPath->generic_string();
+          return CGIRoute{scriptTarget, scriptTarget,
+                          std::string(request_handler::ComputeRouteTail(fullScriptTarget, scriptTarget)), ""};
         }
+        return CGIErrorCode::kMissingPermissionsError;
       }
-
       script = script.parent_path();
     }
-    return CGIErrorCode::kScriptNotFoundError;
+    return CGIErrorCode::kNotFoundError;
+  }
+
+  Expected<CGIProcess, CGIErrorCode> DispatchCGIHandler(const HTTPRequest& httpRequest, const RouteView& route,
+                                                        const ServerRegistry& serverRegistry, IpPort ipPort,
+                                                        std::string_view clientInfo)
+  {
+    if (route.cgiExePaths.has_value())
+    {
+      Expected<CGIProcess, CGIErrorCode> process = ExecuteCgiExtension(httpRequest, route, ipPort, clientInfo);
+      if (process.HasValue())
+      {
+        return process.ExtractValue();
+      }
+      if (process.GetError() != CGIErrorCode::kNone)
+      {
+        return process.ExtractError();
+      }
+    }
+
+    if (route.cgi)
+    {
+      return ExecuteCgiEnabled(httpRequest, route, serverRegistry, ipPort, clientInfo);
+    }
+
+    return CGIErrorCode::kNone;
   }
 
   /// @brief Execute script in a new process
-  Expected<CGIProcess, CGIErrorCode> ExecuteCGI(const HTTPRequest& http_request, Route route,
-                                                std::string_view server_info, std::string_view client_info)
+  Expected<CGIProcess, CGIErrorCode> ExecuteCGI(CGIRequest&& cgiRequest)
   {
-    // TODO: ROOOOOOOT and MAPPING
-    auto cgi_route = SetupCGIRoute(http_request.GetPath(), route.root, "/cgi-bin");
-    if (!cgi_route.HasValue())
-      return std::move(cgi_route.GetError());
-
-    // TODO: Find resource location block here or before ExecuteCGI is called
-
-    auto process = Fork(CGIRequest{http_request, cgi_route.GetValue(), server_info, client_info});
+    auto process = Fork(std::move(cgiRequest));
     if (!process.HasValue())
-      return std::move(process.GetError());
+    {
+      return process.ExtractError();
+    }
     if (process->IsParent())
-      return std::move(process.GetValue());
+    {
+      return process.ExtractValue();
+    }
 
     auto std_io = RedirectStandardIO(process->GetSocket());
     if (std_io.first.GetFD() < 0 || std_io.second.GetFD() < 0)
-      return CGIErrorCode::kRedirectionError;
+    {
+      std::_Exit(EXIT_FAILURE);
+    }
 
+    const char* executable = process->GetRequest().GetExecutable().data();
     const std::vector<char*> argv{ConvertToCstrVector(process->GetRequest().GetArgv())};
     const std::vector<char*> envp{ConvertToCstrVector(process->GetRequest().GetEnvp())};
     const char* path{*argv.data()};
 
-    if (setpgid(0, 0) == 0)  // Create own process group for cgi script
+    if (setpgid(0, 0) != 0)  // Create own process group for cgi script
     {
-      execve(path, argv.data(), envp.data());
+      Logger::Log(LogLevel::ERROR, "Child: setpgid({}) failed: {}", path, errno);
+      std::_Exit(EXIT_FAILURE);
     }
-    Logger::Log(LogLevel::ERROR, "execve({}) failed: {}", path, errno);
-    return CGIErrorCode::kScriptExecveError;
+
+    execve(executable, argv.data(), envp.data());
+    Logger::Log(LogLevel::ERROR, "Child: execve({}) failed: {}", path, errno);
+    std::_Exit(126);
   }
 }  // namespace cgi

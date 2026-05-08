@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   HTTPUtils.cpp                                      :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/09 13:31:19 by bewong        #+#    #+#                 */
-/*   Updated: 2026/04/02 11:52:27 by bewong        ########   odam.nl         */
+/*   Updated: 2026/05/04 14:46:16 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -153,6 +153,57 @@ namespace HTTP
       char buf[64];
       String::GMTCstringFromTime(t, buf, sizeof(buf));
       return std::string(buf);
+    }
+
+    // | Input      | Normalized |
+    // | ---------- | ---------- |
+    // | //         | /          | collapse repeated /
+    // | /./        | /          | remove . segments
+    // | /a/./b     | /a/b       |
+    // | /a/b/../c  | /a/c       |resolve .. by popping
+    // | /a/b/..    | /a         |
+    // | /a/../../x | reject     | if .. go above root -> false
+    bool NormalizePath(std::string_view in, std::string& out)
+    {
+      out.clear();
+      if (in.empty() || in[0] != '/')
+        return false;
+      std::vector<std::string_view> segments;
+      segments.reserve(8);
+      std::size_t segStart = 1;
+      while (segStart < in.size())
+      {
+        while (segStart < in.size() && in[segStart] == '/')
+          ++segStart;
+        if (segStart >= in.size())
+          break;
+        std::size_t segEnd = segStart;
+        while (segEnd < in.size() && in[segEnd] != '/')
+          ++segEnd;
+        std::string_view segment = in.substr(segStart, segEnd - segStart);
+        if (segment == "..")
+        {
+          if (segments.empty())
+            return false;
+          segments.pop_back();
+        }
+        else if (segment != ".")
+          segments.push_back(segment);
+        segStart = segEnd;
+      }
+      out = "/";
+      for (std::size_t k = 0; k < segments.size(); ++k)
+      {
+        out.append(segments[k]);
+        if (k + 1 < segments.size())
+          out.push_back('/');
+      }
+      const bool keepTrailing = (in.size() > 1 && in.back() == '/');
+      if (keepTrailing && out.size() > 1)
+      {
+        out.push_back('/');
+      }
+      return true;
     }
   }  // namespace wire
 }  // namespace HTTP

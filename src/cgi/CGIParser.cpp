@@ -307,7 +307,18 @@ namespace cgi
 
     if ((has_field & (HeaderFieldType::Location | HeaderFieldType::Status)) == HeaderFieldType::Location)
     {
-      response.SetStatus({302, "Found"});
+      if (response.LocalRedirectTarget())
+      {
+        response.SetStatus({301, "Moved Permanently"});
+      }
+      else
+      {
+        response.SetStatus({302, "Found"});
+      }
+      if ((has_field & HeaderFieldType::ContentType) == HeaderFieldType::None)
+      {
+        response.EmplaceHeader("Content-Type", "text/plain; charset=utf-8");
+      }
     }
 
     if (!has_empty_line ||
@@ -354,7 +365,10 @@ namespace cgi
 
     std::size_t delimiter{input.find_first_of(':')};
     if (delimiter == std::string_view::npos)
+    {
+      type = HeaderFieldType::Invalid;
       return;
+    }
 
     header = input.substr(0, delimiter);
     value = String::Trim(input.substr(delimiter + 1));

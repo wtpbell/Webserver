@@ -3,21 +3,28 @@
 /*                                                        ::::::::            */
 /*   Router.cpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/13 10:04:39 by bewong        #+#    #+#                 */
-/*   Updated: 2026/02/13 10:04:39 by bewong        ########   odam.nl         */
+/*   Updated: 2026/05/03 22:41:22 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "router/Router.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <string_view>
+#include <variant>
 
+#include "Expected.hpp"
+#include "cgi/CGI.hpp"
+#include "cgi/CGIProcess.hpp"
 #include "config/RouteView.hpp"
 #include "config/ServerRegistry.hpp"
 #include "config/ServerView.hpp"
+#include "http/HTTPResponse.hpp"
+#include "http/HTTPStatus.hpp"
 #include "http/ResponseFactory.hpp"
 #include "router/RequestHandler.hpp"
 
@@ -51,15 +58,6 @@ namespace
   namespace Response = HTTP::response;
   using Status = HTTP::Status;
 
-  bool MatchLocationPrefix(std::string_view path, std::string_view prefix)
-  {
-    if (prefix == "/")
-      return true;
-    if (path.size() < prefix.size() || path.compare(0, prefix.size(), prefix) != 0)
-      return false;
-    return (path.size() == prefix.size() || path[prefix.size()] == '/');
-  }
-
   bool IsExternalURL(const std::string& s)
   {
     return s.rfind("http://", 0) == 0 || s.rfind("https://", 0) == 0;
@@ -72,45 +70,50 @@ namespace
     request.SetMethod(HTTP::Method::kGet);
     if (!request.SetTarget(uri))
       return std::nullopt;
-    request.SetComplete(true);
     return request;
   }
 }  // namespace
 
-HTTPResponse Router::DispatchHandler(const HTTPRequest& request, const RouteView& route) const
-{
-#ifdef UNIT_TEST
-  if (dispatchHook_)
-  {
-    return dispatchHook_(request, route);
-  }
-#endif
-
-  if (ShouldUseCgi(request, route))
-    return request_handler::HandleCgi(request, route);
-
-  return request_handler::HandleMethods(request, route);
-}
-
-HTTPResponse Router::Dispatch(const HTTPRequest& request, const RouteView& route, const ServerRegistry& serverRegistry,
-                              const ServerView::IpPort& ipPort, std::string_view hostName) const
+std::variant<std::monostate, HTTPResponse, cgi::CGIProcess> Router::Dispatch(const HTTPRequest& request,
+                                                                             const RouteView& route,
+                                                                             const ServerRegistry& serverRegistry,
+                                                                             const ServerView::IpPort& ipPort,
+                                                                             std::string_view clientInfo) const
 {
   HTTPResponse res;
-
   if (route.returnRule.has_value())
+  {
     res = MakeReturnResponse(*route.returnRule);
+  }
   else
-    res = DispatchHandler(request, route);
+  {
+    Expected<cgi::CGIProcess, cgi::CGIErrorCode> cgiProcess =
+        cgi::DispatchCGIHandler(request, route, serverRegistry, ipPort, clientInfo);
+    if (cgiProcess.HasValue())
+    {
+      return cgiProcess.ExtractValue();
+    }
+    else if (cgiProcess.GetError() != cgi::CGIErrorCode::kNone)
+    {
+      HTTP::Status httpCode{cgi::CGIErrorCodeToHTTPCode(cgiProcess.GetError())};
+      if (route.errorPages.count(static_cast<uint16_t>(httpCode)) == 1)
+      {
+        return ApplyErrorPage(cgi::CGIErrorCodeToHTTPCode(cgiProcess.GetError()), route, serverRegistry, ipPort,
+                              request.GetHost());
+      }
+      else
+      {
+        return HTTP::response::MakeError(httpCode);
+      }
+    }
+
+    res = request_handler::HandleMethods(request, route);
+  }
 
   if (res.GetStatusCode() >= 400 && route.errorPages.find(res.GetStatusCode()) != route.errorPages.end())
-    return ApplyErrorPage(request, route, std::move(res), serverRegistry, ipPort, hostName);
+    return ApplyErrorPage(request, route, std::move(res), serverRegistry, ipPort, request.GetHost());
 
   return res;
-}
-
-bool Router::ShouldUseCgi(const HTTPRequest& request, const RouteView& /*route*/) const
-{
-  return MatchLocationPrefix(request.GetPath(), "/cgi-bin");
 }
 
 // If there's no matching error_page mapping for this status code, return original response.
@@ -138,11 +141,39 @@ HTTPResponse Router::ApplyErrorPage(const HTTPRequest& request, const RouteView&
   if (internalRoute == nullptr)
     return res;
 
-  HTTPResponse page = DispatchHandler(internal, *internalRoute);
+  HTTPResponse page = request_handler::HandleMethods(internal, *internalRoute);
   if (page.GetStatusCode() >= 400)
     return res;
 
   page.SetStatus(static_cast<Status>(origCode));
+  return page;
+}
+
+HTTPResponse Router::ApplyErrorPage(HTTP::Status statusCode, const RouteView& route,
+                                    const ServerRegistry& serverRegistry, const ServerView::IpPort& ipPort,
+                                    std::string_view hostName) const
+{
+  const uint16_t code = static_cast<uint16_t>(statusCode);
+  const std::string& target = route.errorPages.find(code)->second;
+
+  if (IsExternalURL(target))
+    return Response::MakeRedirect(Status::kFound, target);
+
+  std::optional<HTTPRequest> internalOpt = MakeInternalGet(target);
+  if (!internalOpt)
+    return Response::MakeError(Status::kInternalServerError);
+
+  HTTPRequest internal = std::move(*internalOpt);
+  const RouteView* internalRoute =
+      serverRegistry.GetRouteView(ipPort.ip, ipPort.port, std::string(hostName), std::string(internal.GetPath()));
+
+  if (internalRoute == nullptr)
+    return Response::MakeError(HTTP::Status::kNotFound);
+
+  HTTPResponse page = request_handler::HandleMethods(internal, *internalRoute);
+  if (page.GetStatusCode() >= 400)
+    return page;
+  page.SetStatus(statusCode);
   return page;
 }
 

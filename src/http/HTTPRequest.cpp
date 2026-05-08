@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   HTTPRequest.cpp                                    :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/12 12:14:12 by bewong        #+#    #+#                 */
-/*   Updated: 2026/04/02 15:57:44 by bewong        ########   odam.nl         */
+/*   Updated: 2026/04/26 13:50:28 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,58 +18,6 @@
 
 #include "http/HTTPTypes.hpp"
 #include "http/HTTPUtils.hpp"
-
-// | Input      | Normalized |
-// | ---------- | ---------- |
-// | //         | /          | collapse repeated /
-// | /./        | /          | remove . segments
-// | /a/./b     | /a/b       |
-// | /a/b/../c  | /a/c       |resolve .. by popping
-// | /a/b/..    | /a         |
-// | /a/../../x | reject     | if .. go above root -> false
-
-bool HTTPRequest::NormalizePath(std::string_view in, std::string& out)
-{
-  out.clear();
-  if (in.empty() || in[0] != '/')
-    return false;
-  std::vector<std::string_view> segments;
-  segments.reserve(8);
-  std::size_t segStart = 1;
-  while (segStart < in.size())
-  {
-    while (segStart < in.size() && in[segStart] == '/')
-      ++segStart;
-    if (segStart >= in.size())
-      break;
-    std::size_t segEnd = segStart;
-    while (segEnd < in.size() && in[segEnd] != '/')
-      ++segEnd;
-    std::string_view segment = in.substr(segStart, segEnd - segStart);
-    if (segment == "..")
-    {
-      if (segments.empty())
-        return false;
-      segments.pop_back();
-    }
-    else if (segment != ".")
-      segments.push_back(segment);
-    segStart = segEnd;
-  }
-  out = "/";
-  for (std::size_t k = 0; k < segments.size(); ++k)
-  {
-    out.append(segments[k]);
-    if (k + 1 < segments.size())
-      out.push_back('/');
-  }
-  const bool keepTrailing = (in.size() > 1 && in.back() == '/');
-  if (keepTrailing && out.size() > 1)
-  {
-    out.push_back('/');
-  }
-  return true;
-}
 
 /************************************************** Getter ***********************************************************/
 
@@ -157,7 +105,7 @@ bool HTTPRequest::SetTarget(std::string_view target)
     raw_path = std::string_view(target_);
   std::string decoded = HTTP::wire::URLDecode(raw_path);
   std::string normalized;
-  if (!NormalizePath(decoded, normalized))
+  if (!HTTP::wire::NormalizePath(decoded, normalized))
     return false;
   uri_ = raw_path;
   path_ = std::move(normalized);
@@ -169,11 +117,6 @@ void HTTPRequest::SetMethod(std::string_view method)
   method_ = HTTP::StringToMethod(method);
 }
 
-void HTTPRequest::SetComplete(bool complete)
-{
-  isComplete_ = complete;
-}
-
 void HTTPRequest::SetBodyFilePath(Path p)
 {
   bodyFilePath_ = std::move(p);
@@ -182,11 +125,6 @@ void HTTPRequest::SetBodyFilePath(Path p)
 void HTTPRequest::SetCookies(CookieMap&& cookies)
 {
   cookies_ = std::move(cookies);
-}
-
-bool HTTPRequest::IsComplete() const
-{
-  return isComplete_;
 }
 
 bool HTTPRequest::HasCookie(std::string_view name) const
@@ -200,7 +138,6 @@ void HTTPRequest::Clear()
   target_.clear();
   uri_.clear();
   query_.clear();
-  isComplete_ = false;
   path_.clear();
   bodyFilePath_.reset();
 }

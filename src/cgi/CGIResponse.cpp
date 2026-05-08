@@ -6,41 +6,40 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/20 15:28:16 by jboon         #+#    #+#                 */
-/*   Updated: 2026/03/17 00:24:35 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/26 21:20:01 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "cgi/CGIResponse.hpp"
 
+#include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
 
+#include "http/HTTPUtils.hpp"
 #include "string.hpp"
 
 namespace cgi
 {
   /* ============================ PUBLIC  ===================================== */
 
-  /* A Local redirect must be handled by the server as it was a regular HTTP request from the client */
-  bool CGIResponse::IsLocalRedirect(void) const noexcept
-  {
-    auto it = headers_.find("Location");
-    if (it == headers_.end())
-    {
-      return false;
-    }
-    return it->second.front() == '/';
-  }
+  CGIResponse::CGIResponse(const Status& status, const std::string& body) : status_(status), body_(body) {}
 
-  const std::string& CGIResponse::LocalTarget(void) const noexcept
+  const std::optional<std::string> CGIResponse::LocalRedirectTarget(void) const noexcept
   {
     auto it = headers_.find("Location");
-    if (it == headers_.end())
+    if (it == headers_.end() || it->second.front() != '/')
     {
-      return kEmpty_;
+      return std::nullopt;
     }
-    return it->second;
+
+    std::string localTarget;
+    if (HTTP::wire::NormalizePath(HTTP::wire::URLDecode(it->second), localTarget))
+    {
+      return localTarget;
+    }
+    return std::nullopt;
   }
 
   std::string CGIResponse::SerializeAsHttp(void) const
@@ -53,7 +52,9 @@ namespace cgi
     message.append("\r\n");
 
     if (headers_.count("Server") == 0)
-      message.append("Server: ").append("webserve/0.1").append("\r\n");
+    {
+      message.append("Server: ").append("webserv/0.1").append("\r\n");
+    }
     if (headers_.count("Date") == 0)
     {
       char buffer[256];
@@ -61,13 +62,19 @@ namespace cgi
     }
 
     for (const auto& [key, value] : headers_)
+    {
       message.append(key).append(": ").append(value).append("\r\n");
+    }
 
     for (const auto& cookie : cookies_)
       message.append("Set-Cookie: ").append(cookie).append("\r\n");
 
     if (!body_.empty())
     {
+      if (headers_.count("Content-Type") == 0)
+      {
+        message.append("Content-Type: application/octet-stream\r\n");
+      }
       message.append("Content-Length: ").append(std::to_string(body_.length())).append("\r\n");
       message.append("\r\n");
       message.append(body_);
@@ -106,6 +113,10 @@ namespace cgi
   void CGIResponse::SetStatus(const Status& status)
   {
     status_ = status;
+    if (body_.empty())
+    {
+      body_.append(status.reason).append("\n");
+    }
   }
 
   std::ostream& operator<<(std::ostream& out, const CGIResponse& response)
@@ -113,7 +124,4 @@ namespace cgi
     return out << response.SerializeAsHttp();
   }
 
-  /* ============================ PRIVATE ===================================== */
-
-  const std::string CGIResponse::kEmpty_{};
 }  // namespace cgi

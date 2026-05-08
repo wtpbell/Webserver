@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# DON'T DELETE THIS FILE (USED IN CGI-INTEGRATION TEST)
+echo ping

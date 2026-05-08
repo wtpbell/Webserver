@@ -1,0 +1,6 @@
+#!/bin/bash
+
+printf "Status: 200 OK\r\n"
+printf "Content-Type: text/plain\r\n"
+printf "\r\n"
+printf "ping"

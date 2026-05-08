@@ -6,13 +6,14 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/20 15:28:24 by jboon         #+#    #+#                 */
-/*   Updated: 2026/03/17 00:04:04 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/27 10:29:53 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CGIRESPONSE_H_
 #define CGIRESPONSE_H_
 
+#include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
@@ -31,15 +32,15 @@ namespace cgi
   {
     public:
       CGIResponse(void) = default;
+      CGIResponse(const Status& status, const std::string& body);
       CGIResponse(const CGIResponse&) = default;
-      CGIResponse(CGIResponse&&) = default;
+      CGIResponse(CGIResponse&&) noexcept = default;
       ~CGIResponse(void) = default;
 
       CGIResponse& operator=(const CGIResponse&) = default;
-      CGIResponse& operator=(CGIResponse&&) = default;
+      CGIResponse& operator=(CGIResponse&&) noexcept = default;
 
-      bool IsLocalRedirect(void) const noexcept;
-      const std::string& LocalTarget(void) const noexcept;
+      const std::optional<std::string> LocalRedirectTarget(void) const noexcept;
       std::string SerializeAsHttp(void) const;
       void EmplaceHeader(std::string&& key, std::string&& value) noexcept;
       void AddCookie(std::string&& cookie);
@@ -51,12 +52,10 @@ namespace cgi
     private:
       using CGIHeaders = std::unordered_map<std::string, std::string>;
 
-      static const std::string kEmpty_;
-
       CGIHeaders headers_;
       std::vector<std::string> cookies_;
-      std::string body_;
       Status status_{200, "OK"};
+      std::string body_;
 
 #ifdef UNIT_TEST
     public:

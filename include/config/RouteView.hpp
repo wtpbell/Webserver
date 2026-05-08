@@ -50,7 +50,7 @@ struct RouteView
     std::map<std::uint16_t, std::string> errorPages;
 
     bool cgi = false;
-    std::optional<std::map<std::string, std::filesystem::path>> cgiExePaths;
+    std::optional<std::map<std::string, std::filesystem::path, std::less<>>> cgiExePaths;
 };
 
 constexpr RouteView::MethodMask operator|(RouteView::MethodMask a, RouteView::MethodMask b)

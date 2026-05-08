@@ -3,10 +3,10 @@
 /*                                                        ::::::::            */
 /*   Connection.hpp                                     :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:33:36 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/24 15:51:28 by bewong        ########   odam.nl         */
+/*   Updated: 2026/05/03 21:07:28 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,20 +17,19 @@
 #include <string>
 #include <string_view>
 
+#include "cgi/CGIRequest.hpp"
+#include "cgi/CGIResponse.hpp"
 #include "config/RouteView.hpp"
-#include "config/ServerRegistry.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPResponse.hpp"
 #include "http/HTTPValidator.hpp"
-#include "http/SessionManager.hpp"
 #include "io/Socket.hpp"
-#include "router/Router.hpp"
+
+class RequestContext;
 
 class Connection
 {
-    using IpPort = ServerView::IpPort;
-
   public:
     Connection(Socket socket);
     Connection() = delete;
@@ -47,13 +46,38 @@ class Connection
       kError
     };
 
+    struct PendingResponse
+    {
+        enum class State
+        {
+          kWaiting,
+          kReady
+        };
+
+        PendingResponse(State state, int cgiFd, std::string wire, bool closeAfter)
+            : state_(state), cgiFd_(cgiFd), wire_(wire), closeAfter_(closeAfter), remaining_(wire.length())
+        {
+        }
+
+        State state_;
+        int cgiFd_;         // valid only for CGI-backed items
+        std::string wire_;  // valid when ready
+        bool closeAfter_;
+        std::size_t remaining_;
+    };
+
     const Socket& GetSocket(void) const;
     void SetPeerClosed(bool close);
     bool HasPendingOutput(void) const;
+    bool HasPauseReading(void) const;
     void Clear(void);
-    State HandleRequest(const IpPort& ipport, const Router& router, const ServerRegistry& serverRegistry,
-                        SessionManager& session_manager);
+    State HandleRequest(RequestContext& requestContext);
     State HandleResponse(void);
+    void UpdateCgiResponse(const int cgiFd, const cgi::CGIResponse& cgiResponse);
+    void UpdateCgiErrorResponse(const int cgiFd, HTTP::Status errorStatus, const cgi::CGIRequest& cgiRequest,
+                                RequestContext& requestContext);
+    int RedirectCgiResponse(const int cgiFd, const std::string& localTarget, const std::string& hostname,
+                            RequestContext& requestContext);
 
   private:
     enum class ReadResult
@@ -65,54 +89,26 @@ class Connection
 
     ReadResult ReadOnce(std::string& out);
     void InitBodyParser(HTTPParser& parser, const HTTPRequest& request);
-    std::optional<ValidationResult> HandleHeadersDone(const ServerRegistry& serverRegistry);
+    std::optional<ValidationResult> HandleHeadersDone(RequestContext& requestContext);
     bool CheckConnectionClose(const HTTPRequest& request, const HTTPResponse& response) const;
     void QueueResponse(const HTTPResponse& response, bool closeAfter);
     void QueueError(ValidationResult result);
-    State ProcessInput(std::string_view in, const Router& router, const ServerRegistry& serverRegistry,
-                       SessionManager& sessionManager);
+    void QueueCgiResponse(const int cgiFd, bool closeAfter);
+    State ProcessInput(std::string_view in, RequestContext& requestContext);
     Connection::State FailRequest(ValidationResult error);
     std::optional<ValidationResult> ValidatePartialRequest(HTTPRequest& request);
-    void MatchRouteAndApplyLimits(const ServerRegistry& serverRegistry, const HTTPRequest& request);
+    void MatchRouteAndApplyLimits(RequestContext& requestContext, const HTTPRequest& request);
     std::optional<ValidationResult> ConfigureBodyStorage(HTTPRequest& request);
     std::optional<ValidationResult> AttachRequestCookies(HTTPRequest& request);
 
     Socket socket_;
     HTTPParser parser_;
-    IpPort ipport_;
     const RouteView* matchedRoute_;
-    std::string matchedHost_;
 
-    std::deque<std::string> outputQueue_;  // queued responses (pipeline)
-    std::size_t remaining_ = 0;            // number of bytes already sent
+    std::deque<PendingResponse> outputQueue_;  // queued responses (pipeline)
     bool closeAfterSend_ = false;
     bool peerClosed_ = false;
-
-#ifdef UNIT_TEST
-  public:
-    using TestIpPort = ServerView::IpPort;
-
-    State TestProcessInput(std::string_view in, const Router& router, const ServerRegistry& serverRegistry,
-                           SessionManager& sessionManager)
-    {
-      return ProcessInput(in, router, serverRegistry, sessionManager);
-    }
-
-    void TestSetIpPort(const ServerView::IpPort& ipport)
-    {
-      ipport_ = ipport;
-    }
-
-    const std::deque<std::string>& TestGetOutputQueue() const
-    {
-      return outputQueue_;
-    }
-
-    bool TestGetCloseAfterSend() const
-    {
-      return closeAfterSend_;
-    }
-#endif
+    bool isFirstResponse_ = true;
 };
 
 #endif  // CONNECTION_H_

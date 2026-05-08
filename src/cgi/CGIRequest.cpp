@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/20 15:28:10 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/24 08:39:09 by jboon         ########   odam.nl         */
+/*   Updated: 2026/04/25 23:28:25 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "cgi/CGI.hpp"
+#include "config/RouteView.hpp"
 #include "http/HTTPRequest.hpp"
 #include "string.hpp"
 
@@ -26,20 +27,36 @@ namespace cgi
 {
   namespace
   {
-    std::string_view GetAddressSegment(std::string_view socket_info)
+    std::string_view GetFileName(std::string_view path)
     {
-      std::size_t port_delimiter{socket_info.find_last_of(':')};
-      if (port_delimiter == std::string_view::npos)
-        return socket_info;
-      return socket_info.substr(0, port_delimiter);
+      std::size_t divider = path.rfind('/');
+      if (divider == path.npos)
+      {
+        return path;
+      }
+      return path.substr(divider + 1);
     }
 
-    std::string_view GetPortNumber(std::string_view socket_info)
+    std::string GetServerName(std::string_view hostname, std::string_view ip)
+    {
+      if (!hostname.empty())
+      {
+        ip = hostname;
+      }
+      if (ip.find(":") != ip.npos)
+      {
+        return std::string("[").append(ip).append("]");
+      }
+      return std::string(ip);
+    }
+
+    std::string GetAddressSegment(std::string_view socket_info)
     {
       std::size_t port_delimiter{socket_info.find_last_of(':')};
       if (port_delimiter == std::string_view::npos)
-        return {"UNKNOWN"};
-      return socket_info.substr(port_delimiter + 1);
+        return std::string(socket_info);
+      std::string_view ip{socket_info.substr(0, port_delimiter)};
+      return GetServerName({}, ip);
     }
   }  // namespace
 
@@ -47,23 +64,37 @@ namespace cgi
       "content-length",     "content-type",        "authorization", "www-authenticate",
       "proxy-authenticate", "proxy-authorization", "host"};
 
-  // TODO: Not all meta-variables are properly set yet (will be resolved next PR)
-  CGIRequest::CGIRequest(const HTTPRequest& http_request, const struct CGIRoute& route, std::string_view server_info,
-                         std::string_view client_info)
-      : body_(http_request.GetBody()), leftover_(body_.length())
+  CGIRequest::CGIRequest(const HTTPRequest& httpRequest, const struct CGIRoute& cgiRoute, const IpPort& ipPortServer,
+                         std::string_view clientInfo, const RouteView& route)
+      : body_(httpRequest.GetBody()),  // TODO: memorysink or filesink
+        leftover_(body_.length()),
+        routeView_(&route),
+        ipPortServer_(ipPortServer),
+        hostname_(httpRequest.GetHost())
   {
-    argv_.emplace_back(route.script_);
-
-    envp_.emplace_back("GATEWAY_INTERFACE=CGI/1.1");
-    envp_.emplace_back("SCRIPT_NAME=" + route.script_.filename().string());
-
-    if (!route.resource_.empty())
+    isClosedConnection_ = String::IsCloseToken(httpRequest.GetFirstHeaderValueOf("connection"));
+    executable_ = cgiRoute.executable_;
+    argv_.emplace_back(executable_);
+    if (executable_ != cgiRoute.script_)
     {
-      envp_.emplace_back("PATH_INFO=" + route.resource_.string());
-      envp_.emplace_back("PATH_TRANSLATED=" + route.full_resource_.string());
+      argv_.emplace_back(cgiRoute.script_);
     }
 
-    const std::string_view query_string{http_request.GetQuery()};
+    envp_.emplace_back("GATEWAY_INTERFACE=CGI/1.1");
+    envp_.emplace_back("SCRIPT_NAME=" + std::string(GetFileName(cgiRoute.script_)));
+
+    if (!cgiRoute.resource_.empty() && cgiRoute.resource_ != "/")
+    {
+      envp_.emplace_back("PATH_INFO=" + cgiRoute.resource_);
+      envp_.emplace_back("PATH_TRANSLATED=" + cgiRoute.fullResource_);
+    }
+    else
+    {
+      envp_.emplace_back("PATH_INFO=");
+      envp_.emplace_back("PATH_TRANSLATED=");
+    }
+
+    const std::string_view query_string{httpRequest.GetQuery()};
     if (query_string.empty())
       envp_.emplace_back("QUERY_STRING=");
     else
@@ -72,8 +103,8 @@ namespace cgi
     if (!body_.empty())
     {
       envp_.emplace_back("CONTENT_LENGTH=" + std::to_string(body_.length()));
-      std::string_view content_type{http_request.GetFirstHeaderValueOf("content-type")};
 
+      std::string_view content_type{httpRequest.GetFirstHeaderValueOf("content-type")};
       if (!content_type.empty())
         envp_.emplace_back("CONTENT_TYPE=" + std::string(content_type));
       else
@@ -81,25 +112,21 @@ namespace cgi
     }
 
     {
-      envp_.emplace_back("REMOTE_ADDR=" + std::string{GetAddressSegment(client_info)});
-      // TODO: should be fully qualified domain name of the client, however I'm skipping this because it requires access
-      // to the (next PR) socket class REMOTE_HOST   = "" | hostname | hostnumber
-      envp_.emplace_back("REMOTE_HOST=" + std::string{GetAddressSegment(client_info)});
-      envp_.emplace_back("REQUEST_METHOD=" + std::string{http_request.GetMethodString()});
+      envp_.emplace_back("REMOTE_ADDR=" + GetAddressSegment(clientInfo));
+      envp_.emplace_back("REMOTE_HOST=" + GetAddressSegment(clientInfo));
+      envp_.emplace_back("REQUEST_METHOD=" + std::string{httpRequest.GetMethodString()});
     }
 
     {
-      // TODO: SERVER_NAME should be hostname (set in configuration, next PR)
-      // server-name = hostname | ipv4-address | ( "[" ipv6-address "]" )
-      envp_.emplace_back("SERVER_NAME=[" + std::string{GetAddressSegment(server_info)} + "]");
-      envp_.emplace_back("SERVER_PORT=" + std::string{GetPortNumber(server_info)});
-      envp_.emplace_back("SERVER_PROTOCOL=" + std::string{http_request.GetVersion()});
+      envp_.emplace_back("SERVER_NAME=" + GetServerName(hostname_, ipPortServer.ip));
+      envp_.emplace_back("SERVER_PORT=" + ipPortServer.port);
+      envp_.emplace_back("SERVER_PROTOCOL=" + std::string{httpRequest.GetVersion()});
       envp_.emplace_back("SERVER_SOFTWARE=" CGI_SERVER_SOFTWARE);
     }
 
     {
       std::string env_var;
-      const HTTP::Headers& http_headers = http_request.GetHeaders();
+      const HTTP::Headers& http_headers = httpRequest.GetHeaders();
       for (auto& [header, values] : http_headers)
       {
         if (std::find(filter_.begin(), filter_.end(), header) != filter_.end())
@@ -126,6 +153,11 @@ namespace cgi
     return body_;
   }
 
+  const std::string& CGIRequest::GetExecutable(void) const noexcept
+  {
+    return executable_;
+  }
+
   const std::vector<std::string>& CGIRequest::GetArgv(void) const noexcept
   {
     return argv_;
@@ -140,4 +172,25 @@ namespace cgi
   {
     return leftover_;
   }
+
+  bool CGIRequest::IsClosedConnection(void) const noexcept
+  {
+    return isClosedConnection_;
+  }
+
+  const RouteView& CGIRequest::GetRouteView(void) const noexcept
+  {
+    return *routeView_;
+  }
+
+  const IpPort& CGIRequest::GetIpPortServer(void) const noexcept
+  {
+    return ipPortServer_;
+  }
+
+  const std::string& CGIRequest::GetHostname(void) const noexcept
+  {
+    return hostname_;
+  }
+
 }  // namespace cgi

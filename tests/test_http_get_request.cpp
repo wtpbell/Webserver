@@ -19,6 +19,7 @@ GET:
     - directory + no index + autoindex off → 403
 */
 
+using VariantResponse = std::variant<std::monostate, HTTPResponse, cgi::CGIProcess>;
 namespace fs = std::filesystem;
 
 static void EnsureAutoindexFixture()
@@ -86,8 +87,11 @@ static ServerRegistry MakeRouterRegistry(const ServerView::IpPort& ipPort, const
   serverViews[0].routes = std::move(routes);
 
   std::map<ServerView::IpPort, std::vector<ServerView*>> serverViewMap;
-  std::map<ServerView::IpPort, std::map<std::string_view, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>> routeViewMap;
-  std::map<ServerView::IpPort, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>> defaultServerRouteViewMap;
+  std::map<ServerView::IpPort,
+           std::map<std::string_view, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>>
+      routeViewMap;
+  std::map<ServerView::IpPort, std::map<std::string_view, RouteView*, ServerRegistry::SizeComparator>>
+      defaultServerRouteViewMap;
 
   serverViewMap[ipPort].push_back(&serverViews[0]);
 
@@ -102,6 +106,12 @@ static ServerRegistry MakeRouterRegistry(const ServerView::IpPort& ipPort, const
 
   return ServerRegistry(std::move(serverViews), std::move(serverViewMap), std::move(routeViewMap),
                         std::move(defaultServerRouteViewMap));
+}
+
+static HTTPResponse& GetHTTPResponse(VariantResponse& variantResponse)
+{
+  REQUIRE(std::holds_alternative<HTTPResponse>(variantResponse));
+  return std::get<HTTPResponse>(variantResponse);
 }
 
 //************************************************** without alias ****************************************************/
@@ -432,7 +442,8 @@ TEST_CASE("Router::Dispatch - alias serves file (end-to-end)", "[alias][router]"
   const std::string hostName = "localhost";
   ServerRegistry registry = MakeRouterRegistry(ipPort, hostName, {route});
 
-  HTTPResponse res = router.Dispatch(request, route, registry, ipPort, hostName);
+  VariantResponse variantResponse{router.Dispatch(request, route, registry, ipPort, hostName)};
+  HTTPResponse& res = GetHTTPResponse(variantResponse);
 
   REQUIRE(res.GetStatusCode() == 200);
   REQUIRE(res.GetBody().find("hi") != std::string::npos);
@@ -460,7 +471,8 @@ TEST_CASE("Router::Dispatch - alias dir without slash redirects (end-to-end)", "
   const std::string hostName = "localhost";
   ServerRegistry registry = MakeRouterRegistry(ipPort, hostName, {route});
 
-  HTTPResponse res = router.Dispatch(request, route, registry, ipPort, hostName);
+  VariantResponse variantResponse{router.Dispatch(request, route, registry, ipPort, hostName)};
+  HTTPResponse& res = GetHTTPResponse(variantResponse);
 
   REQUIRE(res.GetStatusCode() == 301);
   REQUIRE(res.GetFirstHeaderValueOf("Location") == "/static/dir/");
@@ -487,7 +499,8 @@ TEST_CASE("Router::Dispatch - alias blocks traversal escape (end-to-end)", "[ali
   const std::string hostName = "localhost";
   ServerRegistry registry = MakeRouterRegistry(ipPort, hostName, {route});
 
-  HTTPResponse res = router.Dispatch(request, route, registry, ipPort, hostName);
+  VariantResponse variantResponse{router.Dispatch(request, route, registry, ipPort, hostName)};
+  HTTPResponse& res = GetHTTPResponse(variantResponse);
 
   REQUIRE(res.GetStatusCode() == 404);
 }
@@ -513,7 +526,8 @@ TEST_CASE("Router::Dispatch - normalized .. escapes alias match", "[alias][route
   const std::string hostName = "localhost";
   ServerRegistry registry = MakeRouterRegistry(ipPort, hostName, {route});
 
-  HTTPResponse res = router.Dispatch(request, route, registry, ipPort, hostName);
+  VariantResponse variantResponse{router.Dispatch(request, route, registry, ipPort, hostName)};
+  HTTPResponse& res = GetHTTPResponse(variantResponse);
 
   REQUIRE(res.GetStatusCode() == 404);
 }

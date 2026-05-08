@@ -27,13 +27,13 @@
 #define NS_TO_S(ns) ((ns) / 1000000000)
 #define S_TO_NS(s) ((s)*1000000000)
 
-Expected<TimerFD, int> TimerFD::CreateRealtimeClock(time_t ms_duration, time_t ms_interval)
+Expected<TimerFD, int> TimerFD::CreateMonotonicClock(time_t ms_duration, time_t ms_interval)
 {
-  int fd = timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK | TFD_CLOEXEC);
+  int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
   if (fd == -1)
     return static_cast<int>(errno);
 
-  TimerFD timerfd{fd, CLOCK_REALTIME, ms_duration, ms_interval};
+  TimerFD timerfd{fd, CLOCK_MONOTONIC, ms_duration, ms_interval};
   if (!timerfd.SetTime())
     return static_cast<int>(errno);
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+use lib "/home/" . `whoami | tr -d '\n'` . "/perl5/lib/perl5/";
 use strict;
 use warnings;
 use CGI;
@@ -30,8 +31,7 @@ print $cgi->header(
 #    -type => 'adf',
 #);
 #
-
-my $env_entries = join("\n",
+my $env_entries = join("\n    ",
 map { "<tr><td>$_</td><td>$ENV{$_}</td></tr>" }
 sort keys %ENV);
 

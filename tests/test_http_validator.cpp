@@ -93,7 +93,6 @@ static HTTPRequest MakeValidRequest()
   request.SetTarget("/");
   request.SetVersion("HTTP/1.1");
   request.AddHeader("host", "example.com");
-  request.SetComplete(true);
   return request;
 }
 
@@ -135,8 +134,6 @@ TEST_CASE("HTTPValidator rejects missing Host header", "[http][validator]")
   request.SetMethod("GET");
   request.SetTarget("/");
   request.SetVersion("HTTP/1.1");
-  request.SetComplete(true);
-
   REQUIRE(ValidateRequest(request) == ValidationResult::kBadRequest);
 }
 

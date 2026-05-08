@@ -10,6 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <ostream>
 #include <sstream>
 #include <utility>
 
@@ -37,5 +38,6 @@ void Logger::Log(LogLevel level, std::string_view format, Args&&... args)
   if (level == LogLevel::LDEBUG)
     LogFormat(ss, LOG_DEBUG "{} ({}): " LOG_CLEAR, __FILE__, __LINE__);  // TODO: HAHA!
   LogFormat(ss, format, std::forward<Args>(args)...);
-  GetOutputStream(level) << ss.str() << std::endl;
+  ss << "\n";
+  GetOutputStream(level) << ss.str() << std::flush;
 }

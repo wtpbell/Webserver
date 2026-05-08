@@ -1,12 +1,12 @@
-/* *4************************************************************************* */
+/* ************************************************************************** */
 /*                                                                            */
 /*                                                        ::::::::            */
 /*   Server.hpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/06 14:04:06 by bewong        #+#    #+#                 */
-/*   Updated: 2026/03/31 10:30:14 by bewong        ########   odam.nl         */
+/*   Updated: 2026/05/03 21:14:25 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,11 +15,9 @@
 
 #include <netdb.h>
 
-#include <string>
-#include <unordered_map>
-
-#include "Connection.hpp"
+#include "ConnectionRegistry.hpp"
 #include "EpollManager.hpp"
+#include "RequestContext.hpp"
 #include "config/ServerRegistry.hpp"
 #include "config/ServerView.hpp"
 #include "http/SessionManager.hpp"
@@ -32,30 +30,30 @@ class Server
 
   public:
     Server() = delete;
-    Server(const IpPort& ipport, Socket::Type type, const ServerRegistry& serverRegistry);
+    Server(const IpPort& ipport, Socket::Type type, const ServerRegistry& serverRegistry, EpollManager& epollManager);
     ~Server();
     Server(const Server& other) = delete;
     Server(Server&& other) noexcept = default;
     Server& operator=(const Server& rhs) = delete;
     Server& operator=(Server&& rhs) noexcept = delete;
 
-    bool RegisterFD(EpollManager& manager);
-
   private:
     using addrinfo_t = struct addrinfo;
     using sockaddr_storage_t = struct sockaddr_storage;
-    using ConnectionIterator = std::unordered_map<int, Connection>::iterator;
 
-    std::string ExtractHostName(const HTTPRequest& request) const;
     void Accept(EpollManager& manager, const struct epoll_event& event);
     void HandleConnection(EpollManager& mananger, const struct epoll_event& event);
-    void CloseConnection(EpollManager& manager, ConnectionIterator connection);
+    void HandleCGI(EpollManager& manager, const struct epoll_event& event);
+    void HandleTimeout(EpollManager& manager, const struct epoll_event& event);
+    void ErrorCloseCgiProcess(EpollManager& manager, Connection& connection, cgi::CGIProcess& cgiProcess);
+    void CloseConnection(EpollManager& manager, ConnectionRegistry::ConnectionData& connectionData);
 
     IpPort ipPort_;
     Socket socket_;
     const ServerRegistry& serverRegistry_;
     Router router_;
     SessionManager sessionManager_;
-    std::unordered_map<int, Connection> connections_;
+    ConnectionRegistry connectionRegistry_;
+    RequestContext requestContext_;
 };
 #endif  // SERVER_H_

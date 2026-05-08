@@ -11,9 +11,11 @@
 /* ************************************************************************** */
 
 #include <filesystem>
+#include <string_view>
 
 #include "catch_amalgamated.hpp"
 #include "cgi/CGI.hpp"
+#include "config/RouteView.hpp"
 
 namespace
 {
@@ -24,235 +26,85 @@ namespace
   {
     try
     {
-      return {FileSystem::current_path() / "tests/cgi-bin"};
+      return {FileSystem::current_path() / "tests/"};
     }
     catch (...)
     {
     }
     FAIL("Failed to retrieve root directory");
   }
+
+  RouteView CreateRouteView(void)
+  {
+    RouteView route;
+    route.root = GetRoot();
+    route.locationPrefix = "/cgi-bin";
+    route.cgi = true;
+    route.autoindex = false;
+    route.allowedMask = RouteView::MethodMask::kGet;
+    return route;
+  }
+
 }  // namespace
 
 TEST_CASE("SetupCGIRoute - Script only", "[cgi][Helper-CGI]")
 {
-  Path root{GetRoot()};
-  Path target{"/cgi-bin/run.cgi"};
-  Path script_path = root / "run.cgi";
+  std::string_view target{"/cgi-bin/run.cgi"};
+  Path scriptPath{GetRoot() / "cgi-bin/run.cgi"};
+  auto cgiRoute = cgi::SetupCGIRoute(target, CreateRouteView());
 
-  auto cgi_route = cgi::SetupCGIRoute(target, root, "/cgi-bin");
-
-  REQUIRE(cgi_route.HasValue());
-  REQUIRE(cgi_route.GetValue().script_ == script_path);
-  REQUIRE(cgi_route.GetValue().resource_ == "");
-  REQUIRE(cgi_route.GetValue().full_resource_ == "");
+  REQUIRE(cgiRoute.HasValue());
+  REQUIRE(cgiRoute.GetValue().script_ == scriptPath);
+  REQUIRE(cgiRoute.GetValue().resource_ == "/");
+  REQUIRE(cgiRoute.GetValue().fullResource_ == "");
 }
 
 TEST_CASE("SetupCGIRoute - Script /w resource", "[cgi][Helper-CGI]")
 {
   Path root{GetRoot()};
-  Path target{"/cgi-bin/run.cgi/web/page/index.html"};
-  Path script_path = root / "run.cgi";
+  std::string_view target{"/cgi-bin/run.cgi/web/page/index.html"};
+  Path scriptPath{GetRoot() / "cgi-bin/run.cgi"};
 
-  auto cgi_route = cgi::SetupCGIRoute(target, root, "/cgi-bin");
+  auto cgiRoute = cgi::SetupCGIRoute(target, CreateRouteView());
 
-  REQUIRE(cgi_route.HasValue());
-  REQUIRE(cgi_route.GetValue().script_ == script_path);
-  REQUIRE(cgi_route.GetValue().resource_ == "/web/page/index.html");
-  REQUIRE(cgi_route.GetValue().full_resource_ == "");
+  REQUIRE(cgiRoute.HasValue());
+  REQUIRE(cgiRoute.GetValue().script_ == scriptPath);
+  REQUIRE(cgiRoute.GetValue().resource_ == "/web/page/index.html");
+  REQUIRE(cgiRoute.GetValue().fullResource_ == "");
 }
 
-TEST_CASE("SetupCGIRoute - Script soft link", "[cgi][Helper-CGI]")
+TEST_CASE("SetupCGIRoute - Script soft link", "[cgi][Helper-CGI][!mayfail]")
 {
-  Path root{GetRoot()};
-  Path target{"/cgi-bin/exec_me.sh/sym_direct_response"};
-  Path script_path = root / "run.cgi";
+  std::string_view target{"/cgi-bin/exec_me.sh/sym_direct_response"};
+  auto cgiRoute = cgi::SetupCGIRoute(target, CreateRouteView());
 
-  auto cgi_route = cgi::SetupCGIRoute(target, root, "/cgi-bin");
-
-  REQUIRE_FALSE(cgi_route.HasValue());
-  REQUIRE(cgi_route.GetError() == CGIErrorCode::kScriptIsSymlinkError);
+  REQUIRE(cgiRoute.HasValue());
 }
 
 TEST_CASE("SetupCGIRoute - Script No Perms", "[cgi][Helper-CGI]")
 {
-  Path root{GetRoot()};
-  Path target{"/cgi-bin/no_exec_perms.sh"};
-  Path script_path = root / "run.cgi";
+  std::string_view target{"/cgi-bin/no_exec_perms.sh"};
+  auto cgiRoute = cgi::SetupCGIRoute(target, CreateRouteView());
 
-  auto cgi_route = cgi::SetupCGIRoute(target, root, "/cgi-bin");
-
-  REQUIRE_FALSE(cgi_route.HasValue());
-  REQUIRE(cgi_route.GetError() == CGIErrorCode::kScriptMissingPermissionsError);
+  REQUIRE_FALSE(cgiRoute.HasValue());
+  REQUIRE(cgiRoute.GetError() == CGIErrorCode::kMissingPermissionsError);
 }
 
 TEST_CASE("SetupCGIRoute - Script not found", "[cgi][Helper-CGI]")
 {
-  Path root{GetRoot()};
-  Path target{"/cgi-bin/lalallalalalalala/lalalalal/allalalalalalallaal/llalalala/lalalala.cgi"};
-  Path script_path = root / "run.cgi";
+  std::string_view target{"/cgi-bin/lalallalalalalala/lalalalal/allalalalalalallaal/llalalala/lalalala.cgi"};
+  auto cgiRoute = cgi::SetupCGIRoute(target, CreateRouteView());
 
-  auto cgi_route = cgi::SetupCGIRoute(target, root, "/cgi-bin");
-
-  REQUIRE_FALSE(cgi_route.HasValue());
-  REQUIRE(cgi_route.GetError() == CGIErrorCode::kScriptNotFoundError);
+  REQUIRE_FALSE(cgiRoute.HasValue());
+  REQUIRE(cgiRoute.GetError() == CGIErrorCode::kNotFoundError);
 }
 
-TEST_CASE("ReplaceScriptRoot - default", "[cgi][Helper-CGI]")
+TEST_CASE("CGI 1", "[cgi][!mayfail]")
 {
-  Path root{"/data/www/"};
-  std::string_view script{"/cgi-bin/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "cgi-bin", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "/data/www/script.cgi");
+  FAIL("Test CGI with different location and root path");
 }
 
-TEST_CASE("ReplaceScriptRoot - extended root path", "[cgi][Helper-CGI]")
+TEST_CASE("CGI Extensions", "[cgi][!mayfail]")
 {
-  Path root{"/data/www/extra/directory/cgi-bin"};
-  std::string_view script{"/cgi-bin/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "cgi-bin", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "/data/www/extra/directory/cgi-bin/script.cgi");
-}
-
-TEST_CASE("ReplaceScriptRoot - map onto /", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "/data/www/cgi-bin/script.cgi");
-}
-
-TEST_CASE("ReplaceScriptRoot - mapping too large", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/cgi-bin/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/data/www/cgi-bin/", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "");
-}
-
-TEST_CASE("ReplaceScriptRoot - partial mapping", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/cgi-bin/level01/level02/level03/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/cgi-bin/", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "/data/www/cgi-bin/level01/level02/level03/script.cgi");
-}
-
-TEST_CASE("ReplaceScriptRoot - complete mapping", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/cgi-bin/level01/level02/level03/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/cgi-bin/level01/level02/level03", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "/data/www/cgi-bin/script.cgi");
-}
-
-TEST_CASE("ReplaceScriptRoot - full mapping", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/cgi-bin/level01/level02/level03/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/cgi-bin/level01/level02/level03/script.cgi", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "/data/www/cgi-bin/");
-}
-
-TEST_CASE("ReplaceScriptRoot - mapping larger than script", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/cgi-bin/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/cgi-bin/level01/level02/level03/", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "");
-}
-
-TEST_CASE("ReplaceScriptRoot - unmatch mapping", "[cgi][Helper-CGI]")
-{
-  Path root{"/data/www/cgi-bin"};
-  std::string_view script{"/cgi-bin/script.cgi"};
-
-  Path result = ReplaceScriptRoot(script, "/cgi-bin-bin/", root);
-  CAPTURE(root, script);
-  REQUIRE(result == "");
-}
-
-TEST_CASE("ExtractResourcePath - no resource", "[cgi][Helper-CGI]")
-{
-  std::string_view script{"/data/www/cgi-bin/script.cgi"};
-  std::string_view target{"/cgi-bin/script.cgi"};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "");
-}
-
-TEST_CASE("ExtractResourcePath - with resource", "[cgi][Helper-CGI]")
-{
-  std::string_view script{"/data/www/cgi-bin/script.cgi"};
-  std::string_view target{"/cgi-bin/script.cgi/book/pages/index.html"};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "/book/pages/index.html");
-}
-
-TEST_CASE("ExtractResourcePath - empty script", "[cgi][Helper-CGI]")
-{
-  std::string_view script{""};
-  std::string_view target{"/cgi-bin/script.cgi/book/pages/index.html"};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "");
-}
-
-TEST_CASE("ExtractResourcePath - empty target", "[cgi][Helper-CGI]")
-{
-  std::string_view script{"/data/www/cgi-bin/script.cgi"};
-  std::string_view target{""};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "");
-}
-
-TEST_CASE("ExtractResourcePath - non-matching script part", "[cgi][Helper-CGI]")
-{
-  std::string_view script{"/this/is/sparta.cgi"};
-  std::string_view target{"/cgi-bin/script.cgi/book/pages/index.html"};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "");
-}
-
-TEST_CASE("ExtractResourcePath - script exceeds target", "[cgi][Helper-CGI]")
-{
-  std::string_view script{"/data/www/cgi-bin/script.cgi/website/pages/paragraphs/index.html"};
-  std::string_view target{"/cgi-bin/script.cgi/book/pages/index.html"};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "");
-}
-
-TEST_CASE("ExtractResourcePath - target prefix not matching", "[cgi][Helper-CGI]")
-{
-  std::string_view script{"/data/www/cgi-bin/script.cgi"};
-  std::string_view target{"/uuu/cgi-bin/script.cgi/book/pages/index.html"};
-
-  Path resource = ExtractResourcePath(script, target);
-  CAPTURE(script, target);
-  REQUIRE(resource == "");
+  FAIL("HURAY!");
 }

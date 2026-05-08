@@ -12,6 +12,7 @@
 
 #include "Logger.hpp"
 
+#include <cassert>
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -66,9 +67,9 @@ std::string_view Logger::LevelToString(LogLevel level)
     case LogLevel::CRITICAL:
       return LOG_CRITICAL LOG_BOLD "CRITICAL" LOG_CLEAR;
     default:
-      break;
+      assert(false && "Not supported Logger::LogLevel");
+      __builtin_unreachable();
   }
-  return "UNKNOWN";
 }
 
 void Logger::SetLogFilter(LogLevel filter)

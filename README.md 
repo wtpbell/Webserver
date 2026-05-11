@@ -153,7 +153,7 @@ The diagrams below give a visual overview of the server design. Store these imag
 
 ### Event loop and `EpollManager`
 
-![EpollManager architecture](docs/architecture/02_epollManager.png)
+![EpollManager architecture](docs/02_epollManager.png)
 
 ### Connection request lifecycle
 
@@ -161,19 +161,19 @@ The diagrams below give a visual overview of the server design. Store these imag
 
 ### Routing and path resolution
 
-![Routing and path resolution](docs/architecture/04_routing_path_resolution.png)
+![Routing and path resolution](docs/04_routing_path_resolution.png)
 
 ### HTTP Handler
 
-![Routing and path resolution](docs/architecture/07_http_handler.png)
+![Routing and path resolution](docs/07_http_handler.png)
 
 ### CGI Handler
 
-![Routing and path resolution](docs/architecture/08_cgi_handler.png)
+![Routing and path resolution](docs/08_cgi_handler.png)
 
 ### CGI ordered pipeline
 
-![CGI ordered pipeline architecture](docs/architecture/05_cgi_pipleline.png)
+![CGI ordered pipeline architecture](docs/05_cgi_pipleline.png)
 
 The project is split into several main responsibilities.
 

@@ -141,7 +141,7 @@ The server supports regular HTTP handling and CGI handling in the same connectio
 
 ## Project Architecture
 
-The diagrams below give a visual overview of the server design. Store these images in `docs/architecture/` so the relative links work from the repository root.
+The diagrams below give a visual overview of the server design. Store these images in `docs/` so the relative links work from the repository root.
 
 ### Whole system
 

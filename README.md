@@ -157,7 +157,7 @@ The diagrams below give a visual overview of the server design. Store these imag
 
 ### Connection request lifecycle
 
-![Connection request lifecycle](docs/3_request_lifecycle.png)
+![Connection request lifecycle](docs/03_request_lifecycle.png)
 
 ### Routing and path resolution
 

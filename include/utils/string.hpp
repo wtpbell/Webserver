@@ -3,17 +3,18 @@
 /*                                                        ::::::::            */
 /*   string.hpp                                         :+:    :+:            */
 /*                                                     +:+                    */
-/*   By: bewong <bewong@student.codam.nl>             +#+                     */
+/*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2025/12/22 16:23:40 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/02 10:02:22 by bewong        ########   odam.nl         */
+/*   Updated: 2026/05/10 19:41:20 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <string>
-#include <string_view>
 #include <ctime>
 #include <filesystem>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace String
 {
@@ -34,4 +35,5 @@ namespace String
   const char* GMTCstring(char* stime, std::size_t n);
   const char* GMTCstringFromTime(std::time_t time, char* stime, std::size_t n);
   std::time_t FileTimeToTimeT(const std::filesystem::file_time_type& ft);
+  std::vector<char*> ConvertToCstrVector(const std::vector<std::string>& v);
 }  // namespace String

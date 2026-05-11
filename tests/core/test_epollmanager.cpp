@@ -10,9 +10,9 @@
 #include <thread>
 #include <unordered_map>
 
-#include "EpollManager.hpp"
 #include "catch_amalgamated.hpp"
-#include "webserv.hpp"
+#include "core/EpollManager.hpp"
+#include "utils/signal.hpp"
 
 static void InitPipe(SharedFD& left, SharedFD& right)
 {

@@ -19,10 +19,24 @@
 
 #include <cerrno>
 #include <cstdarg>
+#include <cstddef>
 #include <vector>
 
 #include "exception/FileDescriptorException.hpp"
-#include "webserv.hpp"
+
+namespace
+{
+  std::size_t NextPOT(std::size_t n)
+  {
+    --n;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    return (++n);
+  }
+}  // namespace
 
 std::vector<int> SharedFD::shared_count_fds(1024);
 

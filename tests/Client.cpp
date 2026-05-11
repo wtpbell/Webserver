@@ -23,7 +23,7 @@
 #include <iostream>
 #include <string>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 
 Client::~Client(void)
 {

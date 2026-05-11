@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Server.hpp"
+#include "core/Server.hpp"
 
 #include <sys/epoll.h>
 #include <sys/socket.h>
@@ -21,17 +21,17 @@
 #include <optional>
 #include <stdexcept>
 
-#include "Connection.hpp"
-#include "ConnectionRegistry.hpp"
-#include "EpollManager.hpp"
-#include "Logger.hpp"
-#include "RequestContext.hpp"
+#include "core/Connection.hpp"
+#include "core/ConnectionRegistry.hpp"
+#include "core/EpollManager.hpp"
+#include "utils/Logger.hpp"
+#include "core/RequestContext.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "cgi/CGIResponse.hpp"
 #include "config/ServerRegistry.hpp"
 #include "io/Socket.hpp"
 #include "io/TimerFD.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 Server::Server(const IpPort& ipPort, Socket::Type type, const ServerRegistry& serverRegistry,
                EpollManager& epollManager)
@@ -45,12 +45,11 @@ Server::Server(const IpPort& ipPort, Socket::Type type, const ServerRegistry& se
                       })
 {
   const int yes{1};
-  const int no{0};
-
   socket_.SetNonBlocking(true);
   socket_.SetSockOpt(SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
   if (type == Socket::Type::kIPv6)
   {
+    const int no{0};
     socket_.SetSockOpt(IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));  // enable dual stack socket
   }
   socket_.Bind();

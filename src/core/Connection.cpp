@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Connection.hpp"
+#include "core/Connection.hpp"
 
 #include <sys/epoll.h>
 
@@ -25,8 +25,8 @@
 #include <utility>
 #include <variant>
 
-#include "Logger.hpp"
-#include "RequestContext.hpp"
+#include "utils/Logger.hpp"
+#include "core/RequestContext.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "cgi/CGIResponse.hpp"
 #include "config/RouteView.hpp"
@@ -38,7 +38,7 @@
 #include "http/HTTPUtils.hpp"
 #include "http/HTTPValidator.hpp"
 #include "http/ResponseFactory.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace fs = std::filesystem;
 

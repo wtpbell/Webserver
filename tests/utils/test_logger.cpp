@@ -1,7 +1,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "catch_amalgamated.hpp"
 
 using namespace Catch::Matchers;

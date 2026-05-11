@@ -20,7 +20,7 @@
 #include "http/BodySink.hpp"
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPTypes.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 /************************************************** Helper ***********************************************************/
 

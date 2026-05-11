@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/08 19:15:05 by jboon         #+#    #+#                 */
-/*   Updated: 2026/05/03 22:06:50 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/10 19:41:51 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,8 +21,6 @@
 #include <system_error>
 #include <utility>
 
-#include "Expected.hpp"
-#include "Logger.hpp"
 #include "cgi/CGIError.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "cgi/CGIRequest.hpp"
@@ -31,8 +29,9 @@
 #include "http/HTTPRequest.hpp"
 #include "http/HTTPStatus.hpp"
 #include "router/RequestHandler.hpp"
-#include "string.hpp"
-#include "webserv.hpp"
+#include "utils/Expected.hpp"
+#include "utils/Logger.hpp"
+#include "utils/string.hpp"
 
 /* =============================== PUBLIC =================================== */
 namespace cgi
@@ -268,8 +267,8 @@ namespace cgi
     }
 
     const char* executable = process->GetRequest().GetExecutable().data();
-    const std::vector<char*> argv{ConvertToCstrVector(process->GetRequest().GetArgv())};
-    const std::vector<char*> envp{ConvertToCstrVector(process->GetRequest().GetEnvp())};
+    const std::vector<char*> argv{String::ConvertToCstrVector(process->GetRequest().GetArgv())};
+    const std::vector<char*> envp{String::ConvertToCstrVector(process->GetRequest().GetEnvp())};
     const char* path{*argv.data()};
 
     if (setpgid(0, 0) != 0)  // Create own process group for cgi script

@@ -4,7 +4,7 @@
 
 #include <type_traits>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "catch_amalgamated.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "io/Socket.hpp"

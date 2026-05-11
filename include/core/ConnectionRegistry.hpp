@@ -16,7 +16,7 @@
 #include <chrono>
 #include <unordered_map>
 
-#include "Connection.hpp"
+#include "core/Connection.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "io/Socket.hpp"
 #include "io/TimerFD.hpp"

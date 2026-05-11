@@ -17,8 +17,8 @@
 #include <string_view>
 #include <variant>
 
-#include "ConnectionRegistry.hpp"
-#include "EpollManager.hpp"
+#include "core/ConnectionRegistry.hpp"
+#include "core/EpollManager.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "config/RouteView.hpp"
 #include "config/ServerRegistry.hpp"

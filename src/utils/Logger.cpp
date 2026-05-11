@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 
 #include <cassert>
 #include <chrono>

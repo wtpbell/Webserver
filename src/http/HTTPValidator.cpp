@@ -18,7 +18,7 @@
 
 #include "http/HTTPCookie.hpp"
 #include "http/HTTPTypes.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace
 {

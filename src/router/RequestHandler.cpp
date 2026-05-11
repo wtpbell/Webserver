@@ -20,7 +20,7 @@
 #include <string_view>
 #include <system_error>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "config/RouteView.hpp"
 #include "http/HTTPUtils.hpp"
 #include "http/ResponseFactory.hpp"

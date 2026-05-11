@@ -10,14 +10,15 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "ConnectionRegistry.hpp"
+#include "core/ConnectionRegistry.hpp"
 
 #include <cassert>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "io/Socket.hpp"
 #include "io/TimerFD.hpp"
+#include "utils/Expected.hpp"
 
 ConnectionRegistry::ConnectionRegistry(void)
 {

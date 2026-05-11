@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
 #include "http/HTTPTypes.hpp"
 
@@ -204,4 +205,16 @@ namespace String
 
     return system_clock::to_time_t(sctp);
   }
+
+  ///@note: https://stackoverflow.com/a/26032303
+  std::vector<char*> ConvertToCstrVector(const std::vector<std::string>& v)
+  {
+    std::vector<char*> c_vec;
+    c_vec.reserve(v.size());
+    for (const std::string& s : v)
+      c_vec.emplace_back(const_cast<char*>(s.c_str()));
+    c_vec.emplace_back(nullptr);
+    return c_vec;
+  }
+
 }  // namespace String

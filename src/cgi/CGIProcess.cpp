@@ -23,7 +23,7 @@
 #include <optional>
 #include <utility>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "cgi/CGIParser.hpp"
 #include "cgi/CGIRequest.hpp"
 #include "cgi/CGIResponse.hpp"

@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/19 10:35:00 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/24 17:21:09 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/10 19:47:16 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,17 +21,17 @@
 #include <string>
 #include <string_view>
 
-#include "EpollManager.hpp"
-#include "Logger.hpp"
 #include "cgi/CGI.hpp"
 #include "cgi/CGIError.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "cgi/CGIRequest.hpp"
 #include "config/RouteView.hpp"
+#include "core/EpollManager.hpp"
 #include "http/HTTPParser.hpp"
 #include "http/HTTPRequest.hpp"
 #include "io/TimerFD.hpp"
-#include "webserv.hpp"
+#include "utils/Logger.hpp"
+#include "utils/signal.hpp"
 
 #define BUF_SIZE 1024
 

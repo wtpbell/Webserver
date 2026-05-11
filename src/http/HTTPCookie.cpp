@@ -16,7 +16,7 @@
 #include <string_view>
 
 #include "http/HTTPValidator.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace HTTP
 {

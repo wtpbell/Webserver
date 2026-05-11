@@ -22,7 +22,7 @@
 #include <system_error>
 
 #include "http/HTTPResponse.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace HTTP
 {

@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "Client.hpp"
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 
 int main(int argc, char* argv[])
 {

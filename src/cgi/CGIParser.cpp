@@ -19,7 +19,7 @@
 #include <string_view>
 
 #include "cgi/CGIResponse.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace cgi
 {

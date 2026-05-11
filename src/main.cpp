@@ -14,14 +14,15 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "EpollManager.hpp"
-#include "Logger.hpp"
-#include "Server.hpp"
 #include "config/ServerRegistry.hpp"
 #include "config/ServerView.hpp"
+#include "config/loadConfigs.hpp"
+#include "core/EpollManager.hpp"
+#include "core/Server.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "io/Socket.hpp"
-#include "webserv.hpp"
+#include "utils/Logger.hpp"
+#include "utils/signal.hpp"
 
 static void ConstructServers(std::vector<Server>& servers, const ServerRegistry& serverRegistry,
                              EpollManager& epollManager)
@@ -60,10 +61,12 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
+  Logger::Log(LogLevel::INFO, "Loading in the configuration file...");
   std::optional<ServerRegistry> serverRegistry = LoadConfigs(argc, argv);
   if (serverRegistry == std::nullopt)
+  {
     return EXIT_FAILURE;
-
+  }
   Logger::Log(LogLevel::INFO, "Server registry successfully constructed!");
 
   Logger::Log(LogLevel::INFO, "Setting up signals...");
@@ -72,7 +75,7 @@ int main(int argc, char* argv[])
   EpollManager manager;
   if (manager.Init() != EpollManager::Result::kOk)
   {
-    Logger::Log(LogLevel::CRITICAL, "Failed to initialize epoll manager.");
+    Logger::Log(LogLevel::CRITICAL, "ヽ(°〇°)ﾉ Failed to initialize epoll manager.");
     return EXIT_FAILURE;
   }
 
@@ -81,7 +84,7 @@ int main(int argc, char* argv[])
   ConstructServers(servers, *serverRegistry, manager);
   if (servers.empty())
   {
-    Logger::Log(LogLevel::CRITICAL, "No valid servers could be constructed.");
+    Logger::Log(LogLevel::ERROR, "ヽ(°〇°)ﾉ No valid servers could be constructed.");
     return EXIT_FAILURE;
   }
 

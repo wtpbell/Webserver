@@ -27,10 +27,10 @@
 #include <string_view>
 #include <utility>
 
-#include "Logger.hpp"
+#include "utils/Logger.hpp"
 #include "exception/FileDescriptorException.hpp"
 #include "io/SharedFD.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace
 {

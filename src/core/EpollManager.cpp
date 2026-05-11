@@ -6,18 +6,19 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/06 14:03:27 by bewong        #+#    #+#                 */
-/*   Updated: 2026/04/27 12:29:12 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/10 19:38:07 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "EpollManager.hpp"
+#include "core/EpollManager.hpp"
 
 #include <sys/epoll.h>
 
 #include <cassert>
+#include <cerrno>
 #include <csignal>
 
-#include "webserv.hpp"
+#include "utils/signal.hpp"
 
 EpollManager::EpollManager() : SharedFD() {}
 

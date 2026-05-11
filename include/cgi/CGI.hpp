@@ -16,7 +16,7 @@
 #include <filesystem>
 #include <string_view>
 
-#include "Expected.hpp"
+#include "utils/Expected.hpp"
 #include "cgi/CGIError.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "cgi/CGIRequest.hpp"

@@ -21,7 +21,7 @@
 #include "cgi/CGI.hpp"
 #include "config/RouteView.hpp"
 #include "http/HTTPRequest.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 namespace cgi
 {

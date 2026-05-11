@@ -10,15 +10,15 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "RequestContext.hpp"
+#include "core/RequestContext.hpp"
 
 #include <sys/epoll.h>
 
 #include <string>
 #include <string_view>
 
-#include "ConnectionRegistry.hpp"
-#include "EpollManager.hpp"
+#include "core/ConnectionRegistry.hpp"
+#include "core/EpollManager.hpp"
 #include "cgi/CGIProcess.hpp"
 #include "config/RouteView.hpp"
 #include "config/ServerRegistry.hpp"

@@ -15,9 +15,9 @@
 
 #include <netdb.h>
 
-#include "ConnectionRegistry.hpp"
-#include "EpollManager.hpp"
-#include "RequestContext.hpp"
+#include "core/ConnectionRegistry.hpp"
+#include "core/EpollManager.hpp"
+#include "core/RequestContext.hpp"
 #include "config/ServerRegistry.hpp"
 #include "config/ServerView.hpp"
 #include "http/SessionManager.hpp"

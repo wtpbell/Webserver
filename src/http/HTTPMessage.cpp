@@ -20,7 +20,7 @@
 
 #include "http/HTTPTypes.hpp"
 #include "http/HTTPValidator.hpp"
-#include "string.hpp"
+#include "utils/string.hpp"
 
 HTTPMessage::HTTPMessage(std::string ver, HTTP::Headers headers, std::string body)
     : version_(std::move(ver)), headers_(std::move(headers)), body_(std::move(body))

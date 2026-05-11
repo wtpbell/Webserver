@@ -51,12 +51,10 @@ class Socket : public SharedFD
 
     static Socket CreateSocket(int domain, int type, int protocol);
     static Socket CreateSocket(const char* host, const char* service, int flags = 0, Type type = Type::kIPv6);
-    // static Socket CreateTCPSocket(const char* host, const char* service, Type type);
     static std::pair<Socket, Socket> SocketPair(int domain, int type, int protocol);
     static addrinfo_t* GetAddrInfo(addrinfo_t& hints, const char* host, const char* service);
 
     void Bind(void);
-
 
     void Listen(int backlog = SOMAXCONN);
     void Connect(void);

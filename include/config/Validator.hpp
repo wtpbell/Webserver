@@ -88,7 +88,7 @@ class Validator
 
     std::string supportedErrorPageCodesStr_;
 
-    const std::set<std::string_view> supportedReturnCodesSet_{"100", "301"};
+    const std::set<std::string_view> supportedReturnCodesSet_{"100", "301", "302"};
 
     std::string supportedReturnCodesStr_;
 

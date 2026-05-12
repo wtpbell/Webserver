@@ -1,0 +1,572 @@
+*This project has been created as part of the 42 curriculum by bewong, jboon, jstuhrin.*
+
+# webserv
+
+`webserv` is a C++ HTTP/1.1 web server inspired by the behaviour of nginx.  
+The goal of the project is to understand how configs files are parsed and validated, how locations are looked up and corresponding routeviews are dispatched, and how a real web server accepts clients, parses HTTP requests, routes them through a configuration file, serves files, handles uploads, runs CGI programs, and keeps multiple connections alive without blocking the whole server.
+
+The server is built around Linux `epoll` and non-blocking sockets. It can listen on one or more configured addresses, choose a server block from the request `Host` header, apply longest-prefix location matching, and generate HTTP responses for static files, directory listings, uploads, deletes, redirects, custom error pages, and CGI scripts.
+
+---
+
+## Table of Contents
+
+- [Description](#description)
+- [Features](#features)
+- [Project Architecture](#project-architecture)
+- [Configuration Overview](#configuration-overview)
+- [Instructions](#instructions)
+- [Usage Examples](#usage-examples)
+- [Technical Choices](#technical-choices)
+- [Project Boundaries](#project-boundaries)
+- [Resources](#resources)
+- [AI Usage](#ai-usage)
+- [Module READMEs](#module-readmes)
+
+---
+
+## Description
+
+This project implements a small but functional HTTP server in C++.
+
+The server starts from a configuration file, validates it, creates one or more listening sockets, and enters an event loop. Incoming client connections are accepted in non-blocking mode. Each connection owns an HTTP parser and an output queue, so the server can keep reading requests and writing responses without blocking on slow clients.
+
+At a high level, a request goes through the following flow:
+
+```text
+client socket
+    ↓
+epoll event loop
+    ↓
+Connection
+    ↓
+HTTPParser + HTTPValidator
+    ↓
+ServerRegistry route lookup
+    ↓
+Router
+    ↓
+RequestHandler or CGI handler
+    ↓
+HTTPResponse / CGIResponse
+    ↓
+ordered output queue
+    ↓
+client socket
+```
+
+The server supports regular HTTP handling and CGI handling in the same connection pipeline. When a CGI request is encountered, the connection keeps a reserved response slot in the output queue. Later HTTP requests may already be parsed, but responses are still sent back in the correct HTTP order.
+
+---
+
+## Features
+
+### HTTP server
+
+- HTTP/1.1 request parsing.
+- Non-blocking sockets.
+- Linux `epoll` based event loop.
+- Multiple listening servers.
+- IPv4 and IPv6 support.
+- Keep-alive connections.
+- Ordered HTTP pipelining support.
+- Graceful connection closing with `Connection: close`.
+- Request timeout handling with `timerfd`.
+
+### Configuration
+
+- nginx-like configuration syntax.
+- `http`, `server`, and `location` blocks.
+- `listen` directive.
+- `server_name` directive.
+- `root` directive.
+- `alias` directive.
+- `index` directive.
+- `autoindex` directive.
+- `allowed_methods` directive.
+- `client_max_body_size` directive.
+- `return` directive.
+- `error_page` directive.
+- CGI configuration through `cgi` and `cgi_extension`.
+- Validation for duplicate location prefixes.
+- Validation for invalid or unsupported configuration values.
+
+### Routing
+
+- Server selection by IP, port, and `Host` header.
+- Default server fallback.
+- Longest-prefix location matching.
+- Route-level method restrictions.
+- Internal error-page dispatch.
+- External error-page redirects.
+
+### Static file handling
+
+- `GET` regular files.
+- Directory index lookup.
+- Directory autoindex generation.
+- Directory trailing-slash redirect.
+- MIME type selection.
+- `Last-Modified` header support.
+- Path traversal protection.
+- Symlink/base-directory escape protection through canonical path checks.
+
+### Upload and delete
+
+- `POST` uploads request bodies to files.
+- Large/chunked bodies can be stored through a temporary file path before finalizing.
+- `DELETE` removes regular files.
+- Permission checks for read, write, and execute access.
+- `client_max_body_size` enforcement.
+
+### CGI
+
+- CGI route detection.
+- CGI script resolution by configured extension.
+- CGI execution with `fork`/`execve`.
+- CGI environment construction.
+- Request body forwarding to CGI process.
+- CGI response parsing.
+- CGI local redirect handling.
+- CGI timeout/error handling.
+- CGI process tracking through `ConnectionRegistry`.
+
+### Sessions and cookies
+
+- Simple session creation/reuse.
+- `session_id` cookie support.
+- Cookie attributes such as `Path=/`, `HttpOnly`, and `SameSite=Lax`.
+- Expired session cleanup.
+
+---
+
+## Project Architecture
+
+The diagrams below give a visual overview of the server design. Store these images in `docs/` so the relative links work from the repository root.
+
+### Whole system
+
+![webserv system architecture](docs/01_system_architecture.png)
+
+### Configuration loader pipeline
+
+![webserv system architecture](docs/06_configuration_loader_pipeline.png)
+
+### Event loop and `EpollManager`
+
+![EpollManager architecture](docs/02_epollManager.png)
+
+### Connection request lifecycle
+
+![Connection request lifecycle](docs/03_request_lifecycle.png)
+
+### Routing and path resolution
+
+![Routing and path resolution](docs/04_routing_path_resolution.png)
+
+### HTTP Handler
+
+![Routing and path resolution](docs/07_http_handler.png)
+
+### CGI Handler
+
+![Routing and path resolution](docs/08_cgi_handler.png)
+
+### CGI ordered pipeline
+
+![CGI ordered pipeline architecture](docs/05_cgi_pipleline.png)
+
+---
+
+## Configuration Overview
+
+A typical configuration file may look like this:
+
+```nginx
+http {
+    index index.html;
+    client_max_body_size 1m;
+    autoindex off;
+
+    server {
+        listen 8080;
+        server_name localhost;
+
+        root ./www;
+        index index.html;
+        allowed_methods GET POST DELETE;
+
+        error_page 404 /404.html;
+        error_page 500 /500.html;
+
+        cgi_extension .py /usr/bin/python3;
+        cgi_extension .sh /bin/bash;
+
+        location / {
+            root ./www;
+            index index.html;
+            autoindex on;
+            allowed_methods GET;
+        }
+
+        location /upload {
+            root ./www;
+            allowed_methods POST;
+        }
+
+        location /delete {
+            root ./www;
+            allowed_methods DELETE;
+        }
+
+        location /cgi-bin {
+            root ./www/cgi-bin;
+            cgi on;
+            allowed_methods GET POST;
+        }
+
+        location /redirect {
+            return 301 /;
+        }
+    }
+}
+```
+
+---
+
+## Instructions
+
+### Requirements
+
+This project is intended for a Linux environment because it uses Linux-specific APIs such as:
+
+- `epoll`;
+- `timerfd`;
+- non-blocking sockets;
+- `fork`/`execve` for CGI.
+
+You need:
+
+- a C++ compiler with C++17 support;
+- `make`;
+- standard Linux development headers;
+- optional interpreters for CGI routes, for example `python3` or `bash`.
+
+### Compilation
+
+| Command          | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `make`           | Build the main `webserv` executable                    |
+| `make debug`     | Build `webserv` with debug symbols and `DEBUG` enabled |
+| `make sanitize`  | Build `webserv` with sanitizers enabled                |
+| `make test`      | Build and run the unit tests                           |
+| `make cgi_test`  | Build the CGI integration test executable              |
+| `make cgi_clean` | Remove CGI test objects and binary                     |
+| `make clean`     | Remove object files and dependency files               |
+| `make fclean`    | Remove all generated binaries and build files          |
+| `make re`        | Clean everything and rebuild from scratch              |
+
+- For `make cgi_test`, you can add optional flag `FORK_COUNT` `PAIR_COUNT` `DUP_COUNT`. By default, all sets to `FORK_COUNT=10` `PAIR_COUNT=10` `DUP_COUNT=10`
+
+---
+
+### Running the server
+
+Run the server with a configuration file:
+
+```bash
+./webserv path/to/config.conf
+```
+
+Example:
+
+```bash
+./webserv ./configs/default.conf
+```
+
+### Config loader tools
+The config loader pipeline offers some tools that can help debug a config file:
+
+1. flag --print-tokenlist will print a list of all tokens extracted from the config file,
+2. flag --print-AST will print the AST,
+3. flag --config-debug will print the config file with all error tokens highlighted in red.
+
+Example:
+```
+./webserv configs/multi-server.conf --config-debug
+```
+
+
+### Running integration test
+
+Run the integration test with bash scripts:
+
+```bash
+make fclean
+make 
+bash tests/bash/run_all.sh 
+```
+
+Run only a specific integration test 
+
+```bash
+make fclean
+make 
+bash tests/bash/numberOfTheTestInBashDirectory
+```
+
+
+### Stopping the server
+
+Use `Ctrl+C` in the terminal where the server is running.
+
+---
+
+## Usage Examples
+
+The following examples assume the server is listening on port `8080`.
+
+### Basic GET
+
+```bash
+curl -i http://localhost:8080/
+```
+
+### GET a static file
+
+```bash
+curl -i http://localhost:8080/index.html
+```
+
+### Test directory redirect
+
+If `/dir` is a directory, the server should redirect to `/dir/`:
+
+```bash
+curl -i http://localhost:8080/dir
+```
+
+### POST upload
+
+```bash
+curl -i -X POST \
+  -H "Content-Type: text/plain" \
+  --data-binary @./local-file.txt \
+  http://localhost:8080/upload/local-file.txt
+```
+
+Expected result:
+
+- `201 Created` if the file did not exist;
+- `204 No Content` if the file was overwritten;
+- `413 Payload Too Large` if the body is larger than `client_max_body_size`.
+
+### DELETE file
+
+```bash
+curl -i -X DELETE http://localhost:8080/delete/file.txt
+```
+
+Expected result:
+
+- `204 No Content` on success;
+- `404 Not Found` if the file does not exist;
+- `403 Forbidden` if the target is not allowed.
+
+### Keep session cookie
+
+```bash
+curl -i -c /tmp/webserv_cookies.txt http://localhost:8080/
+curl -i -b /tmp/webserv_cookies.txt http://localhost:8080/
+```
+
+### CGI request
+
+```bash
+curl -i http://localhost:8080/cgi-bin/script.py
+```
+
+For a POST CGI request:
+
+```bash
+curl -i -X POST \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data "name=webserv" \
+  http://localhost:8080/cgi-bin/script.py
+```
+
+### HTTP pipelining with netcat
+
+```bash
+printf 'GET / HTTP/1.1\r\nHost: localhost\r\n\r\nGET /index.html HTTP/1.1\r\nHost: localhost\r\n\r\n' | nc localhost 8080
+```
+
+---
+
+## Notes
+
+Useful curl flags:
+
+```bash
+-i              show response headers
+-v              verbose connection/debug output
+-X METHOD       set HTTP method
+-H HEADER       add request header
+--data-binary   send raw body bytes
+--path-as-is    do not normalize path on curl side
+-c file         save cookies
+-b file         send cookies
+-L              follow redirects
+```
+
+---
+
+## Technical Choices
+
+### `epoll` instead of one thread per client
+
+The server uses one event loop to monitor many file descriptors. This avoids creating a thread for every client and keeps the design closer to production event-driven servers.
+
+### Non-blocking I/O
+
+Sockets are non-blocking so that one slow client, slow upload, or slow CGI process does not stop the rest of the server.
+
+### Ordered output queue
+
+Each connection has an output queue. This is important for partial writes and HTTP pipelining. A response may be generated immediately, partially sent, or blocked behind an earlier CGI response slot.
+
+### Route matching after headers
+
+The route is matched after request headers are parsed. This allows the server to apply route-specific settings, such as `client_max_body_size`, before reading the body.
+
+### Memory sink and file sink
+
+Small request bodies can be stored in memory. Large or chunked bodies can be streamed into a temporary file and moved into place only after the full request is accepted.
+
+### Canonical path checks
+
+Filesystem paths are canonicalized and checked against the configured base directory. This protects against path traversal and symlink escapes.
+
+### Internal error page dispatch
+
+For an internal error page such as:
+
+```nginx
+error_page 404 /404.html;
+```
+
+The server creates an internal `GET` request to render the configured page, while preserving the original error status code if the page is served successfully.
+
+---
+
+## Project Boundaries
+
+This project is an educational HTTP server, not a complete nginx replacement.
+
+Implemented or partially implemented scope includes:
+
+- parsing and validating config files;
+- matching locations and dispatching routeviews;
+- HTTP/1.1 request parsing;
+- static file serving;
+- GET, POST, and DELETE;
+- configuration-based routing;
+- redirects;
+- custom error pages;
+- autoindex;
+- CGI execution;
+- cookies and basic sessions;
+- non-blocking I/O and connection timeouts.
+
+Out of scope:
+
+- HTTPS/TLS;
+- HTTP/2 or HTTP/3;
+- reverse proxying;
+- WebSocket support;
+- advanced caching;
+- gzip/brotli compression;
+- virtual filesystem abstractions;
+- production-grade access logs and metrics;
+- full nginx configuration compatibility.
+
+---
+
+## Resources
+
+The following references were useful for understanding the concepts behind this project.
+
+### Linux and Networking References
+
+- [Internet Sockets](https://beej.us/guide/bgnet/html/#broadcast-packetshello-world)
+- [HTTP Comparison](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Evolution_of_HTTP)
+- [Internet Sockets](https://beej.us/guide/bgnet/html/#broadcast-packetshello-world)
+- [Socket application designs](https://www.ibm.com/docs/en/i/7.6.0?topic=programming-examples-socket-application-designs)
+- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [The TCP/IP Guide](http://www.tcpipguide.com/free/t_toc.htm)
+- [Linux man page: socket(2)](https://man7.org/linux/man-pages/man2/socket.2.html)
+- [Linux man page: bind(2)](https://man7.org/linux/man-pages/man2/bind.2.html)
+- [Linux man page: listen(2)](https://man7.org/linux/man-pages/man2/listen.2.html)
+- [Linux man page: accept(2)](https://man7.org/linux/man-pages/man2/accept.2.html)
+- [Linux man page: epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html)
+- [Linux man page: fcntl(2)](https://man7.org/linux/man-pages/man2/fcntl.2.html)
+- [Linux man page: read(2)](https://man7.org/linux/man-pages/man2/read.2.html)
+- [Linux man page: write(2)](https://man7.org/linux/man-pages/man2/write.2.html)
+
+### Testing Tools
+
+- [Catch2 unit test](https://github.com/catchorg/Catch2/blob/devel/extras/catch_amalgamated.hpp)
+- [curl documentation](https://curl.se/docs/)
+- [netcat manual](https://man.openbsd.org/nc.1)
+- [siege homepage](https://www.joedog.org/siege-home/)
+
+### CGI
+
+- [RFC 3875 — The Common Gateway Interface](https://www.rfc-editor.org/rfc/rfc3875)
+
+### nginx behaviour references
+
+- [nginx Beginner's Guide](https://nginx.org/en/docs/beginners_guide.html)
+- [nginx `location` directive documentation  ](https://nginx.org/en/docs/http/ngx_http_core_module.html#location)
+- [nginx `root` directive documentation ](https://nginx.org/en/docs/http/ngx_http_core_module.html#root)
+- [nginx `alias` directive documentation](https://nginx.org/en/docs/http/ngx_http_core_module.html#alias)
+
+### E-Book References
+
+- [2018_Book_SystemsProgrammingInUnixLinux](https://opencoursehub.cs.sfu.ca/bfraser/grav-cms/cmpt300/links/files/2018_Book_SystemsProgrammingInUnixLinux.pdf)
+- [The Linux Programming Interface](https://broman.dev/download/The%20Linux%20Programming%20Interface.pdf)
+- [nginx Beginner's Guide](https://nginx.org/en/docs/beginners_guide.html)
+
+---
+
+## AI Usage
+
+AI tools were used as a development assistant during the project.
+
+AI was used for:
+
+- explain project concepts;
+- help generate the architecture image
+
+---
+
+## Module READMEs
+
+- [config loader ](docs/CONFIGSREADME.md)
+- [http router](docs/HTTPROUTERREADME.md)
+- [cgi](docs/CGIREADME.md)
+
+
+## Notes for Evaluators
+
+Good areas to inspect during evaluation:
+
+- how configuration is parsed and validated;
+- how server blocks and location blocks are stored in `ServerRegistry`;
+- how longest-prefix route matching works;
+- how path traversal is prevented;
+- how body storage switches between memory and temporary files;
+- how the connection output queue preserves HTTP response order;
+- how CGI processes are registered, monitored, and converted back into HTTP responses;
+- how custom error pages are applied without losing the original status code.
+

@@ -21,6 +21,7 @@ The server is built around Linux `epoll` and non-blocking sockets. It can listen
 - [Project Boundaries](#project-boundaries)
 - [Resources](#resources)
 - [AI Usage](#ai-usage)
+- [Module README](#module-readme)
 
 ---
 
@@ -484,7 +485,12 @@ The following references were useful for understanding the concepts behind this 
 
 ### Linux and Networking References
 
+- [Internet Sockets](https://beej.us/guide/bgnet/html/#broadcast-packetshello-world)
+- [HTTP Comparison](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Evolution_of_HTTP)
+- [Internet Sockets](https://beej.us/guide/bgnet/html/#broadcast-packetshello-world)
+- [Socket application designs](https://www.ibm.com/docs/en/i/7.6.0?topic=programming-examples-socket-application-designs)
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [The TCP/IP Guide](http://www.tcpipguide.com/free/t_toc.htm)
 - [Linux man page: socket(2)](https://man7.org/linux/man-pages/man2/socket.2.html)
 - [Linux man page: bind(2)](https://man7.org/linux/man-pages/man2/bind.2.html)
 - [Linux man page: listen(2)](https://man7.org/linux/man-pages/man2/listen.2.html)
@@ -503,22 +509,20 @@ The following references were useful for understanding the concepts behind this 
 
 ### CGI
 
-- RFC 3875 — The Common Gateway Interface  
-  https://www.rfc-editor.org/rfc/rfc3875
+- [RFC 3875 — The Common Gateway Interface](https://www.rfc-editor.org/rfc/rfc3875)
 
 ### nginx behaviour references
 
-- nginx Beginner's Guide  
-  https://nginx.org/en/docs/beginners_guide.html
+- [nginx Beginner's Guide](https://nginx.org/en/docs/beginners_guide.html)
+- [nginx `location` directive documentation  ](https://nginx.org/en/docs/http/ngx_http_core_module.html#location)
+- [nginx `root` directive documentation ](https://nginx.org/en/docs/http/ngx_http_core_module.html#root)
+- [nginx `alias` directive documentation](https://nginx.org/en/docs/http/ngx_http_core_module.html#alias)
 
-- nginx `location` directive documentation  
-  https://nginx.org/en/docs/http/ngx_http_core_module.html#location
+### E-Book References
 
-- nginx `root` directive documentation  
-  https://nginx.org/en/docs/http/ngx_http_core_module.html#root
-
-- nginx `alias` directive documentation  
-  https://nginx.org/en/docs/http/ngx_http_core_module.html#alias
+- [2018_Book_SystemsProgrammingInUnixLinux](https://opencoursehub.cs.sfu.ca/bfraser/grav-cms/cmpt300/links/files/2018_Book_SystemsProgrammingInUnixLinux.pdf)
+- [The Linux Programming Interface](https://broman.dev/download/The%20Linux%20Programming%20Interface.pdf)
+- [nginx Beginner's Guide](https://nginx.org/en/docs/beginners_guide.html)
 
 ---
 
@@ -533,6 +537,13 @@ AI was used for:
 
 ---
 
+## Module README
+
+- [config loader ](docs/CONFIGSREADME.md)
+- [http router](docs/HTTPROUTEREADME.md)
+- [cgi](docs/CGIREADME.md)
+
+
 ## Notes for Evaluators
 
 Good areas to inspect during evaluation:
@@ -545,3 +556,4 @@ Good areas to inspect during evaluation:
 - how the connection output queue preserves HTTP response order;
 - how CGI processes are registered, monitored, and converted back into HTTP responses;
 - how custom error pages are applied without losing the original status code.
+

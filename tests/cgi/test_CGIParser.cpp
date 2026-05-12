@@ -430,8 +430,8 @@ TEST_CASE("Status header lowercase", "[cgi][CGIParser]")
 
   auto cgiResponse = cgi::CGIParser::Parse(raw_response);
   REQUIRE(cgiResponse.has_value());
-  REQUIRE_FALSE(cgiResponse->GetStatus().status_code == 404);
-  REQUIRE_FALSE(cgiResponse->GetStatus().reason == "Page not found");
+  REQUIRE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("Status header uppercase", "[cgi][CGIParser]")
@@ -445,8 +445,8 @@ TEST_CASE("Status header uppercase", "[cgi][CGIParser]")
 
   auto cgiResponse = cgi::CGIParser::Parse(raw_response);
   REQUIRE(cgiResponse.has_value());
-  REQUIRE_FALSE(cgiResponse->GetStatus().status_code == 404);
-  REQUIRE_FALSE(cgiResponse->GetStatus().reason == "Page not found");
+  REQUIRE(cgiResponse->GetStatus().status_code == 404);
+  REQUIRE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
 TEST_CASE("Status header as final header field", "[cgi][CGIParser]")
@@ -479,7 +479,7 @@ TEST_CASE("Status header as first header field", "[cgi][CGIParser]")
   REQUIRE(cgiResponse->GetStatus().reason == "Page not found");
 }
 
-TEST_CASE("CGI parse ill formed - Lowercase content-type", "[cgi][CGIParser]")
+TEST_CASE("CGI parse Lowercase content-type", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "content-type: text/plain; charset=utf-8\n"
@@ -488,10 +488,10 @@ TEST_CASE("CGI parse ill formed - Lowercase content-type", "[cgi][CGIParser]")
       "SOMEBODY ONCE TOLD ME ..."};
 
   auto cgiResponse = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgiResponse.has_value());
+  REQUIRE(cgiResponse.has_value());
 }
 
-TEST_CASE("CGI parse ill formed - Content-[t]ype", "[cgi][CGIParser]")
+TEST_CASE("CGI parse Content-[t]ype", "[cgi][CGIParser]")
 {
   std::string_view raw_response{
       "Content-type: text/plain; charset=utf-8\n"
@@ -500,7 +500,7 @@ TEST_CASE("CGI parse ill formed - Content-[t]ype", "[cgi][CGIParser]")
       "SOMEBODY ONCE TOLD ME ..."};
 
   auto cgiResponse = cgi::CGIParser::Parse(raw_response);
-  REQUIRE_FALSE(cgiResponse.has_value());
+  REQUIRE(cgiResponse.has_value());
 }
 
 TEST_CASE("CGI parse ill formed - Content-Type misspelled", "[cgi][CGIParser]")

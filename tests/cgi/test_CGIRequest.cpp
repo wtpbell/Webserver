@@ -98,8 +98,8 @@ TEST_CASE("GET CGI request", "[cgi][CGIRequest]")
   constexpr std::string_view cgiRequest_sv{
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
-      "PATH_INFO=\n"
-      "PATH_TRANSLATED=\n"
+      "PATH_INFO=/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
       "QUERY_STRING=\n"
       "REMOTE_ADDR=127.0.0.2\n"
       "REMOTE_HOST=127.0.0.2\n"
@@ -108,6 +108,7 @@ TEST_CASE("GET CGI request", "[cgi][CGIRequest]")
       "SERVER_PORT=8080\n"
       "SERVER_PROTOCOL=HTTP/1.1\n"
       "SERVER_SOFTWARE=webserv/0.1\n"
+      "REDIRECT_STATUS=200\n"
       "HTTP_MULTI_VALUE_HEADER=value_a, value_b, value_c\n"
       "HTTP_USER_AGENT=webserv/Catch2\n"
       "HTTP_CONNECTION=keep-alive\n"};
@@ -123,7 +124,7 @@ TEST_CASE("GET CGI request", "[cgi][CGIRequest]")
   CGIRequest cgiRequest{httpRequest, cgiRoute.GetValue(), serverIpPort, clientInfo, route};
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
-  REQUIRE(cgiRequest.GetEnvp().size() == 15);
+  REQUIRE(cgiRequest.GetEnvp().size() == 16);
   REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
   REQUIRE(cgiRequest.GetLeftover() == 0);
   REQUIRE(cgiRequest.GetBody().empty());
@@ -157,8 +158,8 @@ TEST_CASE("POST CGI request", "[cgi][CGIRequest]")
   constexpr std::string_view cgiRequest_sv{
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
-      "PATH_INFO=\n"
-      "PATH_TRANSLATED=\n"
+      "PATH_INFO=/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
       "QUERY_STRING=\n"
       "CONTENT_LENGTH=141\n"
       "CONTENT_TYPE=text/plain; charset=utf-8\n"
@@ -169,6 +170,7 @@ TEST_CASE("POST CGI request", "[cgi][CGIRequest]")
       "SERVER_PORT=8080\n"
       "SERVER_PROTOCOL=HTTP/1.1\n"
       "SERVER_SOFTWARE=webserv/0.1\n"
+      "REDIRECT_STATUS=200\n"
       "HTTP_TRANSFER_ENCODING=chunked\n"
       "HTTP_MULTI_VALUE_HEADER=value_a, value_b, value_c\n"
       "HTTP_USER_AGENT=webserv/Catch2\n"
@@ -186,7 +188,7 @@ TEST_CASE("POST CGI request", "[cgi][CGIRequest]")
   CGIRequest cgiRequest{httpRequest, cgiRoute.GetValue(), serverIpPort, clientInfo, route};
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
-  REQUIRE(cgiRequest.GetEnvp().size() == 18);
+  REQUIRE(cgiRequest.GetEnvp().size() == 19);
   REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
   REQUIRE(cgiRequest.GetLeftover() == 141);
   REQUIRE(cgiRequest.GetBody().length() == 141);
@@ -212,8 +214,8 @@ TEST_CASE("CGI Request with query string", "[cgi][CGIRequest]")
   constexpr std::string_view cgiRequest_sv{
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
-      "PATH_INFO=\n"
-      "PATH_TRANSLATED=\n"
+      "PATH_INFO=/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
       "QUERY_STRING=query=this&key=value&text=bla+bla+bla_bla\n"
       "REMOTE_ADDR=127.0.0.2\n"
       "REMOTE_HOST=127.0.0.2\n"
@@ -222,6 +224,7 @@ TEST_CASE("CGI Request with query string", "[cgi][CGIRequest]")
       "SERVER_PORT=8080\n"
       "SERVER_PROTOCOL=HTTP/1.1\n"
       "SERVER_SOFTWARE=webserv/0.1\n"
+      "REDIRECT_STATUS=200\n"
       "HTTP_MULTI_VALUE_HEADER=value_a, value_b, value_c\n"
       "HTTP_USER_AGENT=webserv/Catch2\n"
       "HTTP_CONNECTION=keep-alive\n"};
@@ -235,7 +238,7 @@ TEST_CASE("CGI Request with query string", "[cgi][CGIRequest]")
   CGIRequest cgiRequest{httpRequest, cgiRoute.GetValue(), serverIpPort, clientInfo, route};
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
-  REQUIRE(cgiRequest.GetEnvp().size() == 15);
+  REQUIRE(cgiRequest.GetEnvp().size() == 16);
   REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
   REQUIRE(cgiRequest.GetLeftover() == 0);
   REQUIRE(cgiRequest.GetBody().empty());
@@ -275,8 +278,8 @@ TEST_CASE("CGI request with all components", "[cgi][CGIRequest]")
   constexpr std::string_view cgiRequest_sv{
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
-      "PATH_INFO=\n"
-      "PATH_TRANSLATED=\n"
+      "PATH_INFO=/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
       "QUERY_STRING=query=this&key=value&text=bla+bla+bla_bla\n"
       "CONTENT_LENGTH=256\n"
       "CONTENT_TYPE=application/octet-stream\n"
@@ -287,6 +290,7 @@ TEST_CASE("CGI request with all components", "[cgi][CGIRequest]")
       "SERVER_PORT=8080\n"
       "SERVER_PROTOCOL=HTTP/1.1\n"
       "SERVER_SOFTWARE=webserv/0.1\n"
+      "REDIRECT_STATUS=200\n"
       "HTTP_TRANSFER_ENCODING=chunked\n"  // TODO: should this be filtered out?
       "HTTP_MULTI_VALUE_HEADER=value_a, value_b, value_c\n"
       "HTTP_USER_AGENT=webserv/Catch2\n"
@@ -306,7 +310,7 @@ TEST_CASE("CGI request with all components", "[cgi][CGIRequest]")
   CGIRequest cgiRequest{httpRequest, cgiRoute.GetValue(), serverIpPort, clientInfo, route};
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
-  REQUIRE(cgiRequest.GetEnvp().size() == 18);
+  REQUIRE(cgiRequest.GetEnvp().size() == 19);
   REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
   REQUIRE(cgiRequest.GetLeftover() == 256);
   REQUIRE(cgiRequest.GetBody() == cgiBody);

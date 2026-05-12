@@ -388,6 +388,11 @@ namespace cgi
 
   std::string CGIParser::HeaderField::GetCanonicalizeHeader(void)
   {
+    if ((type & HeaderFieldType::Extension) == HeaderFieldType::Extension)
+    {
+      return std::string(header);
+    }
+
     return String::CanonicalizeHeader(header);
   }
 

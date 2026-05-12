@@ -199,6 +199,9 @@ http {
         error_page 404 /404.html;
         error_page 500 /500.html;
 
+        cgi_extension .py /usr/bin/python3;
+        cgi_extension .sh /bin/bash;
+
         location / {
             root ./www;
             index index.html;
@@ -219,8 +222,6 @@ http {
         location /cgi-bin {
             root ./www/cgi-bin;
             cgi on;
-            cgi_extension .py /usr/bin/python3;
-            cgi_extension .sh /bin/bash;
             allowed_methods GET POST;
         }
 

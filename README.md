@@ -176,9 +176,6 @@ The diagrams below give a visual overview of the server design. Store these imag
 
 ![CGI ordered pipeline architecture](docs/05_cgi_pipleline.png)
 
-The project is split into several main responsibilities.
-
-
 ---
 
 ## Configuration Overview
@@ -533,7 +530,7 @@ AI tools were used as a development assistant during the project.
 AI was used for:
 
 - explain project concepts;
-- help generate the archecture image
+- help generate the architecture image
 
 ---
 

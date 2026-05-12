@@ -255,31 +255,21 @@ You need:
 
 ### Compilation
 
-From the root of the repository:
+| Command          | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `make`           | Build the main `webserv` executable                    |
+| `make debug`     | Build `webserv` with debug symbols and `DEBUG` enabled |
+| `make sanitize`  | Build `webserv` with sanitizers enabled                |
+| `make test`      | Build and run the unit tests                           |
+| `make cgi_test`  | Build the CGI integration test executable              |
+| `make cgi_clean` | Remove CGI test objects and binary                     |
+| `make clean`     | Remove object files and dependency files               |
+| `make fclean`    | Remove all generated binaries and build files          |
+| `make re`        | Clean everything and rebuild from scratch              |
 
-```bash
-make
-```
+- For `make cgi_test`, you can add optional flag `FORK_COUNT` `PAIR_COUNT` `DUP_COUNT`. By default, all sets to `FORK_COUNT=10` `PAIR_COUNT=10` `DUP_COUNT=10`
 
-This should create the `webserv` executable.
-
-To clean generated object files:
-
-```bash
-make clean
-```
-
-To remove object files and the executable:
-
-```bash
-make fclean
-```
-
-To rebuild from scratch:
-
-```bash
-make re
-```
+---
 
 ### Running the server
 
@@ -294,6 +284,25 @@ Example:
 ```bash
 ./webserv ./configs/default.conf
 ```
+
+### Running integration testmake cgi_test
+
+Run the integration test with bash scripts:
+
+```bash
+make fclean
+make 
+bash tests/bash/run_all.sh 
+```
+
+Run only a specific integration test 
+
+```bash
+make fclean
+make 
+bash tests/bash/numberOfTheTestInBashDirectory
+```
+
 
 ### Stopping the server
 
@@ -382,6 +391,24 @@ printf 'GET / HTTP/1.1\r\nHost: localhost\r\n\r\nGET /index.html HTTP/1.1\r\nHos
 
 ---
 
+## Notes
+
+Useful curl flags:
+
+```bash
+-i              show response headers
+-v              verbose connection/debug output
+-X METHOD       set HTTP method
+-H HEADER       add request header
+--data-binary   send raw body bytes
+--path-as-is    do not normalize path on curl side
+-c file         save cookies
+-b file         send cookies
+-L              follow redirects
+```
+
+---
+
 ## Technical Choices
 
 ### `epoll` instead of one thread per client
@@ -455,22 +482,24 @@ Out of scope:
 
 The following references were useful for understanding the concepts behind this project.
 
-### HTTP
+### Linux and Networking References
 
-- RFC 9110 — HTTP Semantics  
-  https://www.rfc-editor.org/rfc/rfc9110
+- [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
+- [Linux man page: socket(2)](https://man7.org/linux/man-pages/man2/socket.2.html)
+- [Linux man page: bind(2)](https://man7.org/linux/man-pages/man2/bind.2.html)
+- [Linux man page: listen(2)](https://man7.org/linux/man-pages/man2/listen.2.html)
+- [Linux man page: accept(2)](https://man7.org/linux/man-pages/man2/accept.2.html)
+- [Linux man page: epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html)
+- [Linux man page: fcntl(2)](https://man7.org/linux/man-pages/man2/fcntl.2.html)
+- [Linux man page: read(2)](https://man7.org/linux/man-pages/man2/read.2.html)
+- [Linux man page: write(2)](https://man7.org/linux/man-pages/man2/write.2.html)
 
-- RFC 9112 — HTTP/1.1  
-  https://www.rfc-editor.org/rfc/rfc9112
+### Testing Tools
 
-- MDN Web Docs — HTTP  
-  https://developer.mozilla.org/en-US/docs/Web/HTTP
-
-- MDN Web Docs — HTTP response status codes  
-  https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status
-
-### Sockets and event loops
-
+- [Catch2 unit test](https://github.com/catchorg/Catch2/blob/devel/extras/catch_amalgamated.hpp)
+- [curl documentation](https://curl.se/docs/)
+- [netcat manual](https://man.openbsd.org/nc.1)
+- [siege homepage](https://www.joedog.org/siege-home/)
 
 ### CGI
 
@@ -495,6 +524,12 @@ The following references were useful for understanding the concepts behind this 
 
 ## AI Usage
 
+AI tools were used as a development assistant during the project.
+
+AI was used for:
+
+- explain project concepts;
+- help generate the archecture image
 
 ---
 

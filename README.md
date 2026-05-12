@@ -21,7 +21,7 @@ The server is built around Linux `epoll` and non-blocking sockets. It can listen
 - [Project Boundaries](#project-boundaries)
 - [Resources](#resources)
 - [AI Usage](#ai-usage)
-- [Module README](#module-readme)
+- [Module READMEs](#module-readmes)
 
 ---
 
@@ -549,7 +549,7 @@ AI was used for:
 
 ---
 
-## Module README
+## Module READMEs
 
 - [config loader ](docs/CONFIGSREADME.md)
 - [http router](docs/HTTPROUTERREADME.md)

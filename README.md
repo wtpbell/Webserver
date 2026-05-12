@@ -3,7 +3,7 @@
 # webserv
 
 `webserv` is a C++ HTTP/1.1 web server inspired by the behaviour of nginx.  
-The goal of the project is to understand how a real web server accepts clients, parses HTTP requests, routes them through a configuration file, serves files, handles uploads, runs CGI programs, and keeps multiple connections alive without blocking the whole server.
+The goal of the project is to understand how configs files are parsed and validated, how locations are looked up and corresponding routeviews are dispatched, and how a real web server accepts clients, parses HTTP requests, routes them through a configuration file, serves files, handles uploads, runs CGI programs, and keeps multiple connections alive without blocking the whole server.
 
 The server is built around Linux `epoll` and non-blocking sockets. It can listen on one or more configured addresses, choose a server block from the request `Host` header, apply longest-prefix location matching, and generate HTTP responses for static files, directory listings, uploads, deletes, redirects, custom error pages, and CGI scripts.
 
@@ -451,6 +451,8 @@ This project is an educational HTTP server, not a complete nginx replacement.
 
 Implemented or partially implemented scope includes:
 
+- parsing and validating config files;
+- matching locations and dispatching routeviews;
 - HTTP/1.1 request parsing;
 - static file serving;
 - GET, POST, and DELETE;

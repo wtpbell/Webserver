@@ -90,8 +90,8 @@ namespace cgi
     }
     else
     {
-      envp_.emplace_back("PATH_INFO=");
-      envp_.emplace_back("PATH_TRANSLATED=");
+      envp_.emplace_back("PATH_INFO=" + std::string(httpRequest.GetPath()));
+      envp_.emplace_back("PATH_TRANSLATED=" + cgiRoute.script_);
     }
 
     const std::string_view query_string{httpRequest.GetQuery()};
@@ -122,6 +122,10 @@ namespace cgi
       envp_.emplace_back("SERVER_PORT=" + ipPortServer.port);
       envp_.emplace_back("SERVER_PROTOCOL=" + std::string{httpRequest.GetVersion()});
       envp_.emplace_back("SERVER_SOFTWARE=" CGI_SERVER_SOFTWARE);
+    }
+
+    {  // PHP cgi
+      envp_.emplace_back("REDIRECT_STATUS=200");
     }
 
     {

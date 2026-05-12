@@ -217,4 +217,20 @@ namespace String
     return c_vec;
   }
 
+  bool StringCiEqual(std::string_view left, std::string_view right)
+  {
+    if (left.length() != right.length())
+    {
+      return false;
+    }
+    for (size_t i = 0; i < left.length(); ++i)
+    {
+      if (std::tolower(static_cast<unsigned char>(left[i])) != std::tolower(static_cast<unsigned char>(right[i])))
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
 }  // namespace String

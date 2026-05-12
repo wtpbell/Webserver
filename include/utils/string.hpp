@@ -36,4 +36,5 @@ namespace String
   const char* GMTCstringFromTime(std::time_t time, char* stime, std::size_t n);
   std::time_t FileTimeToTimeT(const std::filesystem::file_time_type& ft);
   std::vector<char*> ConvertToCstrVector(const std::vector<std::string>& v);
+  bool StringCiEqual(std::string_view left, std::string_view right);
 }  // namespace String

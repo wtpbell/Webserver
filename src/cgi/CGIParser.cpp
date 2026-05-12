@@ -372,12 +372,11 @@ namespace cgi
 
     header = input.substr(0, delimiter);
     value = String::Trim(input.substr(delimiter + 1));
-
-    if (header == "Content-Type")
+    if (String::StringCiEqual(header, "Content-Type"))
       type = HeaderFieldType::ContentType;
-    else if (header == "Location")
+    else if (String::StringCiEqual(header, "Location"))
       type = HeaderFieldType::Location;
-    else if (header == "Status")
+    else if (String::StringCiEqual(header, "Status"))
       type = HeaderFieldType::Status;
     else if (header.compare(0, "X-CGI-"sv.length(), "X-CGI-") == 0 && CGIParser::IsToken(header))
       type = HeaderFieldType::Extension;
@@ -389,12 +388,6 @@ namespace cgi
 
   std::string CGIParser::HeaderField::GetCanonicalizeHeader(void)
   {
-    const HeaderFieldType mask{HeaderFieldType::ContentType | HeaderFieldType::Status | HeaderFieldType::Location |
-                               HeaderFieldType::Extension};
-    if ((type & mask) != HeaderFieldType::None)
-    {
-      return std::string(header);
-    }
     return String::CanonicalizeHeader(header);
   }
 

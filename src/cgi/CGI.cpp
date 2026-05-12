@@ -169,9 +169,8 @@ namespace cgi
         return HTTP::Status::kInternalServerError;
       case CGIErrorCode::kForbidden:
       case CGIErrorCode::kMissingPermissionsError:
-        return HTTP::Status::kForbidden;
       case CGIErrorCode::kNotFoundError:
-        return HTTP::Status::kNotFound;
+        return HTTP::Status::kForbidden;
       case CGIErrorCode::kNone:
         return HTTP::Status::kOk;
     }

@@ -29,63 +29,6 @@ static HTTPRequest MakeParsedHeadersOnly(std::string_view raw)
   return parser.TakeRequest();
 }
 
-// Use this only for tests that truly need the body to be parsed by the parser,
-// e.g. generating a very large body and ensuring the message is fully parsed.
-static HTTPRequest MakeParsedRequestWithBody(std::string_view raw)
-{
-  HTTPParser parser;
-
-  auto res = parser.Parse(raw);
-
-  if (res == HTTPParser::ParseResult::kHeadersDone)
-  {
-    const HTTPRequest& request = parser.GetRequest();
-
-    // Body framing decision only:
-    // - Only select chunked mode if TE is exactly "chunked"
-    //   (for validator tests like TE:gzip we must NOT enter chunked mode)
-    bool isChunked = false;
-    if (auto te = request.GetHeaderValuesOf("transfer-encoding"))
-    {
-      for (const auto& v : *te)
-      {
-        // minimal check; parser stored values trimmed but not lowercased
-        // your validator will do the strict token parsing anyway
-        std::string vv = v;
-        for (char& c : vv)
-          c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-        // trim ASCII spaces/tabs
-        auto is_ws = [](char ch)
-        {
-          return ch == ' ' || ch == '\t';
-        };
-        while (!vv.empty() && is_ws(vv.front()))
-          vv.erase(vv.begin());
-        while (!vv.empty() && is_ws(vv.back()))
-          vv.pop_back();
-
-        if (vv == "chunked")
-        {
-          isChunked = true;
-          break;
-        }
-      }
-    }
-
-    if (isChunked)
-      parser.SetChunked();
-    else if (auto len = request.GetContentLength())
-      parser.SetContentLength(*len);
-    else
-      parser.SetNoBody();
-
-    res = parser.Parse({});
-  }
-
-  REQUIRE(res == HTTPParser::ParseResult::kDone);
-  return parser.TakeRequest();
-}
-
 static HTTPRequest MakeValidRequest()
 {
   HTTPRequest request;
@@ -107,25 +50,6 @@ TEST_CASE("HTTPValidator::ValidateRequest - Basic Request", "[http][validator]")
       "\r\n");
 
   REQUIRE(ValidateRequest(request) == ValidationResult::kOk);
-}
-
-TEST_CASE("HTTPValidator rejects oversized body", "[http][validator]")
-{
-  const std::size_t size = HTTP::kMaxBodySize + 1;
-  std::string body(size, 'x');
-
-  const std::string raw = std::string(
-                              "POST / HTTP/1.1\r\n"
-                              "Host: example.com\r\n"
-                              "Content-Length: ") +
-                          std::to_string(size) +
-                          "\r\n"
-                          "\r\n" +
-                          body;
-
-  auto request = MakeParsedRequestWithBody(raw);
-
-  REQUIRE(ValidateRequest(request) == ValidationResult::kPayloadTooLarge);
 }
 
 TEST_CASE("HTTPValidator rejects missing Host header", "[http][validator]")

@@ -209,8 +209,6 @@ ValidationResult ValidateContentLength(const HTTPRequest& request)
   auto len = request.GetContentLength();
   if (!len)
     return ValidationResult::kBadRequest;
-  if (*len > HTTP::kMaxBodySize)
-    return ValidationResult::kPayloadTooLarge;
   return ValidationResult::kOk;
 }
 

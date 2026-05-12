@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/03/17 11:34:04 by jboon         #+#    #+#                 */
-/*   Updated: 2026/05/07 23:24:40 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/12 16:37:05 by bewong        ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -233,14 +233,13 @@ void Connection::QueueResponse(const HTTPResponse& response, bool closeAfter)
 
 void Connection::QueueError(ValidationResult result)
 {
-  HTTPResponse response;
-  response.SetStatus(HTTP::ToHTTPStatus(result));
-  response.SetHeader("Content-Type", "text/plain");
-  response.SetBody(response.GetReason() + "\n");
+  HTTP::Status status = HTTP::ToHTTPStatus(result);
+
+  HTTPResponse response = HTTP::response::MakeError(status);
   response.SetHeader("Connection", "close");
+
   QueueResponse(response, true);
 }
-
 void Connection::QueueCgiResponse(const int cgiFd, bool closeAfter)
 {
   closeAfterSend_ = closeAfterSend_ || closeAfter;

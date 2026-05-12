@@ -98,13 +98,3 @@ TEST_CASE("SetupCGIRoute - Script not found", "[cgi][Helper-CGI]")
   REQUIRE_FALSE(cgiRoute.HasValue());
   REQUIRE(cgiRoute.GetError() == CGIErrorCode::kNotFoundError);
 }
-
-TEST_CASE("CGI 1", "[cgi][!mayfail]")
-{
-  FAIL("Test CGI with different location and root path");
-}
-
-TEST_CASE("CGI Extensions", "[cgi][!mayfail]")
-{
-  FAIL("HURAY!");
-}

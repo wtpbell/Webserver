@@ -283,7 +283,20 @@ Example:
 ./webserv ./configs/default.conf
 ```
 
-### Running integration testmake cgi_test
+### Config loader tools
+The config loader pipeline offers some tools that can help debug a config file:
+
+1. flag --print-tokenlist will print a list of all tokens extracted from the config file,
+2. flag --print-AST will print the AST,
+3. flag --config-debug will print the config file with all error tokens highlighted in red.
+
+Example:
+```
+./webserv configs/multi-server.conf --config-debug
+```
+
+
+### Running integration test
 
 Run the integration test with bash scripts:
 

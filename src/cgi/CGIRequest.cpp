@@ -6,7 +6,7 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/01/20 15:28:10 by jboon         #+#    #+#                 */
-/*   Updated: 2026/04/25 23:28:25 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/13 20:35:52 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,7 +124,7 @@ namespace cgi
       envp_.emplace_back("SERVER_SOFTWARE=" CGI_SERVER_SOFTWARE);
     }
 
-    {  // PHP cgi
+    {  // php-cgi specific environment variable (https://stackoverflow.com/a/31870773)
       envp_.emplace_back("REDIRECT_STATUS=200");
     }
 

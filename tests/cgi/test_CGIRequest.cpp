@@ -6,9 +6,11 @@
 /*   By: jboon <jboon@student.codam.nl>               +#+                     */
 /*                                                   +#+                      */
 /*   Created: 2026/02/17 15:05:10 by jboon         #+#    #+#                 */
-/*   Updated: 2026/02/17 15:05:11 by jboon         ########   odam.nl         */
+/*   Updated: 2026/05/13 19:34:39 by jboon         ########   odam.nl         */
 /*                                                                            */
 /* ************************************************************************** */
+
+#include <filesystem>
 
 #include "catch_amalgamated.hpp"
 #include "cgi/CGI.hpp"
@@ -29,7 +31,9 @@ namespace
 
     const auto& envp = request.GetEnvp();
     for (const auto& item : envp)
+    {
       buffer.append(item).append("\n");
+    }
     return buffer;
   }
 
@@ -58,12 +62,12 @@ namespace
   {
     try
     {
-      return {FileSystem::current_path() / "tests/"};
+      return {FileSystem::current_path() / "tests"};
     }
     catch (...)
     {
+      FAIL("Failed to retrieve root directory");
     }
-    FAIL("Failed to retrieve root directory");
   }
 
   RouteView CreateRouteView(void)
@@ -75,6 +79,23 @@ namespace
     route.autoindex = false;
     route.allowedMask = RouteView::MethodMask::kGet;
     return route;
+  }
+
+  std::string CGIEnvToString(std::string_view env)
+  {
+    std::string_view pathTranslated{"PATH_TRANSLATED="};
+    std::string cgiEnv{env};
+    std::size_t path = cgiEnv.find("PATH_TRANSLATED=");
+    if (path == cgiEnv.npos)
+    {
+      FAIL("env is missing PATH_TRANSLATED");
+    }
+    else if (cgiEnv.at(path + pathTranslated.length()) != '.')
+    {
+      FAIL("No replacement token `.` found after PATH_TRANSLATED=");
+    }
+    cgiEnv.replace(path + pathTranslated.length(), 1, GetRoot().generic_string());
+    return cgiEnv;
   }
 
 }  // namespace
@@ -99,7 +120,7 @@ TEST_CASE("GET CGI request", "[cgi][CGIRequest]")
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
       "PATH_INFO=/cgi-bin/hello_world.sh\n"
-      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=./cgi-bin/hello_world.sh\n"
       "QUERY_STRING=\n"
       "REMOTE_ADDR=127.0.0.2\n"
       "REMOTE_HOST=127.0.0.2\n"
@@ -125,7 +146,7 @@ TEST_CASE("GET CGI request", "[cgi][CGIRequest]")
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
   REQUIRE(cgiRequest.GetEnvp().size() == 16);
-  REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
+  REQUIRE(CGIRequestEnvpToString(cgiRequest) == CGIEnvToString(cgiRequest_sv));
   REQUIRE(cgiRequest.GetLeftover() == 0);
   REQUIRE(cgiRequest.GetBody().empty());
 }
@@ -159,7 +180,7 @@ TEST_CASE("POST CGI request", "[cgi][CGIRequest]")
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
       "PATH_INFO=/cgi-bin/hello_world.sh\n"
-      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=./cgi-bin/hello_world.sh\n"
       "QUERY_STRING=\n"
       "CONTENT_LENGTH=141\n"
       "CONTENT_TYPE=text/plain; charset=utf-8\n"
@@ -189,7 +210,7 @@ TEST_CASE("POST CGI request", "[cgi][CGIRequest]")
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
   REQUIRE(cgiRequest.GetEnvp().size() == 19);
-  REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
+  REQUIRE(CGIRequestEnvpToString(cgiRequest) == CGIEnvToString(cgiRequest_sv));
   REQUIRE(cgiRequest.GetLeftover() == 141);
   REQUIRE(cgiRequest.GetBody().length() == 141);
   REQUIRE(cgiRequest.GetBody() == cgiBody);
@@ -215,7 +236,7 @@ TEST_CASE("CGI Request with query string", "[cgi][CGIRequest]")
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
       "PATH_INFO=/cgi-bin/hello_world.sh\n"
-      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=./cgi-bin/hello_world.sh\n"
       "QUERY_STRING=query=this&key=value&text=bla+bla+bla_bla\n"
       "REMOTE_ADDR=127.0.0.2\n"
       "REMOTE_HOST=127.0.0.2\n"
@@ -239,7 +260,7 @@ TEST_CASE("CGI Request with query string", "[cgi][CGIRequest]")
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
   REQUIRE(cgiRequest.GetEnvp().size() == 16);
-  REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
+  REQUIRE(CGIRequestEnvpToString(cgiRequest) == CGIEnvToString(cgiRequest_sv));
   REQUIRE(cgiRequest.GetLeftover() == 0);
   REQUIRE(cgiRequest.GetBody().empty());
 }
@@ -279,7 +300,7 @@ TEST_CASE("CGI request with all components", "[cgi][CGIRequest]")
       "GATEWAY_INTERFACE=CGI/1.1\n"
       "SCRIPT_NAME=hello_world.sh\n"
       "PATH_INFO=/cgi-bin/hello_world.sh\n"
-      "PATH_TRANSLATED=/home/jboon/projects/Webserv/tests/cgi-bin/hello_world.sh\n"
+      "PATH_TRANSLATED=./cgi-bin/hello_world.sh\n"
       "QUERY_STRING=query=this&key=value&text=bla+bla+bla_bla\n"
       "CONTENT_LENGTH=256\n"
       "CONTENT_TYPE=application/octet-stream\n"
@@ -311,7 +332,7 @@ TEST_CASE("CGI request with all components", "[cgi][CGIRequest]")
   REQUIRE(cgiRequest.GetArgv().size() == 1);
   REQUIRE(cgiRequest.GetArgv().at(0) == fullPath.string());
   REQUIRE(cgiRequest.GetEnvp().size() == 19);
-  REQUIRE(CGIRequestEnvpToString(cgiRequest) == cgiRequest_sv);
+  REQUIRE(CGIRequestEnvpToString(cgiRequest) == CGIEnvToString(cgiRequest_sv));
   REQUIRE(cgiRequest.GetLeftover() == 256);
   REQUIRE(cgiRequest.GetBody() == cgiBody);
 }

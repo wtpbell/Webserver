@@ -13,6 +13,8 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
+#include <cstdint>
 
 #include "config/Builder.hpp"
 #include "config/Lexer.hpp"
@@ -32,6 +34,18 @@ namespace
 
   std::optional<std::string> ReadFile(const std::string& filename)
   {
+    std::error_code ec{};
+    std::uintmax_t size = std::filesystem::file_size(filename, ec);
+    if (ec)
+    {
+      std::cerr << "ERROR: " << ec.message() << "\n";
+      return std::nullopt;
+    }
+    if (size > 32 * 1024 * 1024)
+    {
+      std::cerr << "Error: config file exceeds 32 MiB\n";
+      return std::nullopt;
+    }
     std::ifstream file(filename);
     if (!file)
     {
